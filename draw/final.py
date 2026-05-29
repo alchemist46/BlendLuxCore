@@ -39,7 +39,8 @@ AOVS_WITH_ID = {
     "OBJECT_ID_MASK",
 }
 
-DEFAULT_AOV_SETTINGS = ConvertFilmChannelOutput(3, np.float32, 3)
+DEFAULT_AOV_SETTINGS_RGB = ConvertFilmChannelOutput(3, np.float32, 3)
+DEFAULT_AOV_SETTINGS_RGBA = ConvertFilmChannelOutput(4, np.float32, 4)
 
 
 class FrameBufferFinal:
@@ -173,7 +174,12 @@ class FrameBufferFinal:
         """Import AOV into render layer."""
         # print(output_name)  # Debug
 
-        convert_func = AOVS.get(output_name, DEFAULT_AOV_SETTINGS)
+        if output_name == "DENOISED" and self._transparent:
+            # Denoised needs an alpha channel conditionally.
+            # Other AOV are either explicitly specified in AOVS, or RGB.
+            convert_func = AOVS.get(output_name, DEFAULT_AOV_SETTINGS_RGBA)
+        else:
+            convert_func = AOVS.get(output_name, DEFAULT_AOV_SETTINGS_RGB)
 
         if output_name in AOVS_WITH_ID:
             # Add the index so we can differentiate between the outputs with id
@@ -186,7 +192,6 @@ class FrameBufferFinal:
                 if output_name == "DENOISED" and self._transparent
                 else plc.FilmOutputType.RGB_IMAGEPIPELINE
             )
-            convert_func = DEFAULT_AOV_SETTINGS
 
         # Depth needs special treatment because it's pre-defined by Blender and
         # not uppercase
