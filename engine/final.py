@@ -84,15 +84,15 @@ def _render_layer(engine, depsgraph, statistics, view_layer):
     print("Session started in %.1f s" % session_init_time)
     statistics.session_init_time.value = session_init_time
 
-    config = engine.session.GetRenderConfig()
+    session_config = engine.session.GetRenderConfig()
 
     if scene.luxcore.config.use_filesaver:
         engine.session.Stop()
 
         if scene.luxcore.config.filesaver_format == "BIN":
-            output_path = config.GetProperties().Get("filesaver.filename").GetString()
+            output_path = session_config.GetProperty("filesaver.filename").GetString()
         else:
-            output_path = config.GetProperties().Get("filesaver.directory").GetString()
+            output_path = session_config.GetProperty("filesaver.directory").GetString()
         engine.report({"INFO"}, 'Exported to "%s"' % output_path)
 
         # Clean up
@@ -105,7 +105,7 @@ def _render_layer(engine, depsgraph, statistics, view_layer):
     last_film_refresh = 0
     last_stat_refresh = 0
     checked_optimal_clamp = path_settings.use_clamping
-    engine_type = config.GetProperties().Get("renderengine.type").GetString()
+    engine_type = session_config.GetProperty("renderengine.type").GetString()
     if engine_type.startswith("TILE"):
         epsilon = 0.1
         aa = scene.luxcore.config.tile.path_sampling_aa_size
