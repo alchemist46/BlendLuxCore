@@ -94,7 +94,7 @@ class ConvertFilmChannelOutput:
         # Reshape source buffer
         if self.src_depth == 1 and self.dst_depth == 4 and self.src_dtype == np.float32:
             # Repeat on RGB and pad with 1.f in alpha channel
-            buf = np.concat(
+            buf = np.concatenate(
                 (buf.repeat(3, axis=-1), np.ones(shape=buf.shape)), axis=2
             )
         elif self.src_depth == 1 and self.dst_depth == 1 and self.src_dtype == np.uint32:
@@ -108,11 +108,11 @@ class ConvertFilmChannelOutput:
             # exists and 0 otherwise.
             pad = ((buf[..., 0] != 0) & (buf[..., 1] != 0)).astype(np.float32)
             pad = pad.reshape(width, height, 1)
-            buf = np.concat((buf, pad), axis=2)
+            buf = np.concatenate((buf, pad), axis=2)
             dst_depth = 3
         elif self.src_depth == 3 and self.dst_depth == 4:
             # Pad with 1.f in alpha channel
-            buf = np.concat((buf, np.ones(shape=buf.shape)), axis=2)
+            buf = np.concatenate((buf, np.ones(shape=buf.shape)), axis=2)
         elif self.src_depth == self.dst_depth and self.src_dtype == np.float32:
             pass
         else:
