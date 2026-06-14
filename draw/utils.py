@@ -98,8 +98,7 @@ class ConvertFilmChannelOutput:
                 (buf.repeat(3, axis=-1), np.ones(shape=buf.shape)), axis=2
             )
         elif self.src_depth == 1 and self.dst_depth == 1 and self.src_dtype == np.uint32:
-            if self.is_id:
-                buf /= 2**32
+            pass
 
         elif self.src_depth == 2 and self.dst_depth == 3:
             # This is for UV channel
