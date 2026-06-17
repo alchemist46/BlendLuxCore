@@ -289,6 +289,22 @@ def _install_wheels():
     apply(wheel_list)
 
 
+def _pyluxcore_importable():
+    """Return whether pyluxcore is already installed and importable.
+
+    The install-info cache can claim a successful installation while the
+    extension site-packages is in fact empty (e.g. after a Blender or Python
+    upgrade, or an interrupted install). Checking for an importable module is
+    therefore more reliable than trusting the cached hash alone.
+    """
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("pyluxcore") is not None
+    except (ImportError, ValueError):
+        return False
+
+
 class WheelSource(IntEnum):
     """Permitted values for wheel source (from BlendLuxHelper)."""
 
@@ -374,9 +390,15 @@ def _fetch_wheels():
     else:
         raise ValueError(f"Unhandled wheel source setting ({wheel_source})")
 
-    # Check cache (hash and compare)
+    # Check cache (hash and compare). The cache is only trusted if pyluxcore is
+    # actually importable: a matching hash with an empty site-packages (e.g.
+    # after a Blender/Python upgrade) must still trigger a reinstall.
     wheel_hash = _hash_wheels(wheels)
-    if not reinstall_upon_reloading and wheel_hash == old_wheel_hash:
+    if (
+        not reinstall_upon_reloading
+        and wheel_hash == old_wheel_hash
+        and _pyluxcore_importable()
+    ):
         return FetchWheelStatus.CACHE, wheel_hash
 
     # Download
