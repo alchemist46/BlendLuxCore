@@ -95,7 +95,7 @@ class LUXCORE_OT_switch_to_camera_settings(bpy.types.Operator):
         return context.scene.camera
 
     def execute(self, context):
-        context.scene.objects.active = context.scene.camera
+        context.view_layer.objects.active = context.scene.camera
         bpy.ops.luxcore.switch_space_data_context(target="DATA")
         return {"FINISHED"}
 

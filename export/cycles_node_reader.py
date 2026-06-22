@@ -340,7 +340,9 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
             "kd": [0, 0, 0],
             "holdout.enable": True,
         }
-    elif node.bl_idname == "ShaderNodeMixRGB":
+    elif node.bl_idname == "ShaderNodeMixRGB" or (
+            node.bl_idname == "ShaderNodeMix" and node.data_type == 'RGBA'):
+        # ShaderNodeMixRGB was renamed to ShaderNodeMix (data_type='RGBA') in Blender 4.0
         # TODO (in LuxCore):
         #  "DARKEN", "BURN", "LIGHTEN", "SCREEN", "DODGE", "OVERLAY", "SOFT_LIGHT",
         #  "LINEAR_LIGHT", "DIFFERENCE", "HUE", "SATURATION", "COLOR", "VALUE"
@@ -348,13 +350,18 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
         prefix = "scene.textures."
         definitions = {}
 
-        fac_input = node.inputs["Fac"]
+        _is_legacy_mix = node.bl_idname == "ShaderNodeMixRGB"
+        fac_key = "Fac" if _is_legacy_mix else "Factor"
+        col1_key = "Color1" if _is_legacy_mix else "A"
+        col2_key = "Color2" if _is_legacy_mix else "B"
+
+        fac_input = node.inputs[fac_key]
         fac = _socket(fac_input, props, material, obj_name, group_node_stack)
         if fac_input.is_linked and fac == ERROR_VALUE:
             fac = 0.5
 
-        tex1 = _socket(node.inputs["Color1"], props, material, obj_name, group_node_stack)
-        tex2 = _socket(node.inputs["Color2"], props, material, obj_name, group_node_stack)
+        tex1 = _socket(node.inputs[col1_key], props, material, obj_name, group_node_stack)
+        tex2 = _socket(node.inputs[col2_key], props, material, obj_name, group_node_stack)
 
         if fac == 0:
             return tex1
@@ -577,22 +584,27 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
                 "amount": fac,
             }
             luxcore_name = luxcore_name + "fac"
-    elif node.bl_idname in {"ShaderNodeSeparateRGB", "ShaderNodeSeparateXYZ"}:
+    elif node.bl_idname in {"ShaderNodeSeparateRGB", "ShaderNodeSeparateColor", "ShaderNodeSeparateXYZ"}:
+        # ShaderNodeSeparateRGB was renamed to ShaderNodeSeparateColor in Blender 4.0
         prefix = "scene.textures."
 
-        if node.bl_idname == "ShaderNodeSeparateRGB":
-            channels = ["R", "G", "B"]
-            tex_socket_name = "Image"
-        else:
+        if node.bl_idname == "ShaderNodeSeparateXYZ":
             channels = ["X", "Y", "Z"]
             tex_socket_name = "Vector"
+        elif node.bl_idname == "ShaderNodeSeparateColor":
+            channels = ["Red", "Green", "Blue"]
+            tex_socket_name = "Color"
+        else:  # ShaderNodeSeparateRGB
+            channels = ["R", "G", "B"]
+            tex_socket_name = "Image"
 
         definitions = {
             "type": "splitfloat3",
             "texture": _socket(node.inputs[tex_socket_name], props, material, obj_name, group_node_stack),
             "channel": channels.index(output_socket.name),
         }
-    elif node.bl_idname in {"ShaderNodeCombineRGB", "ShaderNodeCombineXYZ"}:
+    elif node.bl_idname in {"ShaderNodeCombineRGB", "ShaderNodeCombineColor", "ShaderNodeCombineXYZ"}:
+        # ShaderNodeCombineRGB was renamed to ShaderNodeCombineColor in Blender 4.0
         prefix = "scene.textures."
 
         definitions = {
@@ -785,7 +797,10 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
 
         return ERROR_VALUE
 
-    if node.bl_idname in {"ShaderNodeMixRGB", "ShaderNodeMath"} and node.use_clamp:
+    _is_mix_rgba = node.bl_idname == "ShaderNodeMixRGB" or (
+        node.bl_idname == "ShaderNodeMix" and node.data_type == 'RGBA')
+    _node_clamp = getattr(node, 'use_clamp', False) or getattr(node, 'clamp_result', False)
+    if (_is_mix_rgba or node.bl_idname == "ShaderNodeMath") and _node_clamp:
         # Here we need to insert a helper texture *after* the current texture
         props.Set(utils.luxutils.create_props(prefix + luxcore_name + ".", definitions))
         definitions = {
