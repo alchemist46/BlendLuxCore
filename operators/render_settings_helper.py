@@ -48,9 +48,7 @@ class LUXCORE_OT_render_settings_helper(bpy.types.Operator):
     has_SDS_caustics: EnumProperty(items=yes_no_items)
 
     def _use_GPU(self):
-        return (
-            utils.luxutils.is_opencl_build() or utils.luxutils.is_cuda_build()
-        )
+        return utils.luxutils.is_gpu_build()
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self, width=450)

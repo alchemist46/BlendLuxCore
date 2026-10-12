@@ -61,6 +61,9 @@ class LuxCoreDeviceSettings(PropertyGroup):
             
             if device.type == "CUDA_GPU" and preferences.gpu_backend != "CUDA":
                 enabled = False
+
+            if device.type == "HIP_GPU" and preferences.gpu_backend != "HIP":
+                enabled = False
             
             selection += "1" if enabled else "0"
 
@@ -72,6 +75,8 @@ class LuxCoreDeviceSettings(PropertyGroup):
             return [device for device in self.devices if device.type == "OPENCL_GPU"]
         elif gpu_backend == "CUDA":
             return [device for device in self.devices if device.type == "CUDA_GPU"]
+        elif gpu_backend == "HIP":
+            return [device for device in self.devices if device.type == "HIP_GPU"]
         else:
             raise Exception("Unknown GPU Backend")
 

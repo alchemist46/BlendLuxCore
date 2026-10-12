@@ -63,6 +63,13 @@ class LuxCoreAddonPreferences(AddonPreferences):
             "OptiX acceleration is used only when supported hardware is detected",
             1,
         ),
+        (
+            "HIP",
+            "HIP",
+            "Use HIP for GPU acceleration on AMD GPUs (experimental). "
+            "Requires the AMD ROCm runtime",
+            2,
+        ),
     ]
     gpu_backend: EnumProperty(items=gpu_backend_items, default="OPENCL")
 
@@ -71,6 +78,7 @@ class LuxCoreAddonPreferences(AddonPreferences):
         backend_to_type = {
             "OPENCL": "OPENCL_GPU",
             "CUDA": "CUDA_GPU",
+            "HIP": "HIP_GPU",
         }
 
         devices = context.scene.luxcore.devices.devices
@@ -183,7 +191,7 @@ class LuxCoreAddonPreferences(AddonPreferences):
         row = layout.row()
         row.label(text="GPU API:")
 
-        if utils.luxutils.is_cuda_build():
+        if utils.luxutils.is_cuda_build() or utils.luxutils.is_hip_build():
             row.prop(self, "gpu_backend", expand=True)
 
             row = layout.row()

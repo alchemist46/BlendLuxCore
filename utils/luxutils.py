@@ -49,3 +49,17 @@ def is_cuda_build():
         .Get("compile.LUXRAYS_ENABLE_CUDA")
         .GetBool()
     )
+
+
+def is_hip_build():
+    """Check if pyluxcore has been built with HIP support (AMD GPUs)."""
+    platform_desc = pyluxcore.GetPlatformDesc()
+    # pyluxcore versions without HIP support don't define the property
+    if not platform_desc.IsDefined("compile.LUXRAYS_ENABLE_HIP"):
+        return False
+    return platform_desc.Get("compile.LUXRAYS_ENABLE_HIP").GetBool()
+
+
+def is_gpu_build():
+    """Check if pyluxcore has been built with any GPU support."""
+    return is_opencl_build() or is_cuda_build() or is_hip_build()
