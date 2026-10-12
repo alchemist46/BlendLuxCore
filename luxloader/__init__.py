@@ -13,6 +13,9 @@ from enum import Enum, IntEnum
 import types
 import json
 import configparser
+import gzip
+import pickle
+import re
 
 import bpy
 import addon_utils
@@ -22,18 +25,21 @@ from .. import utils
 
 # The variable PYLUXCORE_VERSION specifies the release version of pyluxcore
 # that will be downloaded from PyPi during the standard installation of
-# BlendLuxCore. Please update this variable ONLY after the targeted version of
+# BlendLuxCore. Please update this variable ONLY AFTER the targeted version of
 # pyluxcore has been released on PyPi.
-PYLUXCORE_VERSION = "2.11.0a5"
+PYLUXCORE_VERSION = "2.11.2"
 
-# User folders
-ROOT_FOLDER = utils.get_user_dir("")
-WHEEL_DL_FOLDER = utils.get_user_dir("wheels")
-WHEEL_BACKUP_FOLDER = utils.get_user_dir("wheels_backup")
+# Module folders
+ROOT_FOLDER = utils.get_module_path()  # The root dir of the package
+WHEEL_DL_FOLDER = ROOT_FOLDER / "wheels"
+WHEEL_BACKUP_FOLDER = ROOT_FOLDER / "wheels_backup"
+
+# Extension folder
+EXTENSIONS_FOLDER = pathlib.Path(bpy.utils.user_resource("EXTENSIONS"))
 
 # Settings file
 SETTINGS_FOLDER = pathlib.Path(
-    bpy.utils.user_resource("CONFIG", path="BlendLuxCore", create=True)
+    bpy.utils.user_resource("CONFIG", path="blendluxcore", create=True)
 )
 SETTINGS_FILENAME = "blc_settings.json"
 SETTINGS_FILEPATH = SETTINGS_FOLDER / SETTINGS_FILENAME
@@ -97,8 +103,7 @@ def _download_wheels(wheel_requirements, no_deps, no_index):
                 f"and return message {err.stdout}"
             ) from err
 
-
-        if (output := process.stdout):
+        if output := process.stdout:
             print("[BLC] Downloading wheel:\n", output)
 
 
@@ -139,7 +144,7 @@ def _get_installation_info():
     info_file = ROOT_FOLDER / "pyluxcore_installation_info.txt"
     print(f"[BLC] Checking installation info ('{info_file}')")
 
-    if not info_file.exists:
+    if not info_file.exists():
         return None
 
     config = configparser.ConfigParser()
@@ -259,50 +264,102 @@ def _get_settings():
         return DEFAULT_SETTINGS
 
 
-def _install_wheels():
-    """Install wheels in Blender from download folder."""
-    extensions_directory = pathlib.Path(bpy.utils.user_resource("EXTENSIONS"))
-    if not (wheel_list := [("blendluxcore", list(WHEEL_DL_FOLDER.iterdir()))]):
-        raise ValueError("[BLC] ERROR - No wheel to install.")
+def _update_manifest(wheel_list):
+    """Update blender_manifest.toml with wheel info.
 
-    local_dir = extensions_directory / ".local"
+    This is intended as a post-update treatment: wheels should have been
+    installed before.
+    """
+
+    print(f"[BLC] Updating blender manifest")
+    pkg_manifest_filepath = ROOT_FOLDER / "blender_manifest.toml"
+
+    # Compute statement
+    wheel_abs_paths = list(
+        itertools.chain.from_iterable(
+            entry[1] for entry in wheel_list if entry[0] == "blendluxcore"
+        )
+    )
+    wheel_rel_paths = ", ".join(
+        f'"{path.relative_to(ROOT_FOLDER).as_posix()}"'
+        for path in wheel_abs_paths
+    )
+    wheel_manifest_statement = f"wheels = [{wheel_rel_paths}]\n"
+
+    # Read manifest
+    with open(pkg_manifest_filepath, mode="r", encoding="utf-8") as manifest:
+        content = manifest.read()
+
+    # Modify: add wheel statement to manifest content (modify current wheel entry)
+    content, number_of_replacements = re.subn(
+        r"^\s*wheels\s*=\s*\[.*\]\n?",
+        wheel_manifest_statement,
+        content,
+        flags=re.MULTILINE
+    )
+    if number_of_replacements != 1:
+        print(
+            "[BLC] WARNING: inconsistent number of replacements when updating"
+            "`wheels` statement in blender_manifest.toml "
+            f"({number_of_replacements}) - see file '{pkg_manifest_filepath}'"
+        )
+
+    # Write back to file
+    with open(pkg_manifest_filepath, mode="w", encoding="utf-8") as manifest:
+        manifest.write(content)
+
+    # Create fake wheels
+    for path in wheel_abs_paths:
+        print(f"[BLC] Creating fake wheel {path.name}")
+        path.touch()
+
+
+def _apply_wheels(p_wheel_list):
+    """Wrap call to wheel_manager.apply_action."""
+
+    local_dir = EXTENSIONS_FOLDER / ".local"
     pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
     site_packages = local_dir / "lib" / pyver / "site-packages"
 
-    # We use Blender internal feature to install the wheels
-    def apply(p_wheel_list):
-        wheel_manager.apply_action(
-            local_dir=str(local_dir),
-            local_dir_site_packages=str(site_packages),
-            wheel_list=p_wheel_list,
-            error_fn=lambda ex: print("Error:", ex),
-            remove_error_fn=lambda filepath, ex: print(
-                "Error removing file:", filepath, ex
-            ),
-            debug=True,
-        )
-
-    # First, remove previous wheels
-    apply([("blendluxcore", [])])
-
-    # Second, add new wheels
-    apply(wheel_list)
+    wheel_manager.apply_action(
+        local_dir=str(local_dir),
+        local_dir_site_packages=str(site_packages),
+        wheel_list=p_wheel_list,
+        error_fn=lambda ex: print("Error:", ex),
+        remove_error_fn=lambda filepath, ex: print(
+            "Error removing file:", filepath, ex
+        ),
+        debug=True,
+    )
 
 
-def _pyluxcore_importable():
-    """Return whether pyluxcore is already installed and importable.
+def _install_wheels():
+    """Install wheels in Blender from download folder.
 
-    The install-info cache can claim a successful installation while the
-    extension site-packages is in fact empty (e.g. after a Blender or Python
-    upgrade, or an interrupted install). Checking for an importable module is
-    therefore more reliable than trusting the cached hash alone.
+    Notes:
+    - We use Blender internal feature (wheel_manager.apply_action) to install
+      the wheels, see _apply_wheels
+    - Once the wheels have been installed, we have to declare them in
+      blender_manifest.toml, otherwise the wheels will not be "registered" by
+      Blender and any modification on add-ons (install, refresh...) will remove
+      them
+    - We have to create fake wheels in BLC repo to lure pkg_wheel_filter() (in
+      'scripts/addons_core/bl_pkg/bl_extension_ops.py'), as this function will
+      check whether the files actually exist and, if not, will uninstall them
     """
-    import importlib.util
 
-    try:
-        return importlib.util.find_spec("pyluxcore") is not None
-    except (ImportError, ValueError):
-        return False
+    # Get the wheel list
+    if not (wheel_list := [("blendluxcore", list(WHEEL_DL_FOLDER.iterdir()))]):
+        raise ValueError("[BLC] ERROR - No wheel to install.")
+
+    # Remove previous wheels
+    _apply_wheels([("blendluxcore", [])])
+
+    # Install new wheels
+    _apply_wheels(wheel_list)
+
+    # Update wheel information in blender_manifest.toml and create fake wheels
+    _update_manifest(wheel_list)
 
 
 class WheelSource(IntEnum):
@@ -342,6 +399,17 @@ def _fetch_wheels():
     no_deps = bool(settings.get("no_deps", False))
     no_index = bool(settings.get("no_index", False))
 
+    # Ensure 'wheels*' directories exist
+    def ensure_directory(directory):
+        abs_dir = ROOT_FOLDER / directory
+        try:
+            print(f"[BLC] Ensuring '{abs_dir}' exists")
+            abs_dir.mkdir()
+        except FileExistsError:
+            pass  # Already exists, pass silently
+    ensure_directory("wheels")
+    ensure_directory("wheels_backup")
+
     # Get installation info for comparison in the following steps
     old_wheel_hash = _get_installation_info()
 
@@ -352,17 +420,20 @@ def _fetch_wheels():
 
         wheels = [f"pyluxcore=={pyluxcore_version}"]
 
-        print("[BLC] Installing pyluxcore version:", pyluxcore_version)
+        print("[BLC] Fetching wheels from PyPi")
+        print("[BLC] Targeting pyluxcore version:", pyluxcore_version)
 
     # Case #2: Get from local source (1 file)
     elif wheel_source == WheelSource.LOCAL:
         # Get path to wheel and check consistency
         path_to_wheel = pathlib.Path(settings.get("path_to_wheel", ""))
+        print("[BLC] Fetching wheels from local source:", path_to_wheel)
         if not (path_to_wheel.is_file() and path_to_wheel.is_absolute()):
             print(f"[BLC] Wheel file not found ('{path_to_wheel}')")
             return FetchWheelStatus.ERROR, None
 
         # Get optional folder with dependencies
+        print("[BLC] Getting dependencies")
         additional_deps = []
         if path_to_wheel_deps_setting := settings.get(
             "path_to_wheel_deps", ""
@@ -390,16 +461,19 @@ def _fetch_wheels():
     else:
         raise ValueError(f"Unhandled wheel source setting ({wheel_source})")
 
-    # Check cache (hash and compare). The cache is only trusted if pyluxcore is
-    # actually importable: a matching hash with an empty site-packages (e.g.
-    # after a Blender/Python upgrade) must still trigger a reinstall.
+    # Check cache (hash and compare)
     wheel_hash = _hash_wheels(wheels)
-    if (
-        not reinstall_upon_reloading
-        and wheel_hash == old_wheel_hash
-        and _pyluxcore_importable()
-    ):
-        return FetchWheelStatus.CACHE, wheel_hash
+    if not reinstall_upon_reloading and wheel_hash == old_wheel_hash:
+        # We check there is no desync and pyluxcore is available
+        try:
+            import pyluxcore
+        except ModuleNotFoundError:
+            print(
+                "[BLC] Warning: pyluxcore should already be installed, "
+                "but it is not possible to find it! Reinstalling..."
+            )
+        else:
+            return FetchWheelStatus.CACHE, wheel_hash
 
     # Download
     _backup_wheels()

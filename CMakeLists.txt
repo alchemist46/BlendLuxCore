@@ -58,10 +58,33 @@ find_program(
   NO_CACHE REQUIRED
 )
 
+# Clean 'wheels' directory
+MESSAGE(STATUS "Cleaning wheels directory")
+FILE(GLOB WHEELS "${CMAKE_CURRENT_SOURCE_DIR}/wheels/*.whl")
+file(REMOVE ${WHEELS})
+
+# Clean 'out' directory
+MESSAGE(STATUS "Cleaning wheels directory")
+FILE(GLOB OUTFILES "${CMAKE_CURRENT_SOURCE_DIR}/out/*")
+file(REMOVE ${OUTFILES})
+
+# Clean 'pyluxcore_installation_info.txt'
+MESSAGE(STATUS "Cleaning pyluxcore_installation_info.txt")
+file(REMOVE "pyluxcore_installation_info.txt")
+
+# Clean wheels entry in Blender manifest
+# Nota: It would also be possible to use configure_file
+MESSAGE(STATUS "Cleaning wheels entry in blender_manifest.toml")
+file(READ "blender_manifest.toml" CONTENT)
+string(REGEX REPLACE "wheels *= *\\\[[^]]*\\]" "wheels = []" NEW_CONTENT "${CONTENT}")
+file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/blender_manifest.toml" "${NEW_CONTENT}")
+
+
 # Add BlendLuxCore target
 # https://docs.blender.org/manual/en/latest/advanced/command_line/extension_arguments.html
 add_custom_target(
   extension ALL ${BLENDER}
+    --factory-startup
     --command extension build
     --source-dir ${CMAKE_CURRENT_SOURCE_DIR}
     --output-filepath ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/BlendLuxCore-${BLC_VERSION}.zip
@@ -72,7 +95,7 @@ add_custom_target(
 # cmake --install .
 install(CODE "
   execute_process(
-    COMMAND ${BLENDER} --command extension install-file -r blender_org ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/BlendLuxCore-${BLC_VERSION}.zip
+    COMMAND ${BLENDER} --factory_startup --command extension install-file -r blender_org ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/BlendLuxCore-${BLC_VERSION}.zip
     OUTPUT_VARIABLE INSTALL_OUTPUT
     ERROR_VARIABLE INSTALL_OUTPUT
   )
