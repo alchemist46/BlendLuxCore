@@ -69,6 +69,11 @@ class LuxCoreDeviceSettings(PropertyGroup):
 
         return selection
 
+    def hiprt_selection_string(self, use_hiprt):
+        """The hip.hiprt.devices.select string: one character for each HIP device"""
+        hip_device_count = sum(1 for device in self.devices if device.type == "HIP_GPU")
+        return ("1" if use_hiprt else "0") * hip_device_count
+
     def get_gpu_devices(self, context):
         gpu_backend = get_addon_preferences(context).gpu_backend
         if gpu_backend == "OPENCL":

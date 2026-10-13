@@ -60,6 +60,17 @@ def is_hip_build():
     return platform_desc.Get("compile.LUXRAYS_ENABLE_HIP").GetBool()
 
 
+def is_hiprt_available():
+    """Check if pyluxcore can use HIPRT (hardware ray tracing on AMD GPUs).
+
+    It requires a pyluxcore with HIPRT support and the HIPRT library."""
+    platform_desc = pyluxcore.GetPlatformDesc()
+    # pyluxcore versions without HIPRT support don't define the property
+    if not platform_desc.IsDefined("compile.LUXRAYS_ENABLE_HIPRT"):
+        return False
+    return platform_desc.Get("compile.LUXRAYS_ENABLE_HIPRT").GetBool()
+
+
 def is_gpu_build():
     """Check if pyluxcore has been built with any GPU support."""
     return is_opencl_build() or is_cuda_build() or is_hip_build()

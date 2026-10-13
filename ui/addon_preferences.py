@@ -73,6 +73,15 @@ class LuxCoreAddonPreferences(AddonPreferences):
     ]
     gpu_backend: EnumProperty(items=gpu_backend_items, default="OPENCL")
 
+    use_hiprt: BoolProperty(
+        name="HIP RT",
+        default=True,
+        description=(
+            "Use AMD HIPRT for hardware accelerated ray tracing on HIP devices. "
+            "When disabled or not available, the LuxCore BVH is used"
+        ),
+    )
+
     def film_device_items_callback(self, context):
         """List items for Film Device property (callback)."""
         backend_to_type = {
@@ -193,6 +202,17 @@ class LuxCoreAddonPreferences(AddonPreferences):
 
         if utils.luxutils.is_cuda_build() or utils.luxutils.is_hip_build():
             row.prop(self, "gpu_backend", expand=True)
+
+            if self.gpu_backend == "HIP":
+                hiprt_available = utils.luxutils.is_hiprt_available()
+                row = layout.row()
+                split = row.split(factor=SPLIT_FACTOR)
+                split.label(text="Ray Tracing:")
+                col = split.column()
+                col.enabled = hiprt_available
+                col.prop(self, "use_hiprt")
+                if not hiprt_available:
+                    col.label(text="HIPRT library not found", icon=icons.INFO)
 
             row = layout.row()
             split = row.split(factor=SPLIT_FACTOR)

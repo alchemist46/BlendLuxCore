@@ -176,6 +176,14 @@ def _convert_opencl_settings(scene, definitions, is_final_render):
             opencl.devices_to_selection_string()
         )
 
+        # HIPRT (hardware ray tracing on AMD GPUs) for the HIP devices. LuxCore
+        # falls back to its own BVH when HIPRT isn't available.
+        preferences = utils.get_addon_preferences(bpy.context)
+        if preferences.gpu_backend == "HIP" and utils.luxutils.is_hiprt_available():
+            definitions["hip.hiprt.devices.select"] = (
+                opencl.hiprt_selection_string(preferences.use_hiprt)
+            )
+
         # OpenCL CPU (hybrid render) thread settings. Only enabled in final render.
         if opencl.use_native_cpu and is_final_render:
             # We use the properties from Blender here
