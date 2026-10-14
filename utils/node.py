@@ -440,6 +440,14 @@ class Roughness:
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
 
+    Optionally declare a distribution property like this
+    (it is drawn and exported automatically if present):
+    distribution: EnumProperty(name=Roughness.distribution_name,
+                               items=Roughness.distribution_items,
+                               default="schlick",
+                               description=Roughness.distribution_desc,
+                               update=force_viewport_update)
+
     Call Roughness.init(self, default=0.1) in the init method of the material node
 
     Draw the use_anisotropy property in the draw_buttons method:
@@ -507,6 +515,21 @@ class Roughness:
     aniso_desc = ("Use different roughness values for "
                   "U- and V-directions (needs UV mapping)")
 
+    distribution_name = "Distribution"
+    distribution_desc = "Microfacet distribution of the glossy reflection"
+    distribution_items = [
+        ("schlick", "Schlick", "Classic LuxCore microfacet distribution", 0),
+        ("ggx", "GGX", "GGX with visible normal sampling, less noise at equal samples "
+                       "(needs a pyluxcore build with GGX support)", 1),
+    ]
+
+    @staticmethod
+    def export_distribution(node, definitions):
+        # Only exported when not the default, so pyluxcore builds
+        # without GGX support get exactly the same scene as before
+        if getattr(node, "distribution", "schlick") != "schlick":
+            definitions["distribution"] = node.distribution
+
     @staticmethod
     def init(node, default=0.05, init_enabled=True):
         node.add_input("LuxCoreSocketRoughness", "Roughness", default, enabled=init_enabled)
@@ -519,6 +542,8 @@ class Roughness:
 
     @staticmethod
     def draw(node, context, layout):
+        if hasattr(node, "distribution"):
+            layout.prop(node, "distribution")
         layout.prop(node, "use_anisotropy")
         if node.use_anisotropy:
             draw_uv_info(context, layout)
@@ -534,6 +559,7 @@ class Roughness:
 
         definitions["uroughness"] = uroughness
         definitions["vroughness"] = vroughness
+        Roughness.export_distribution(node, definitions)
 
         if Roughness.has_backface(node):
             if node.use_anisotropy:

@@ -4,6 +4,7 @@ from ..base import LuxCoreNodeMaterial
 from ..sockets import LuxCoreSocketFloat
 from ... import icons
 from ...utils import node as utils_node
+from ...utils.node import Roughness
 
 REFLECTION_DESCRIPTION = "Glossy layer reflection value"
 
@@ -50,6 +51,11 @@ class LuxCoreNodeMatCarpaint(LuxCoreNodeMaterial, bpy.types.Node):
         ("white", "White", "", 8),
     ]
     preset: EnumProperty(name="Preset", items=preset_items, default="manual", update=update_preset)
+    distribution: EnumProperty(name=Roughness.distribution_name,
+                               items=Roughness.distribution_items,
+                               default="schlick",
+                               description=Roughness.distribution_desc,
+                               update=utils_node.force_viewport_update)
 
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Diffuse Color", (0.3, 0.3, 0.3))
@@ -72,6 +78,7 @@ class LuxCoreNodeMatCarpaint(LuxCoreNodeMaterial, bpy.types.Node):
         op = layout.operator("luxcore.open_website", text="Open Wiki Page", icon=icons.URL)
         op.url = "https://wiki.luxcorerender.org/LuxCoreRender_Materials_Car_Paint"
         layout.prop(self, "preset")
+        layout.prop(self, "distribution")
 
     def sub_export(self, exporter, depsgraph, props, luxcore_name=None, output_socket=None):
         if self.preset != "manual":
@@ -98,5 +105,6 @@ class LuxCoreNodeMatCarpaint(LuxCoreNodeMaterial, bpy.types.Node):
                 "r3": self.inputs["R3"].export(exporter, depsgraph, props),
             }
 
+        Roughness.export_distribution(self, definitions)
         self.export_common_inputs(exporter, depsgraph, props, definitions)
         return self.create_props(props, definitions, luxcore_name)

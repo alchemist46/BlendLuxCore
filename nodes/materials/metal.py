@@ -43,6 +43,11 @@ class LuxCoreNodeMatMetal(LuxCoreNodeMaterial, bpy.types.Node):
                                   default=False,
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
+    distribution: EnumProperty(name=Roughness.distribution_name,
+                               items=Roughness.distribution_items,
+                               default="schlick",
+                               description=Roughness.distribution_desc,
+                               update=utils_node.force_viewport_update)
 
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Color", (0.7, 0.7, 0.7))
