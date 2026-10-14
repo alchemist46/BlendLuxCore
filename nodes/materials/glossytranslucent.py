@@ -66,6 +66,9 @@ class LuxCoreNodeMatGlossyTranslucent(LuxCoreNodeMaterial, bpy.types.Node):
                                default="schlick",
                                description=Roughness.distribution_desc,
                                update=utils_node.force_viewport_update)
+    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
+                                  description=Roughness.multiscattering_desc,
+                                  update=utils_node.force_viewport_update)
 
     # Front face
     multibounce: BoolProperty(name="Multibounce", default=False,

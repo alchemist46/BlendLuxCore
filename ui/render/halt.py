@@ -74,9 +74,18 @@ def draw(layout, context, halt):
     layout.prop(halt, "use_noise_thresh")
     col = layout.column(align=True)
     if halt.use_noise_thresh:
-        col.prop(halt, "noise_thresh")
-        col.prop(halt, "noise_thresh_warmup")
-        col.prop(halt, "noise_thresh_step")
+        col.prop(halt, "noise_thresh_mode")
+        if halt.noise_thresh_mode == "PER_PIXEL":
+            col.prop(halt, "noise_thresh_perpixel")
+            col.prop(halt, "noise_thresh_tolerance")
+            if config.using_tiled_path() or config.get_sampler() not in {"SOBOL", "RANDOM"}:
+                layout.label(text="Uses the classic test with this sampler", icon=icons.INFO)
+        else:
+            col.prop(halt, "noise_thresh")
+            col.prop(halt, "noise_thresh_warmup")
+            col.prop(halt, "noise_thresh_step")
+            col.prop(halt, "noise_thresh_passes")
+            col.prop(halt, "noise_thresh_tolerance")
 
 
 class LUXCORE_RENDER_PT_halt_conditions(Panel, RenderButtonsPanel):
@@ -138,7 +147,10 @@ class LUXCORE_RENDER_PT_halt_conditions(Panel, RenderButtonsPanel):
                         and not using_only_lighttracing):
                     conditions.append("Light Path Samples (%d)" % halt.light_samples)
                 if halt.use_noise_thresh:
-                    conditions.append("Noise (%d)" % halt.noise_thresh)
+                    if halt.noise_thresh_mode == "PER_PIXEL":
+                        conditions.append("Noise (%g%%)" % halt.noise_thresh_perpixel)
+                    else:
+                        conditions.append("Noise (%d)" % halt.noise_thresh)
 
                 if conditions:
                     text = layer.name + ": " + ", ".join(conditions)

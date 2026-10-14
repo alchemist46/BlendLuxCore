@@ -448,6 +448,11 @@ class Roughness:
                                description=Roughness.distribution_desc,
                                update=force_viewport_update)
 
+    and, for the GGX energy compensation, a multiscattering property like this:
+    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
+                                  description=Roughness.multiscattering_desc,
+                                  update=force_viewport_update)
+
     Call Roughness.init(self, default=0.1) in the init method of the material node
 
     Draw the use_anisotropy property in the draw_buttons method:
@@ -530,6 +535,25 @@ class Roughness:
         if getattr(node, "distribution", "schlick") != "schlick":
             definitions["distribution"] = node.distribution
 
+    multiscattering_name = "Energy Compensation"
+    multiscattering_desc = ("Add the energy lost by the single-scattering microfacet model, which makes "
+                            "rough surfaces too dark (GGX only; needs a pyluxcore build with energy "
+                            "compensation support)")
+
+    @staticmethod
+    def export_multiscattering(node, definitions):
+        # The engine compensates the GGX lobes only. Only exported when
+        # enabled, so older pyluxcore builds get the same scene as before
+        if getattr(node, "multiscattering", False) and getattr(node, "distribution", "schlick") == "ggx":
+            definitions["multiscattering"] = True
+
+    @staticmethod
+    def draw_multiscattering(node, layout):
+        if hasattr(node, "multiscattering"):
+            row = layout.row()
+            row.active = getattr(node, "distribution", "schlick") == "ggx"
+            row.prop(node, "multiscattering")
+
     @staticmethod
     def init(node, default=0.05, init_enabled=True):
         node.add_input("LuxCoreSocketRoughness", "Roughness", default, enabled=init_enabled)
@@ -544,6 +568,7 @@ class Roughness:
     def draw(node, context, layout):
         if hasattr(node, "distribution"):
             layout.prop(node, "distribution")
+        Roughness.draw_multiscattering(node, layout)
         layout.prop(node, "use_anisotropy")
         if node.use_anisotropy:
             draw_uv_info(context, layout)
@@ -560,6 +585,7 @@ class Roughness:
         definitions["uroughness"] = uroughness
         definitions["vroughness"] = vroughness
         Roughness.export_distribution(node, definitions)
+        Roughness.export_multiscattering(node, definitions)
 
         if Roughness.has_backface(node):
             if node.use_anisotropy:

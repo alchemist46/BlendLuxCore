@@ -34,6 +34,9 @@ class LuxCoreNodeMatGlossy2(LuxCoreNodeMaterial, bpy.types.Node):
                                default="schlick",
                                description=Roughness.distribution_desc,
                                update=utils_node.force_viewport_update)
+    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
+                                  description=Roughness.multiscattering_desc,
+                                  update=utils_node.force_viewport_update)
 
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Diffuse Color", [0.7] * 3)

@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import FloatProperty, EnumProperty
+from bpy.props import FloatProperty, EnumProperty, BoolProperty
 from ..base import LuxCoreNodeMaterial
 from ..sockets import LuxCoreSocketFloat
 from ... import icons
@@ -56,6 +56,9 @@ class LuxCoreNodeMatCarpaint(LuxCoreNodeMaterial, bpy.types.Node):
                                default="schlick",
                                description=Roughness.distribution_desc,
                                update=utils_node.force_viewport_update)
+    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
+                                  description=Roughness.multiscattering_desc,
+                                  update=utils_node.force_viewport_update)
 
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Diffuse Color", (0.3, 0.3, 0.3))
@@ -79,6 +82,7 @@ class LuxCoreNodeMatCarpaint(LuxCoreNodeMaterial, bpy.types.Node):
         op.url = "https://wiki.luxcorerender.org/LuxCoreRender_Materials_Car_Paint"
         layout.prop(self, "preset")
         layout.prop(self, "distribution")
+        Roughness.draw_multiscattering(self, layout)
 
     def sub_export(self, exporter, depsgraph, props, luxcore_name=None, output_socket=None):
         if self.preset != "manual":
@@ -106,5 +110,6 @@ class LuxCoreNodeMatCarpaint(LuxCoreNodeMaterial, bpy.types.Node):
             }
 
         Roughness.export_distribution(self, definitions)
+        Roughness.export_multiscattering(self, definitions)
         self.export_common_inputs(exporter, depsgraph, props, definitions)
         return self.create_props(props, definitions, luxcore_name)

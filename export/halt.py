@@ -20,14 +20,27 @@ def convert(scene):
             and using_hybridbackforward and not using_only_lighttracing) else 0
 
         if halt.use_noise_thresh:
-            if halt.noise_thresh == 0:
-                noise_thresh = SMALLEST_NOISE_THRESH
+            # The per-pixel test and the passes/tolerance options are only
+            # exported when used, so older pyluxcore builds get exactly
+            # the same properties as before
+            if halt.noise_thresh_mode == "PER_PIXEL":
+                definitions["batch.haltthreshold"] = max(halt.noise_thresh_perpixel / 100, SMALLEST_NOISE_THRESH)
+                # The warmup and step defaults of the per-pixel test (16 and 8 samples)
+                # are tuned for it, the classic warmup and step are not exported
+                definitions["batch.haltthreshold.halfbuffer.enable"] = True
             else:
-                noise_thresh = halt.noise_thresh / 256
+                if halt.noise_thresh == 0:
+                    noise_thresh = SMALLEST_NOISE_THRESH
+                else:
+                    noise_thresh = halt.noise_thresh / 256
 
-            definitions["batch.haltthreshold"] = noise_thresh
-            definitions["batch.haltthreshold.warmup"] = halt.noise_thresh_warmup
-            definitions["batch.haltthreshold.step"] = halt.noise_thresh_step
+                definitions["batch.haltthreshold"] = noise_thresh
+                definitions["batch.haltthreshold.warmup"] = halt.noise_thresh_warmup
+                definitions["batch.haltthreshold.step"] = halt.noise_thresh_step
+                if halt.noise_thresh_passes > 0:
+                    definitions["batch.haltthreshold.passes"] = halt.noise_thresh_passes
+            if halt.noise_thresh_tolerance > 0:
+                definitions["batch.haltthreshold.tolerance"] = halt.noise_thresh_tolerance / 100
             definitions["batch.haltthreshold.filter.enable"] = True
             definitions["batch.haltthreshold.stoprendering.enable"] = True
     else:
