@@ -99,6 +99,10 @@ def convert(exporter, scene, context=None, engine=None):
                 scene, definitions, config, is_viewport_render
             )
 
+        # Exported only when enabled, so older pyluxcore builds keep working
+        if config.light_solid_angle and config.engine == "PATH":
+            definitions["lightstrategy.trianglelight.solidangle"] = True
+
         if config.photongi.enabled and not is_viewport_render:
             _convert_photongi_settings(context, scene, definitions, config)
 

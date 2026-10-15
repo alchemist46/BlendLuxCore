@@ -535,6 +535,9 @@ class LuxCoreConfig(PropertyGroup):
     ]
     light_strategy: EnumProperty(name="Light Strategy", items=light_strategy_items, default="LOG_POWER",
                                   description="Decides how the lights in the scene are sampled")
+    light_solid_angle: BoolProperty(name="Solid Angle Sampling", default=False,
+                                    description="Sample the mesh lights (area lights included) by solid angle "
+                                                "instead of by area: less noise near the lights. Path engine only")
 
     # Special properties of the direct light sampling cache
     dls_cache: PointerProperty(type=LuxCoreConfigDLSCache)

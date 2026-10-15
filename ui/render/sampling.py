@@ -216,3 +216,5 @@ class LUXCORE_RENDER_PT_sampling_advanced(RenderButtonsPanel, Panel):
             col.active = False
         
         col.prop(config, "light_strategy")
+        if config.engine == "PATH":
+            layout.prop(config, "light_solid_angle")
