@@ -94,6 +94,8 @@ class Exporter(object):
         self.imagepipeline_cache = caches.StringCache()
         self.halt_cache = caches.StringCache()
         self.motion_blur_enabled = False
+        # The working colour space of the session (it can't change in a scene)
+        self.working_space = None
 
         # A dictionary with the following mapping:
         # {node_key: luxcore_name}
@@ -136,6 +138,10 @@ class Exporter(object):
             pyluxcore.Properties(), image_resize_policy_props
         )
         scene_props = pyluxcore.Properties()
+
+        # Working colour space, before anything that depends on it
+        self.working_space = utils.colorspace.get_working_space()
+        luxcore_scene.Parse(utils.luxutils.working_space_props())
 
         # Camera (needs to be parsed first because it is needed for hair
         # tesselation)
@@ -373,6 +379,11 @@ class Exporter(object):
 
         config_props = config.convert(self, self.scene, context)
         if self.config_cache.diff(config_props):
+            changes |= Change.CONFIG
+
+        # A new working colour space requires a new scene
+        if (self.working_space is not None
+                and utils.colorspace.get_working_space() != self.working_space):
             changes |= Change.CONFIG
 
         if self.camera_cache.diff(self, self.scene, depsgraph, context):

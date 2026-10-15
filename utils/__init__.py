@@ -25,7 +25,7 @@ _needs_reload = "bpy" in locals()
 import bpy
 import mathutils
 
-from . import view_layer, errorlog, misc
+from . import view_layer, errorlog, misc, colorspace
 
 from .misc import get_name_with_lib, pluralize
 
@@ -35,6 +35,7 @@ if _needs_reload:
     view_layer = importlib.reload(view_layer)
     errorlog = importlib.reload(errorlog)
     misc = importlib.reload(misc)
+    colorspace = importlib.reload(colorspace)
 
 MESH_OBJECTS = {"MESH", "CURVES", "SURFACE", "META", "FONT"}
 EXPORTABLE_OBJECTS = MESH_OBJECTS | {"LIGHT"}

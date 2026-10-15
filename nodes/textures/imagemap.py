@@ -203,15 +203,15 @@ class LuxCoreNodeTexImagemap(base.LuxCoreNodeTexture, bpy.types.Node):
         if self.is_normal_map:
             definitions.update({
                 "channel": "rgb" if self.normal_map_orientation == "opengl" else "directx2opengl_normalmap",
-                "gamma": 1,
+                "colorspace": "nop",
                 "gain": 1,
             })
         else:
             definitions.update({
                 "channel": "alpha" if output_socket == self.outputs["Alpha"] else self.channel,
-                "gamma": self.gamma,
                 "gain": self.brightness,
             })
+            definitions.update(utils.colorspace.image_colorspace_with_gamma(self.image, self.gamma))
 
         luxcore_name = self.create_props(props, definitions, luxcore_name)
         

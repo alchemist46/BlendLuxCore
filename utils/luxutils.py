@@ -2,6 +2,21 @@
 
 import pyluxcore
 
+from . import colorspace
+
+
+def working_space_props():
+    """The scene properties of the working colour space of the .blend file
+
+    They are empty in Rec.709 (the default), so older pyluxcore builds keep
+    working. They must be parsed before anything else in the scene.
+    """
+    props = pyluxcore.Properties()
+    working_space = colorspace.get_working_space()
+    if working_space != colorspace.DEFAULT_WORKING_SPACE:
+        props.Set(pyluxcore.Property("scene.colorspace.working", working_space))
+    return props
+
 
 def create_props(prefix, definitions):
     """

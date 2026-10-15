@@ -92,6 +92,8 @@ def _export_mat_scene(engine, depsgraph, active_mat):
 
     scene_props = pyluxcore.Properties()
     luxcore_scene = pyluxcore.Scene()
+    # Working colour space, before anything that depends on it
+    luxcore_scene.Parse(utils.luxutils.working_space_props())
 
     # The world sphere uses different lights and render settings
     is_world_sphere = active_mat.use_preview_world

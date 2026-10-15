@@ -272,8 +272,6 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
                 "file": filepath,
                 "wrap": extension_map[node.extension],
                 "channel": "alpha" if output_socket == node.outputs["Alpha"] else "rgb",
-                # Crude approximation, not sure if we can do better
-                "gamma": 2.2 if node.image.colorspace_settings.name == "sRGB" else 1,
                 "gain": 1,
 
                 "mapping.type": "uvmapping2d",
@@ -281,6 +279,7 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
                 "mapping.rotation": 0,
                 "mapping.uvdelta": [0, 1],
             }
+            definitions.update(utils.colorspace.image_colorspace(node.image))
         else:
             return MISSING_IMAGE_COLOR
     elif node.bl_idname == "ShaderNodeBsdfGlass":

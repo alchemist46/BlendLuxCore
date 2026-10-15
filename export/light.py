@@ -203,7 +203,8 @@ def _convert_luxcore_light(exporter, obj, depsgraph, luxcore_scene, transform, i
                                                     light.luxcore.image_user,
                                                     scene)
                     definitions["mapfile"] = filepath
-                    definitions["gamma"] = light.luxcore.gamma
+                    definitions.update(utils.colorspace.image_colorspace_with_gamma(light.luxcore.image,
+                                                                                   light.luxcore.gamma))
                     has_image = True
                 except OSError as error:
                     msg = 'Light "%s": %s' % (obj.name, error)
@@ -286,7 +287,8 @@ def _convert_luxcore_light(exporter, obj, depsgraph, luxcore_scene, transform, i
                                                               scene)
                 definitions["type"] = "projection"
                 definitions["fov"] = coneangle * 2
-                definitions["gamma"] = light.luxcore.gamma
+                definitions.update(utils.colorspace.image_colorspace_with_gamma(light.luxcore.image,
+                                                                               light.luxcore.gamma))
             except OSError as error:
                 msg = 'Light "%s": %s' % (obj.name, error)
                 LuxCoreErrorLog.add_warning(msg, obj_name=obj.name)
@@ -431,7 +433,7 @@ def _convert_cycles_world(exporter, scene, world, is_viewport_render):
                         image_missing = False
                         definitions["type"] = "infinite"
                         definitions["file"] = filepath
-                        definitions["gamma"] = 2.2 if image.colorspace_settings.name == "sRGB" else 1
+                        definitions.update(utils.colorspace.image_colorspace(image))
 
                         # Transformation
                         mapping_node = utils_node.get_linked_node(color_node.inputs["Vector"])
@@ -615,7 +617,8 @@ def _convert_infinite(definitions, light_or_world, scene, transformation=None):
 
     definitions["type"] = "infinite"
     definitions["file"] = filepath
-    definitions["gamma"] = light_or_world.luxcore.gamma
+    definitions.update(utils.colorspace.image_colorspace_with_gamma(light_or_world.luxcore.image,
+                                                                   light_or_world.luxcore.gamma))
     definitions["sampleupperhemisphereonly"] = light_or_world.luxcore.sampleupperhemisphereonly
 
     if transformation:

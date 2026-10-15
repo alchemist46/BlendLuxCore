@@ -185,6 +185,8 @@ def view_draw(engine, context, depsgraph):
         if luxcore_engine.endswith("OCL"):
             # Create dummy renderconfig to check if we have to compile OpenCL kernels
             luxcore_scene = pyluxcore.Scene()
+            # The working colour space is a kernel parameter
+            luxcore_scene.Parse(utils.luxutils.working_space_props())
             definitions = {
                 "scene.camera.type": "perspective",
             }
