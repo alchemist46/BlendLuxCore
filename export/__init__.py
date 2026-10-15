@@ -139,7 +139,9 @@ class Exporter(object):
         )
         scene_props = pyluxcore.Properties()
 
-        # Working colour space, before anything that depends on it
+        # Working colour space, before anything that depends on it (with the
+        # LuxCore colours converted if it has just changed)
+        utils.colorspace.sync_luxcore_colors()
         self.working_space = utils.colorspace.get_working_space()
         luxcore_scene.Parse(utils.luxutils.working_space_props())
 

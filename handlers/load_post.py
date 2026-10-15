@@ -73,6 +73,10 @@ def _init_LuxCoreOnlineLibrary():
 def handler(_):
     """ Note: the only argument Blender passes is always None """
 
+    # Record the working colour space of the LuxCore colours (or convert them
+    # if the file's space was changed without the addon)
+    utils.colorspace.sync_luxcore_colors()
+
     for scene in bpy.data.scenes:
         # Update OpenCL devices if .blend is opened on
         # a different computer than it was saved on

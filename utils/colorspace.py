@@ -76,3 +76,117 @@ def image_colorspace_with_gamma(image, gamma):
     if settings.is_data or not _is_linear_scene_space(settings.name):
         return {"colorspace": "nop"}
     return image_colorspace(image)
+
+
+# ------------------------------------------------------------------------------
+# Working space changes
+#
+# Blender's "Working Space" selector (wm.set_working_color_space with
+# convert_colors) converts Blender's own colours, not the ones of the addon.
+# The space the LuxCore colours are in is stored on the scenes, and the
+# LuxCore colours are converted when the working space no longer matches it.
+# A file is never converted on load: its colours were picked in its space.
+# ------------------------------------------------------------------------------
+
+_STORED_SPACE_KEY = "luxcore_colors_working_space"
+
+
+def _get_stored_spaces():
+    return {scene.get(_STORED_SPACE_KEY) for scene in bpy.data.scenes} - {None}
+
+
+def _store_space(space):
+    for scene in bpy.data.scenes:
+        if scene.get(_STORED_SPACE_KEY) != space:
+            scene[_STORED_SPACE_KEY] = space
+
+
+def _convert_struct(struct, convert, builtin_props=frozenset()):
+    """Convert the colour properties of an addon struct, recursing into its
+    property groups (never into other ID data-blocks)"""
+    for prop in struct.bl_rna.properties:
+        identifier = prop.identifier
+        if identifier == "rna_type" or identifier in builtin_props:
+            continue
+
+        if prop.type == "FLOAT" and prop.subtype == "COLOR" and prop.array_length in (3, 4) \
+                and not prop.is_readonly:
+            value = getattr(struct, identifier)
+            new_value = list(convert(value[:3]))
+            if prop.array_length == 4:
+                new_value.append(value[3])
+            setattr(struct, identifier, new_value)
+        elif prop.type == "POINTER":
+            value = getattr(struct, identifier)
+            if isinstance(value, bpy.types.PropertyGroup):
+                _convert_struct(value, convert)
+        elif prop.type == "COLLECTION":
+            for item in getattr(struct, identifier):
+                if isinstance(item, bpy.types.PropertyGroup):
+                    _convert_struct(item, convert)
+
+
+def _convert_luxcore_colors(convert):
+    # The "luxcore" settings of every data-block (some are listed by more than
+    # one collection of bpy.data)
+    done = set()
+    for collection_name in dir(bpy.data):
+        collection = getattr(bpy.data, collection_name, None)
+        if not isinstance(collection, bpy.types.bpy_prop_collection):
+            continue
+        for datablock in collection:
+            if not isinstance(datablock, bpy.types.ID):
+                break
+            if datablock.as_pointer() in done:
+                continue
+            done.add(datablock.as_pointer())
+
+            settings = getattr(datablock, "luxcore", None)
+            if isinstance(settings, bpy.types.PropertyGroup):
+                _convert_struct(settings, convert)
+
+    # The LuxCore node trees: the properties the addon adds to its nodes and
+    # sockets (Blender's own node properties are not colours of the scene)
+    node_props = frozenset(p.identifier for p in bpy.types.Node.bl_rna.properties)
+    socket_props = frozenset(p.identifier for p in bpy.types.NodeSocket.bl_rna.properties)
+    for node_tree in bpy.data.node_groups:
+        if not node_tree.bl_idname.startswith("luxcore"):
+            continue
+        for node in node_tree.nodes:
+            _convert_struct(node, convert, node_props)
+            for socket in node.inputs:
+                _convert_struct(socket, convert, socket_props)
+
+
+def sync_luxcore_colors():
+    """Convert the LuxCore colours if the working space has changed since they
+    were last converted; called often, so it returns quickly when nothing
+    changed"""
+    colorspace = getattr(bpy.data, "colorspace", None)
+    if colorspace is None:
+        return
+
+    current = colorspace.working_space
+    stored = _get_stored_spaces()
+    if not stored or stored == {current}:
+        # Nothing to convert; record the space on the scenes without it (new
+        # files, new scenes)
+        if any(scene.get(_STORED_SPACE_KEY) != current for scene in bpy.data.scenes):
+            _store_space(current)
+        return
+
+    # All the scenes of a file share the working space: any stored value that
+    # differs from the current one is the space the colours are in
+    previous = next(iter(stored - {current}))
+    try:
+        import PyOpenColorIO as OCIO
+        config = OCIO.Config.CreateFromFile(get_ocio_config())
+        cpu = config.getProcessor(previous, current).getDefaultCPUProcessor()
+    except Exception as error:
+        print(f"[BLC] Could not convert the LuxCore colours from {previous} to {current}: {error}")
+        _store_space(current)
+        return
+
+    print(f"[BLC] Converting the LuxCore colours from {previous} to {current}")
+    _convert_luxcore_colors(lambda rgb: cpu.applyRGB(list(rgb)))
+    _store_space(current)

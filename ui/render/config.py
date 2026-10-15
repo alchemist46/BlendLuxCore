@@ -212,7 +212,10 @@ class LUXCORE_RENDER_PT_lightpaths_clamping(RenderButtonsPanel, Panel):
 def compatible_panels():
     panels = [
         "RENDER_PT_color_management",
+        "RENDER_PT_color_management_working_space",
+        "RENDER_PT_color_management_white_balance",
         "RENDER_PT_color_management_curves",
+        "RENDER_PT_color_management_advanced",
     ]
     types = bpy.types
     return [getattr(types, p) for p in panels if hasattr(types, p)]
