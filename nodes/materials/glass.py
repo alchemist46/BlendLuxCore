@@ -9,7 +9,8 @@ from ...utils.node import Roughness, ThinFilmCoating
 
 CAUCHYB_DESCRIPTION = (
     "Dispersion strength (cauchy B coefficient)\n"
-    "Realistic values range from 0.00354 to 0.01342\n"
+    "Realistic values range from 0.003 (water) to 0.018 (cubic zirconia)\n"
+    "The Dispersion output of the IOR Preset node gives the value for a material\n"
     "Not supported by architectural and rough glass"
 )
 
@@ -32,7 +33,7 @@ class LuxCoreSocketCauchyC(bpy.types.NodeSocket, LuxCoreSocketFloat):
     For consistency of renewed variable naming, this class should be called 
     "LuxCoreSocketCauchyB". However, the name was retained for backward compatibility.
     """
-    default_value: FloatProperty(name="Dispersion", default=0, min=0, soft_max=0.01342,
+    default_value: FloatProperty(name="Dispersion", default=0, min=0, soft_max=0.02,
                                  step=0.1, precision=5, description=CAUCHYB_DESCRIPTION,
                                  update=utils_node.force_viewport_update)
 

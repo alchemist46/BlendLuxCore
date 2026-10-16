@@ -1,5 +1,6 @@
 import bpy
 from ..utils.node import find_nodes, TREE_TYPES, ThinFilmCoating
+from ..utils.ior_presets import LuxCoreIORPresetValues
 
 
 """
@@ -26,6 +27,7 @@ def run():
         update_glass_disney_add_film_sockets(node_tree)
         update_invert_add_maximum_input(node_tree)
         update_brick_texture(node_tree)
+        update_iorpreset_add_dispersion_output(node_tree)
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
@@ -313,4 +315,17 @@ def update_brick_texture(node_tree):
         node_id = node.inputs.find("brickmodtex")
         node.inputs[node_id].name = "Brick Color 2"
 
+        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+
+
+def update_iorpreset_add_dispersion_output(node_tree):
+    for node in find_nodes(node_tree, "LuxCoreNodeTexIORPreset", False):
+        if node.outputs.find("Dispersion") != -1:
+            continue
+
+        node.outputs.new("LuxCoreSocketFloatPositive", "Dispersion")
+        # The Abbe number of the preset the node shows
+        item = LuxCoreIORPresetValues.find_by_name(node.ior_name_text)
+        if item and item[2]:
+            node.abbe_number = item[2]
         print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
