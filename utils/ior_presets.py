@@ -41,7 +41,7 @@ class LuxCoreIORPresetValues():
         "air_0C": ["Air @ 0C", 1.000293, None],
         "air_stp": ["Air @ STP", 1.000277, None],
         "amber": ["Amber", 1.55, None],
-        "blood": ["Blood", 1.301, 53.70],  # blood/Liu
+        "blood": ["Blood", 1.35, 53.70],  # blood/Liu
         "calcite_e": ["Calcite (extraordinary)", 1.486, 79.17],  # CaCO3/Ghosh-e
         "calcite_o": ["Calcite (ordinary)", 1.658, 49.91],  # CaCO3/Ghosh-o
         "cellulose": ["Cellulose", 1.47, 54.00],  # cellulose/Sultanova
@@ -58,7 +58,7 @@ class LuxCoreIORPresetValues():
         "pet_plastic": ["PET plastic", 1.5750, 27.87],  # PET/Zhang
         "plate_glass": ["Plate Glass", 1.52, 63.97],  # soda-lime/Rubin-clear
         "polycarbonate": ["Polycarbonate", 1.584, 27.86],  # PC/Sultanova
-        "polystyrene": ["Polystyrene", 1.52, 29.53],  # PS/Sultanova
+        "polystyrene": ["Polystyrene", 1.59, 29.53],  # PS/Sultanova
         "pyrex_glass": ["Pyrex Glass", 1.470, 65.41],  # Schott BOROFLOAT 33
         "quartz": ["Quartz", 1.458, 67.82],  # fused silica, SiO2/Malitson
         "sapphire": ["Sapphire", 1.77, 72.31],  # Al2O3/Malitson-o
