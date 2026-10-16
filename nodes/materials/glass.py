@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import FloatProperty, BoolProperty, EnumProperty
+from bpy.props import FloatProperty, BoolProperty
 from ..base import LuxCoreNodeMaterial
 from ..sockets import LuxCoreSocketFloat
 from ...utils.node import get_active_output
@@ -59,11 +59,6 @@ class LuxCoreNodeMatGlass(LuxCoreNodeMaterial, bpy.types.Node):
                                   default=False,
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
-    distribution: EnumProperty(name=Roughness.distribution_name,
-                               items=Roughness.distribution_items,
-                               default="schlick",
-                               description=Roughness.distribution_desc,
-                               update=utils_node.force_viewport_update)
     rough: BoolProperty(name="Rough",
                          default=False,
                          description="Rough glass surface instead of a smooth one",

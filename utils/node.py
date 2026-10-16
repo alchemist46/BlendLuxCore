@@ -440,15 +440,8 @@ class Roughness:
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
 
-    Optionally declare a distribution property like this
-    (it is drawn and exported automatically if present):
-    distribution: EnumProperty(name=Roughness.distribution_name,
-                               items=Roughness.distribution_items,
-                               default="schlick",
-                               description=Roughness.distribution_desc,
-                               update=force_viewport_update)
-
-    and, for the GGX energy compensation, a multiscattering property like this:
+    Optionally declare, for the energy compensation, a multiscattering
+    property like this (it is drawn and exported automatically if present):
     multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
                                   description=Roughness.multiscattering_desc,
                                   update=force_viewport_update)
@@ -520,39 +513,22 @@ class Roughness:
     aniso_desc = ("Use different roughness values for "
                   "U- and V-directions (needs UV mapping)")
 
-    distribution_name = "Distribution"
-    distribution_desc = "Microfacet distribution of the glossy reflection"
-    distribution_items = [
-        ("schlick", "Schlick", "Classic LuxCore microfacet distribution", 0),
-        ("ggx", "GGX", "GGX with visible normal sampling, less noise at equal samples "
-                       "(needs a pyluxcore build with GGX support)", 1),
-    ]
-
-    @staticmethod
-    def export_distribution(node, definitions):
-        # Only exported when not the default, so pyluxcore builds
-        # without GGX support get exactly the same scene as before
-        if getattr(node, "distribution", "schlick") != "schlick":
-            definitions["distribution"] = node.distribution
-
     multiscattering_name = "Energy Compensation"
     multiscattering_desc = ("Add the energy lost by the single-scattering microfacet model, which makes "
-                            "rough surfaces too dark (GGX only; needs a pyluxcore build with energy "
+                            "rough surfaces too dark (needs a pyluxcore build with energy "
                             "compensation support)")
 
     @staticmethod
     def export_multiscattering(node, definitions):
-        # The engine compensates the GGX lobes only. Only exported when
-        # enabled, so older pyluxcore builds get the same scene as before
-        if getattr(node, "multiscattering", False) and getattr(node, "distribution", "schlick") == "ggx":
+        # Only exported when enabled, so older pyluxcore builds get the
+        # same scene as before
+        if getattr(node, "multiscattering", False):
             definitions["multiscattering"] = True
 
     @staticmethod
     def draw_multiscattering(node, layout):
         if hasattr(node, "multiscattering"):
-            row = layout.row()
-            row.active = getattr(node, "distribution", "schlick") == "ggx"
-            row.prop(node, "multiscattering")
+            layout.prop(node, "multiscattering")
 
     @staticmethod
     def init(node, default=0.05, init_enabled=True):
@@ -566,8 +542,6 @@ class Roughness:
 
     @staticmethod
     def draw(node, context, layout):
-        if hasattr(node, "distribution"):
-            layout.prop(node, "distribution")
         Roughness.draw_multiscattering(node, layout)
         layout.prop(node, "use_anisotropy")
         if node.use_anisotropy:
@@ -584,7 +558,6 @@ class Roughness:
 
         definitions["uroughness"] = uroughness
         definitions["vroughness"] = vroughness
-        Roughness.export_distribution(node, definitions)
         Roughness.export_multiscattering(node, definitions)
 
         if Roughness.has_backface(node):

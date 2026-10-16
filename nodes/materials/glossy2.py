@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import BoolProperty, EnumProperty
+from bpy.props import BoolProperty
 from ..base import LuxCoreNodeMaterial
 from .glossytranslucent import IOR_DESCRIPTION, MULTIBOUNCE_DESCRIPTION
 from ...utils import node as utils_node
@@ -29,11 +29,6 @@ class LuxCoreNodeMatGlossy2(LuxCoreNodeMaterial, bpy.types.Node):
                                   default=False,
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
-    distribution: EnumProperty(name=Roughness.distribution_name,
-                               items=Roughness.distribution_items,
-                               default="schlick",
-                               description=Roughness.distribution_desc,
-                               update=utils_node.force_viewport_update)
     multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
                                   description=Roughness.multiscattering_desc,
                                   update=utils_node.force_viewport_update)
