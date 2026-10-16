@@ -28,10 +28,6 @@ BIDIR_DESC = (
 
 SOBOL_DESC = "Optimized random noise pattern. Supports noise-aware adaptive sampling"
 METROPOLIS_DESC = "Sampler that focuses samples on brighter parts of the image. Not noise-aware. Suited for rendering caustics"
-RANDOM_DESC = (
-    "Random noise pattern. Supports noise-aware adaptive sampling."
-    "Recommended only if the BCD denoiser is used (use Sobol otherwise)"
-)
 
 TILED_DESCRIPTION = (
     'Use the special "Tiled Path" engine, which is slower than the regular Path engine, but uses less memory. '
@@ -420,27 +416,29 @@ class LuxCoreConfig(PropertyGroup):
     samplers = [
         ("SOBOL", "Sobol", SOBOL_DESC, 0),
         ("METROPOLIS", "Metropolis", METROPOLIS_DESC, 1),
-        ("RANDOM", "Random", RANDOM_DESC, 2),
+        # 2 was "RANDOM" (removed from LuxCore, Sobol replaces it)
     ]
     sampler: EnumProperty(name="Sampler", items=samplers, default="SOBOL")
     
     samplers_gpu = [
         ("SOBOL", "Sobol", "Best suited sampler for the GPU. " + SOBOL_DESC, 0),
-        ("RANDOM", "Random", RANDOM_DESC, 1),
+        # 1 was "RANDOM" (removed from LuxCore, Sobol replaces it)
     ]
     sampler_gpu: EnumProperty(name="Sampler", items=samplers_gpu, default="SOBOL")
     
     def get_sampler(self):
-        return self.sampler_gpu if (self.engine == "PATH" and self.device == "OCL") else self.sampler
+        sampler = self.sampler_gpu if (self.engine == "PATH" and self.device == "OCL") else self.sampler
+        # A .blend file saved with the removed "RANDOM" sampler has no valid item here
+        return sampler if sampler in {"SOBOL", "METROPOLIS"} else "SOBOL"
 
     # SOBOL properties
     sobol_adaptive_strength: FloatProperty(name="Adaptive Strength", default=0.9, min=0, max=0.95,
                                             description=SOBOL_ADAPTIVE_STRENGTH_DESC)
 
-    # Noise estimation (used by adaptive samplers like SOBOL and RANDOM)
+    # Noise estimation (used by the adaptive SOBOL sampler)
     noise_estimation: PointerProperty(type=LuxCoreConfigNoiseEstimation)
     
-    # Sampler pattern (used by SOBOL and RANDOM)
+    # Sampler pattern (used by SOBOL)
     sampler_patterns = [
         ("PROGRESSIVE", "Progressive", "Optimized for quick feedback, sampling 1 sample per pixel in each pass over the image", 0),
         ("CACHE_FRIENDLY", "Cache-friendly", "Optimized for faster rendering", 1),

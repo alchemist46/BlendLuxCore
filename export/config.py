@@ -235,9 +235,8 @@ def convert_viewport_engine(context, scene, definitions, config):
         luxcore_engine = "BIDIRCPU"
         definitions["light.maxdepth"] = config.bidir_light_maxdepth
         definitions["path.maxdepth"] = config.bidir_path_maxdepth
-        sampler = config.sampler
+        sampler = config.get_sampler()
         definitions["sampler.sobol.adaptive.strength"] = 0
-        definitions["sampler.random.adaptive.strength"] = 0
         _convert_metropolis_settings(definitions, config)
     elif device == "CPU":
         if using_hybridbackforward:
@@ -339,7 +338,7 @@ def _convert_final_engine(scene, definitions, config):
     else:
         sampler = config.get_sampler()
 
-    if sampler in {"SOBOL", "RANDOM"}:
+    if sampler == "SOBOL":
         sampler_type = sampler.lower()
 
         # Adaptive sampling

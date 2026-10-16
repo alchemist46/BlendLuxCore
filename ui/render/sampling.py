@@ -9,7 +9,7 @@ from bl_ui.properties_render import RenderButtonsPanel
 def calc_samples_per_pass(config):
     if config.using_tiled_path():
         return config.tile.path_sampling_aa_size**2
-    elif config.get_sampler() in {"SOBOL", "RANDOM"}:
+    elif config.get_sampler() == "SOBOL":
         if config.using_out_of_core():
             return int(config.out_of_core_supersampling) * SamplingOverlap.OUT_OF_CORE
         else:
@@ -62,7 +62,7 @@ class LUXCORE_RENDER_PT_sampling(RenderButtonsPanel, Panel):
             else:
                 row.prop(config, "sampler")
 
-            if sampler in ["SOBOL", "RANDOM"]:
+            if sampler == "SOBOL":
                 col = layout.column()
                 col.active = not config.using_out_of_core()
                 col.prop(config, "sampler_pattern")
@@ -130,7 +130,7 @@ class LUXCORE_RENDER_PT_sampling_adaptivity(RenderButtonsPanel, Panel):
     @classmethod
     def poll(cls, context):
         config = context.scene.luxcore.config
-        return config.get_sampler() in {"SOBOL", "RANDOM"} and not config.using_tiled_path()
+        return config.get_sampler() == "SOBOL" and not config.using_tiled_path()
 
     def draw(self, context):
         layout = self.layout

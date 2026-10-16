@@ -134,7 +134,7 @@ def convert(exporter, scene, context=None, engine=None):
                 pipeline_index = _make_denoiser_imagepipeline(context, scene, pipeline_props, engine,
                                                               pipeline_index, definitions)
 
-            use_adaptive_sampling = config.get_sampler() in ["SOBOL", "RANDOM"] and config.sobol_adaptive_strength > 0
+            use_adaptive_sampling = config.get_sampler() == "SOBOL" and config.sobol_adaptive_strength > 0
 
             if use_adaptive_sampling and not utils.using_filesaver(context, scene):
                 noise_detection_pipeline_index = pipeline_index

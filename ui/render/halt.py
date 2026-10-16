@@ -52,7 +52,7 @@ def draw(layout, context, halt):
 
             if not config.tile.multipass_enable and halt.samples > min_samples:
                 layout.label(text="Samples halt condition overriden by disabled multipass", icon=icons.INFO)
-        elif config.get_sampler() in {"SOBOL", "RANDOM"} and config.using_out_of_core() or config.sampler_pattern == "CACHE_FRIENDLY":
+        elif config.get_sampler() == "SOBOL" and config.using_out_of_core() or config.sampler_pattern == "CACHE_FRIENDLY":
             if halt.samples % samples_per_pass != 0:
                 layout.label(text="Should be a multiple of %d" % samples_per_pass, icon=icons.WARNING)
 
@@ -78,7 +78,7 @@ def draw(layout, context, halt):
         if halt.noise_thresh_mode == "PER_PIXEL":
             col.prop(halt, "noise_thresh_perpixel")
             col.prop(halt, "noise_thresh_tolerance")
-            if config.using_tiled_path() or config.get_sampler() not in {"SOBOL", "RANDOM"}:
+            if config.using_tiled_path() or config.get_sampler() != "SOBOL":
                 layout.label(text="Uses the classic test with this sampler", icon=icons.INFO)
         else:
             col.prop(halt, "noise_thresh")
