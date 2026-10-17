@@ -41,6 +41,14 @@ from threading import _MainThread, Thread, Lock
 from .timer import timer_update
 from ...utils import get_addon_preferences, compatibility
 
+
+def urlopen(req, timeout=60):
+    """urllib.request.urlopen that honors Blender's "Allow Online Access" preference"""
+    import urllib.request
+    if not bpy.app.online_access:
+        raise urllib.error.URLError("Online access is disabled in the Blender preferences (System > Network)")
+    return urllib.request.urlopen(req, timeout=timeout)
+
 download_threads = []
 bg_threads = []
 stop_check_cache = False
@@ -96,7 +104,7 @@ def load_patreon_assets(context):
         req = urllib.request.Request(
             urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
         )
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with urlopen(req, timeout=60) as response:
             import json
             assets = json.load(response)
 
@@ -154,7 +162,7 @@ def download_table_of_contents(context):
             req = urllib.request.Request(
                 urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
             )
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urlopen(req, timeout=60) as response:
                 import json
                 assets = json.load(response)
                 # cache file for future offline work
@@ -189,7 +197,7 @@ def download_table_of_contents(context):
             req = urllib.request.Request(
                 urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
             )
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urlopen(req, timeout=60) as response:
                 import json
                 assets = json.load(response)
                 # cache file for future offline work
@@ -375,7 +383,7 @@ class Downloader(threading.Thread):
                 req = urllib.request.Request(
                     urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
                 )
-                with urllib.request.urlopen(req, timeout=60) as response, \
+                with urlopen(req, timeout=60) as response, \
                         open(temp_zip_path, "wb") as file_handle:
                     if 'Content-Length' in response.headers:
                         total_length = response.headers.get('Content-Length')
@@ -716,12 +724,16 @@ def bg_download_thumbnails(context, download_queue):
         tpath_full = join(user_preferences.global_dir, asset_type.lower(), 'preview', 'full', imagename)
         tpath = join(user_preferences.global_dir, asset_type.lower(), 'preview', imagename)
 
+        if not bpy.app.online_access:
+            print("[LOL] Online access is disabled, not downloading thumbnails")
+            break
+
         print("[LOL] Downloading ", imagename)
         urlstr = LOL_HOST_URL + "/"+ asset_type.lower() +"/preview/" + imagename
         req = urllib.request.Request(
             urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
         )
-        with urllib.request.urlopen(req, timeout=60) as response, open(tpath, "wb") as file_handle:
+        with urlopen(req, timeout=60) as response, open(tpath, "wb") as file_handle:
             if response.getcode() == 200:
                 file_handle.write(response.read())
 

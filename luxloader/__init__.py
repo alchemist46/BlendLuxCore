@@ -475,6 +475,15 @@ def _fetch_wheels():
         else:
             return FetchWheelStatus.CACHE, wheel_hash
 
+    # Honor Blender's "Allow Online Access" preference (or --offline-mode):
+    # only PyPI needs the network, local wheels and a local index do not
+    if wheel_source == WheelSource.PYPI and not no_index and not bpy.app.online_access:
+        print(
+            "[BLC] Online access is disabled in the Blender preferences "
+            "(System > Network): not downloading pyluxcore"
+        )
+        return FetchWheelStatus.ERROR, None
+
     # Download
     _backup_wheels()
     try:

@@ -58,7 +58,7 @@ class LOLUpdateTOC(Operator):
         req = urllib.request.Request(
             urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
         )
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with utils.urlopen(req, timeout=60) as response:
             assets = json.load(response)
 
             with open(filepath, 'w') as file:
@@ -70,7 +70,7 @@ class LOLUpdateTOC(Operator):
         req = urllib.request.Request(
             urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
         )
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with utils.urlopen(req, timeout=60) as response:
             assets = json.load(response)
 
             with open(filepath, 'w') as file:
@@ -82,7 +82,7 @@ class LOLUpdateTOC(Operator):
         req = urllib.request.Request(
             urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
         )
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with utils.urlopen(req, timeout=60) as response:
             assets = json.load(response)
 
             with open(filepath, 'w') as file:
