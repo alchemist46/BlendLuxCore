@@ -694,6 +694,17 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
             props.Set(utils.luxutils.create_props(prefix + luxcore_name + ".", definitions))
             return luxcore_name
 
+        # Not fed by an image texture: LuxCore has no per-channel power texture, so only constants can be folded
+        color = _socket(node.inputs["Color"], props, material, obj_name, group_node_stack)
+        gamma = _socket(node.inputs["Gamma"], props, material, obj_name, group_node_stack)
+        if _is_textured(color) or _is_textured(gamma):
+            LuxCoreErrorLog.add_warning("Gamma node is only supported with a constant or an image texture input, "
+                                        "it is skipped", obj_name=obj_name)
+            return color if _is_textured(color) else ERROR_VALUE
+        if isinstance(color, list):
+            return [max(channel, 0) ** gamma for channel in color]
+        return max(color, 0) ** gamma
+
     elif node.bl_idname == "ShaderNodeNormalMap":
         if node.space != "TANGENT":
             LuxCoreErrorLog.add_warning(f"Unsupported normal map space: {node.space}", obj_name=obj_name)
