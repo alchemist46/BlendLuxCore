@@ -72,6 +72,16 @@ CLAMPING_DESC = (
     "Use to reduce fireflies. The optimal clamping value is computed after "
     "rendering for 10 seconds, but only if clamping is DISABLED"
 )
+REGULARIZATION_DESC = (
+    "Path regularization: after the first non-specular bounce, glossy lobes get a roughness floor "
+    "and glass and mirror become rough, so the caustic paths that produce fireflies become samplable, "
+    "blurred. Biased: caustics and reflections seen indirectly are softer and can be brighter. "
+    "Ignored when Add Light Tracing is enabled"
+)
+REGULARIZATION_ROUGHNESS_DESC = (
+    "The roughness floor given to the regularized lobes (a GGX alpha). Lobes rougher than "
+    "three times this value are not changed"
+)
 
 SEED_DESC = (
     "Seed for random number generation. Images rendered with "
@@ -226,6 +236,12 @@ class LuxCoreConfigPath(PropertyGroup):
     clamping: FloatProperty(name="Max Brightness", default=10, min=0,soft_max=10000,  description=CLAMPING_DESC)
     # This should only be set in the engine code after export. Only show a read-only label to the user.
     suggested_clamping_value: FloatProperty(name="", default=-1)
+
+    # path.regularization.enable, path.regularization.roughness
+    use_regularization: BoolProperty(name="Path Regularization", default=False,
+                                     description=REGULARIZATION_DESC)
+    regularization_roughness: FloatProperty(name="Roughness Floor", default=0.1, min=0.001, max=1,
+                                            description=REGULARIZATION_ROUGHNESS_DESC)
 
     # We probably don't need to expose these properties because they have good
     # default values that should very rarely (or never?) need adjustment

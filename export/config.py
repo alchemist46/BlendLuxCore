@@ -119,6 +119,16 @@ def convert(exporter, scene, context=None, engine=None):
                 config.path.clamping
             )
 
+        # Path regularization (PATH engines). Exported only when enabled, so
+        # older pyluxcore builds keep working; the roughness only when it is
+        # not the engine default
+        if config.path.use_regularization and config.engine == "PATH":
+            definitions["path.regularization.enable"] = True
+            if abs(config.path.regularization_roughness - 0.1) > 1e-6:
+                definitions["path.regularization.roughness"] = (
+                    config.path.regularization_roughness
+                )
+
         # Filter
         if config.filter == "GAUSSIAN":
             definitions["film.filter.gaussian.alpha"] = config.gaussian_alpha

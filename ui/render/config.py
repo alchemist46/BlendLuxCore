@@ -209,6 +209,36 @@ class LUXCORE_RENDER_PT_lightpaths_clamping(RenderButtonsPanel, Panel):
             )
 
 
+class LUXCORE_RENDER_PT_lightpaths_regularization(RenderButtonsPanel, Panel):
+    COMPAT_ENGINES = {"LUXCORE"}
+    bl_parent_id = "LUXCORE_RENDER_PT_lightpaths"
+    bl_label = "Path Regularization"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    @classmethod
+    def poll(cls, context):
+        config = context.scene.luxcore.config
+        return config.engine == "PATH"
+
+    def draw_header(self, context):
+        layout = self.layout
+        config = context.scene.luxcore.config
+        layout.prop(config.path, "use_regularization", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        config = context.scene.luxcore.config
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        layout.active = config.path.use_regularization
+        layout.prop(config.path, "regularization_roughness")
+
+        if config.path.use_regularization and config.path.hybridbackforward_enable:
+            layout.label(text="Ignored while Add Light Tracing is enabled", icon=icons.INFO)
+
+
 def compatible_panels():
     panels = [
         "RENDER_PT_color_management",
