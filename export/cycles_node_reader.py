@@ -1,3 +1,4 @@
+import math
 import pyluxcore
 from .. import utils
 from ..utils import node as utils_node
@@ -273,12 +274,8 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
                 "wrap": extension_map[node.extension],
                 "channel": "alpha" if output_socket == node.outputs["Alpha"] else "rgb",
                 "gain": 1,
-
-                "mapping.type": "uvmapping2d",
-                "mapping.uvscale": [1, -1],
-                "mapping.rotation": 0,
-                "mapping.uvdelta": [0, 1],
             }
+            definitions.update(_uv_mapping(node.inputs["Vector"], material, obj_name))
             definitions.update(utils.colorspace.image_colorspace(node.image))
         else:
             return MISSING_IMAGE_COLOR
@@ -684,11 +681,8 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
                 "wrap": extension_map.get(tex_node.extension, "repeat"),
                 "gamma": gamma_value,
                 "gain": 1,  # Adjust as necessary
-                "mapping.type": "uvmapping2d",
-                "mapping.uvscale": [1, -1],
-                "mapping.rotation": 0,
-                "mapping.uvdelta": [0, 1],
             }
+            definitions.update(_uv_mapping(tex_node.inputs["Vector"], material, obj_name))
         
             # Define the LuxCore texture node
             props.Set(utils.luxutils.create_props(prefix + luxcore_name + ".", definitions))
@@ -847,6 +841,64 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
 
     props.Set(utils.luxutils.create_props(prefix + luxcore_name + ".", definitions))
     return luxcore_name
+
+
+def _uv_mapping(vector_socket, material, obj_name):
+    """LuxCore mapping of an image texture from what feeds its Vector input.
+
+    Supported: nothing (the UVs), Texture Coordinate UV, and a Mapping node of
+    type Point or Vector on them, with a rotation around Z only. The V axis is
+    flipped as LuxCore expects: (u, v) -> (u, 1 - v) after the Mapping node.
+    """
+    scale = [1, 1]
+    rotation = 0
+    location = [0, 0]
+
+    node = utils_node.get_linked_node(vector_socket)
+    if node and node.bl_idname == "ShaderNodeMapping":
+        if node.vector_type not in {"POINT", "VECTOR"}:
+            LuxCoreErrorLog.add_warning(f"In material {material.name}: unsupported Mapping type: "
+                                        f"{node.vector_type}, using the UVs", obj_name=obj_name)
+        else:
+            inputs = node.inputs
+            if any(utils_node.get_link(inputs[name]) for name in ("Location", "Rotation", "Scale")
+                   if name in inputs):
+                LuxCoreErrorLog.add_warning(f"In material {material.name}: linked Mapping inputs are "
+                                            "not supported, using their values", obj_name=obj_name)
+            rot = inputs["Rotation"].default_value
+            if abs(rot[0]) > 1e-6 or abs(rot[1]) > 1e-6:
+                LuxCoreErrorLog.add_warning(f"In material {material.name}: Mapping rotation around X or Y "
+                                            "is not supported on UVs", obj_name=obj_name)
+            scale = list(inputs["Scale"].default_value)[:2]
+            rotation = math.degrees(rot[2])
+            if node.vector_type == "POINT":
+                location = list(inputs["Location"].default_value)[:2]
+        node = utils_node.get_linked_node(node.inputs["Vector"])
+
+    if node and not (node.bl_idname == "ShaderNodeTexCoord" or node.bl_idname == "ShaderNodeUVMap"):
+        LuxCoreErrorLog.add_warning(f"In material {material.name}: unsupported texture coordinates "
+                                    f"from {node.name}, using the UVs", obj_name=obj_name)
+    elif node and node.bl_idname == "ShaderNodeTexCoord" and _texcoord_output(vector_socket) != "UV":
+        LuxCoreErrorLog.add_warning(f"In material {material.name}: unsupported texture coordinates "
+                                    f"{_texcoord_output(vector_socket)}, using the UVs", obj_name=obj_name)
+
+    # LuxCore: R(-rotation) * (uvscale * uv) + uvdelta, see UVMapping2D::Map()
+    return {
+        "mapping.type": "uvmapping2d",
+        "mapping.uvscale": [scale[0], -scale[1]],
+        "mapping.rotation": rotation,
+        "mapping.uvdelta": [location[0], 1 - location[1]],
+    }
+
+
+def _texcoord_output(socket):
+    """Name of the Texture Coordinate output behind socket (through a Mapping node)"""
+    link = utils_node.get_link(socket)
+    while link and link.from_node.bl_idname == "ShaderNodeMapping":
+        link = utils_node.get_link(link.from_node.inputs["Vector"])
+    if link and link.from_node.bl_idname == "ShaderNodeTexCoord":
+        return link.from_socket.name
+    return None
 
 
 def _squared_roughness_to_linear(socket, props, material, luxcore_name, obj_name, group_node):
