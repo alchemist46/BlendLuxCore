@@ -5,6 +5,16 @@ from .errorlog import LuxCoreErrorLog
 from .. import icons
 
 
+def uses_nodes(id_block):
+    """True if a material, light or world uses its Cycles node tree.
+
+    Blender 5 ignores use_nodes (deprecated, removed in 6.0): the node tree is always used.
+    """
+    if bpy.app.version >= (5, 0, 0):
+        return id_block.node_tree is not None
+    return id_block.use_nodes and id_block.node_tree is not None
+
+
 OUTPUT_MAP = {
     "luxcore_material_nodes": "LuxCoreNodeMatOutput",
     "luxcore_texture_nodes": "LuxCoreNodeTexOutput",

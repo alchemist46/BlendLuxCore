@@ -2,6 +2,7 @@ from bl_ui.properties_material import MaterialButtonsPanel, MATERIAL_PT_viewport
 from bpy.types import Panel, Menu
 from ..operators.node_tree_presets import LUXCORE_OT_preset_material
 from .. import icons
+from ..utils.node import uses_nodes
 
 original_viewport_draw = None
 
@@ -90,13 +91,13 @@ class LUXCORE_PT_context_material(MaterialButtonsPanel, Panel):
             layout.separator()
 
         if mat:
-            if mat.luxcore.node_tree or (mat.use_nodes and mat.node_tree and mat.luxcore.use_cycles_nodes):
+            if mat.luxcore.node_tree or (uses_nodes(mat) and mat.luxcore.use_cycles_nodes):
                 layout.operator("luxcore.material_show_nodetree", icon=icons.SHOW_NODETREE)
 
             if not mat.luxcore.node_tree and not mat.luxcore.use_cycles_nodes:
                 layout.operator("luxcore.mat_nodetree_new", icon=icons.NODETREE, text="Use LuxCore Material Nodes")
 
-            if mat.use_nodes and mat.node_tree:
+            if uses_nodes(mat):
                 layout.prop(mat.luxcore, "use_cycles_nodes")
 
 

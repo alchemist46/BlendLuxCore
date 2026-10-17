@@ -2,7 +2,7 @@ import bpy
 from ..utils.node import TREE_TYPES, TREE_ICONS
 from .. import utils
 from .. import icons
-from ..utils.node import show_nodetree
+from ..utils.node import show_nodetree, uses_nodes
 
 """ Utility functions for our operators """
 
@@ -199,5 +199,5 @@ def use_cycles_settings():
 
 def use_cycles_material_nodes():
     for mat in bpy.data.materials:
-        if mat.use_nodes and mat.node_tree:
+        if uses_nodes(mat):
             mat.luxcore.use_cycles_nodes = True
