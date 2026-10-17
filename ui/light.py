@@ -84,7 +84,7 @@ class LUXCORE_LIGHT_PT_context_light(DataButtonsPanel, Panel):
         if is_area_light and light.shape not in {"SQUARE", "RECTANGLE"}:
             layout.label(text="Unsupported shape", icon=icons.WARNING)
 
-        if not is_portal and not light.cycles.cast_shadow:
+        if not is_portal and not light.use_shadow:
             layout.label(text="Cast Shadow is disabled, but unsupported by LuxCore", icon=icons.WARNING)
 
         if light.type == "SPOT" and light.shadow_soft_size > 0:

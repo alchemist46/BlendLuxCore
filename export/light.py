@@ -48,6 +48,7 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
 
     color = list(light.color)
     gain = light.energy
+    temperature = None
 
     if light.use_nodes and light.node_tree:
         # Modify color and gain according to node setup
@@ -70,6 +71,12 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
                     if color_node:
                         if color_node.bl_idname == "ShaderNodeRGB":
                             node_color = list(color_node.outputs[0].default_value)[:3]
+                        elif color_node.bl_idname == "ShaderNodeBlackbody":
+                            if utils_node.get_linked_node(color_node.inputs["Temperature"]):
+                                LuxCoreErrorLog.add_warning("Textured blackbody temperature not supported", obj.name)
+                            else:
+                                # The temperature scales the color in LuxCore, so the color stays white
+                                temperature = color_node.inputs["Temperature"].default_value
                         else:
                             LuxCoreErrorLog.add_warning("Unsupported color node type: " + color_node.bl_idname, obj.name)
                     else:
@@ -149,6 +156,9 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
             "emission.importance": light.luxcore.importance,
             "transparency.shadow": [1, 1, 1],
         }
+        if temperature is not None:
+            mat_definitions["emission.temperature"] = temperature
+            mat_definitions["emission.temperature.normalize"] = True
 
         mat_props = utils.luxutils.create_props(mat_prefix, mat_definitions)
         props.Set(mat_props)
@@ -170,8 +180,11 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
     definitions["power"] = 0.0
     definitions["normalizebycolor"] = False
     definitions["importance"] = light.luxcore.importance
+    if temperature is not None:
+        definitions["temperature"] = temperature
+        definitions["temperature.normalize"] = True
 
-    if not light.cycles.cast_shadow:
+    if not light.use_shadow:
         LuxCoreErrorLog.add_warning("Cast Shadow is disabled, but unsupported by LuxCore", obj.name)
 
     props = utils.luxutils.create_props(prefix, definitions)
