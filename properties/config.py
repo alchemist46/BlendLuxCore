@@ -85,7 +85,7 @@ SOBOL_ADAPTIVE_STRENGTH_DESC = (
 )
 
 LOG_POWER_DESC = (
-    "(Default) Sample lights according to their brightness, but weighting very bright "
+    "Sample lights according to their brightness, but weighting very bright "
     "lights not much more than dim lights (recommended when using environment "
     "lights (HDRI/sky) plus few small light sources)"
 )
@@ -104,7 +104,7 @@ DLSC_DESC = (
 )
 
 LIGHT_TREE_DESC = (
-    "Pick the light to sample by its importance at the shaded point (distance, "
+    "(Default) Pick the light to sample by its importance at the shaded point (distance, "
     "orientation, brightness), and learn from the shadow rays which lights really "
     "reach each region of the scene: less noise with many lights, with lights far "
     "apart, or with a sun or a window that only lights part of the scene. "
@@ -556,12 +556,12 @@ class LuxCoreConfig(PropertyGroup):
 
     # Light strategy
     light_strategy_items = [
+        ("LIGHT_TREE", "Light Tree", LIGHT_TREE_DESC, 3),
         ("LOG_POWER", "Log Power", LOG_POWER_DESC, 0),
         ("POWER", "Power", POWER_DESC, 1),
         ("UNIFORM", "Uniform", UNIFORM_DESC, 2),
-        ("LIGHT_TREE", "Light Tree", LIGHT_TREE_DESC, 3),
     ]
-    light_strategy: EnumProperty(name="Light Strategy", items=light_strategy_items, default="LOG_POWER",
+    light_strategy: EnumProperty(name="Light Strategy", items=light_strategy_items, default="LIGHT_TREE",
                                   description="Decides how the lights in the scene are sampled")
     light_solid_angle: BoolProperty(name="Solid Angle Sampling", default=False,
                                     description="Sample the mesh lights (area lights included) by solid angle "

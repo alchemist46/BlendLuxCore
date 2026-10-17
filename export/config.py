@@ -80,13 +80,17 @@ def convert(exporter, scene, context=None, engine=None):
                 "film.height": height,
                 "film.filter.type": filter_type,
                 "film.filter.width": config.filter_width,
-                "lightstrategy.type": light_strategy,
                 "scene.epsilon.min": config.min_epsilon,
                 "scene.epsilon.max": config.max_epsilon,
                 "path.albedospecular.type": scene.luxcore.denoiser.albedo_specular_passthrough_mode,
                 "path.albedospecular.glossinessthreshold": 0.05,
             }
         )
+
+        # LIGHT_TREE is the engine default: not exported, so older pyluxcore
+        # builds without it fall back to their own default (LOG_POWER)
+        if light_strategy != "LIGHT_TREE":
+            definitions["lightstrategy.type"] = light_strategy
 
         if preferences.film_device not in {"", "none"}:
             definitions["film.opencl.enable"] = True
