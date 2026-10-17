@@ -9,6 +9,53 @@ architecture level only.
 File paths are relative to the repository root; line numbers refer to the commit
 above.
 
+## Status (2026-10-17)
+
+Measured with the headless tests in `tests/` and in a 1000x700 Blender 5.2
+window (PATH CPU).
+
+| Item | Status |
+| --- | --- |
+| 1.1 Config export on every redraw | Done, `5386391d`: the check runs when the view state changes, and every 0.5 s otherwise. A paused redraw takes 0.17 ms instead of 2.76 ms |
+| 1.2 GPU texture on every draw | Done, `5386391d`: the texture is built on the first draw after a film update |
+| 1.3 Blocking calls in `view_draw()` | Not needed: `WaitNewFrame()` only blocks on the first frame after a reset (RTPATHCPU) or just updates counters (RTPATHOCL). A draw during rendering costs about 38 ms, split between `GetOutputFloat()` (image pipeline, about 15 ms) and the 16-bit texture upload (about 9 ms; `RGBA32F` is faster to upload but the RGB to RGBA copy costs as much) |
+| 1.4 Viewport denoiser on the UI thread | Done, `5bd9f1dc`: OIDN runs as an asynchronous image pipeline. Blender stayed frozen for 957 ms before; now the longest draw is 70 ms. A view change while OIDN runs still waits for it (about 0.9 s), because the core cannot cancel it |
+| 1.5 Session restart on resize | Open (core issue #577) |
+| 1.6 O(scene) object updates | Open |
+| 1.7 Compatibility converters per session | Not worth it for now: 31 ms per session start with 1000 node trees |
+| 1.8 Handlers scanning all materials | Not worth it for now: 0.9 ms per depsgraph update with 1000 materials. Filtering on `depsgraph.updates` would miss renames of unused materials, which produce no update entry |
+| 1.9 One vertex per loop | Done, `3508f3cb`: loops with equal data share a vertex, and each submesh gets only its own vertices. 3.7x fewer vertices on a smooth subdivided mesh; export plus session start take the same time |
+| 1.10 `split_faces()` normals | Done, `3508f3cb`: `Mesh.corner_normals`. Hair: `obj` is already the evaluated object there, and `Mesh.vertex_colors` is still what `mcol_on_emitter()` indexes, so no change |
+| 2.1 `bpy.app.online_access` | Done, `8b2e2d04` (PyPI download and every online library request) |
+| 2.2 Loader internals | Open |
+| 2.3 Legacy node add menu | Open |
+| 2.4 Viewport color management | Not needed in Blender 5.2: the viewport follows the view transform, look and exposure (measured: Standard, AgX, Filmic and +1 exposure all give different pixels) |
+| 2.5 Property-write hacks | Open |
+| 2.6 Pointer cache keys | Open |
+| 2.7 Version drift, dead code | Done, `6af5ab61` and `bfa74776` |
+| 2.8 Node editor header copy | Open |
+| 2.9 Online library on the Asset Browser | Open (separate project) |
+| 3.1 Swallowed registration errors | Done, `6af5ab61` |
+| 3.2 AOV table in four places | Open |
+| 3.3 `bpy.context` on render paths | Left as is: `bpy.context.preferences` is the only way to read the addon preferences, and these are static settings |
+| 3.4 Logging, types, threading | Thread done, `178855f1`; logging open |
+| 3.5 Tests | Done, `a88c7242`: `tests/run.sh` (smoke, mesh export, Cycles lights, Cycles Mapping); not run in CI yet, which needs a pyluxcore wheel there |
+
+Also found and fixed on the way, in the "Use Cycles settings" lights and the
+Cycles node reader:
+
+- Point, spot and sun lights were dropped from the export: `light.cycles.cast_shadow` no longer exists in Blender 4 and later (`99f0a383`).
+- The light factors were wrong: spot lights were 12% too dark and area lights 19% too dark. All light types are now within 1.6% of Cycles (`f8cebc2f`).
+- The Blackbody color node on lights is now supported (`99f0a383`).
+- The Gamma node no longer crashes when it isn't fed by an image texture (`e40d079e`).
+- The Mapping node in front of image textures was ignored; it is now used (`c4b6b031`).
+- The light exporter no longer reads the `use_nodes` flag that Blender 5 ignores (`7c47965d`).
+
+Found in the core (not changed here):
+
+- LuxCore's image is one pixel row off Cycles'. The cameras flip the continuous film coordinate with `filmHeight - filmY - 1`, the integer formula. The path engines put pixel `j`'s center at `filmY = j + 0.5`, so the continuous flip is `filmHeight - filmY`. On the OpenCL side, the environment camera uses `filmHeight - filmY` while the CPU one uses `filmHeight - filmY - 1`.
+- `pyluxcore.Version()` can report an old version: `LUXCORE_VERSION` is a CMake cache variable, so an existing build directory keeps it after a version bump.
+
 ## Summary
 
 The addon is structurally sound (strict import hierarchy, incremental caches,
