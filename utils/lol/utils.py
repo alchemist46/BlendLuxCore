@@ -601,10 +601,6 @@ def get_thumbnail(imagename):
         img = bpy.data.images.load(path)
         img.name = imagename_blender
 
-        if bpy.app.version < (2, 83, 0):
-            # Needed in old Blender versions so the images are not too dark
-            img.colorspace_settings.name = 'Linear'
-
     return img
 
 
@@ -662,10 +658,6 @@ def bg_load_previews(context, asset_type):
             img = bpy.data.images.load(tpath)
             img.name = '.LOL_preview'
             asset["thumbnail"] = img
-
-            if bpy.app.version < (2, 83, 0):
-                # Needed in old Blender versions so the images are not too dark
-                img.colorspace_settings.name = 'Linear'
         else:
             if exists(tpath) and getsize(tpath) > 0:
                 img = bpy.data.images.load(tpath)
@@ -688,10 +680,6 @@ def bg_load_previews(context, asset_type):
                 path = join(rootdir, 'thumbnails', 'thumbnail_notready.jpg')
                 img = bpy.data.images.load(path)
                 img.name = '.LOL_preview'
-
-                if bpy.app.version < (2, 83, 0):
-                    # Needed in old Blender versions so the images are not too dark
-                    img.colorspace_settings.name = 'Linear'
 
                 asset["thumbnail"] = img
             else:

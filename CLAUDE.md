@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BlendLuxCore is a Blender extension/addon that integrates the LuxCoreRender engine into Blender. It is a pure-Python addon (the `pyluxcore` render engine itself is a separate compiled project, consumed here as a Python wheel). Supports Blender 4.2/4.3 (Blender 4.4+ experimental).
+BlendLuxCore is a Blender extension/addon that integrates the LuxCoreRender engine into Blender. It is a pure-Python addon (the `pyluxcore` render engine itself is a separate compiled project, consumed here as a Python wheel). Requires Blender 4.5 or newer (the minimum in `blender_manifest.toml`).
 
 ## Build & Packaging
 

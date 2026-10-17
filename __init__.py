@@ -22,10 +22,10 @@ import addon_utils
 import nodeitems_utils
 
 # Check if Blender and OS versions are compatible
-if bpy.app.version < (4, 2, 0):
+if bpy.app.version < (4, 5, 0):
     raise RuntimeError(
         "\n\nUnsupported Blender version. "
-        "4.2 or higher is required by BlendLuxCore."
+        "4.5 or higher is required by BlendLuxCore."
     )
 
 

@@ -98,12 +98,8 @@ class LuxCoreNodeVolHeterogeneous(LuxCoreNodeVolume, bpy.types.Node):
             settings = smoke_domain_mod.domain_settings
             # A list with 3 elements (resolution in x, y, z directions)
             resolutions = list(settings.domain_resolution)
-            if bpy.app.version[:2] < (2, 82):
-                if settings.use_high_resolution:
-                    resolutions = [res * (settings.amplify + 1) for res in resolutions]
-            else:
-                if settings.use_noise:
-                    resolutions = [res * settings.noise_scale for res in resolutions]
+            if settings.use_noise:
+                resolutions = [res * settings.noise_scale for res in resolutions]
 
             dimensions = [dim for dim in domain_eval.dimensions]
 

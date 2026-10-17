@@ -794,7 +794,10 @@ def register_module(module_name, classes, submodules=[]):
         try:
             bpy.utils.register_class(cls)
         except Exception as err:
-            errorlog.LuxCoreErrorLog.add_warning(err, "\n")
+            # Print the traceback, a class that failed to register leaves the addon half working
+            import traceback
+            traceback.print_exc()
+            errorlog.LuxCoreErrorLog.add_warning(f"Failed to register {module_name}.{cls.__name__}: {err}")
 
 
 def unregister_module(module_name, classes, submodules=[]):

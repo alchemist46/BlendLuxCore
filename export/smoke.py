@@ -43,12 +43,8 @@ def convert(smoke_obj, channel, depsgraph):
     resolution = list(settings.domain_resolution)
 
     # Note: Velocity and heat data is always low-resolution. (Comment from Cycles source code)
-    if bpy.app.version[:2] < (2, 82):
-        if settings.use_high_resolution and channel not in {"velocity", "heat"}:
-            resolution = [res * (settings.amplify + 1) for res in resolution]
-    else:
-        if settings.use_noise:
-            resolution = [res * settings.noise_scale for res in resolution]
+    if settings.use_noise:
+        resolution = [res * settings.noise_scale for res in resolution]
 
     print("conversion to array took %.3f s" % (time() - start))
 
