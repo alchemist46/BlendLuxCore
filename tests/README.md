@@ -1,0 +1,32 @@
+# Headless tests
+
+Each test runs in a fresh background Blender and loads the addon from this
+repository, with the pyluxcore wheel loader stubbed out: nothing is
+downloaded or installed, and the installed extension is not touched.
+
+```bash
+# All tests, with pyluxcore from a venv
+tests/run.sh ~/venvs/pyluxcore/lib/python3.13/site-packages
+# One test
+tests/run.sh <site-packages> test_mesh_export
+# Directly
+blender -b --factory-startup --python tests/test_smoke.py -- <site-packages>
+```
+
+`BLENDER` selects the Blender executable (default: `blender` in `PATH`). The
+renders are tiny (64x64 or smaller, a few to 128 samples, CPU): the whole
+suite takes under 10 seconds.
+
+| Test | Checks |
+| --- | --- |
+| `test_smoke` | The addon enables, exports the default scene and renders it, with an empty error log |
+| `test_mesh_export` | Every exported triangle corner has Blender's position, corner normal, UVs and colors; corners with the same data share one vertex (flat, smooth, smooth by angle, custom normals, several materials, UV and color layers, UV seams) |
+| `test_cycles_lights` | Lights with "Use Cycles settings" have Cycles' brightness within 3% (point, sphere, spot, sun, sharp sun, square and rectangle area), and a Blackbody color node becomes the light temperature |
+| `test_cycles_mapping` | An image texture behind a Mapping node matches Cycles (identity, scale, rotation, translation, Vector type) |
+
+`harness.py` has the shared setup (`setup()`, `Checks`, `render()`). A test
+prints one `OK` or `FAIL` line per check and exits with status 1 when a check
+fails.
+
+The tests are excluded from the extension package (`paths_exclude_pattern` in
+`blender_manifest.toml`).
