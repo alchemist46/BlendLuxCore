@@ -164,6 +164,37 @@ def view_update(engine, context, depsgraph, changes=None):
     print(f"[BLC] view_update() took {delta_t:.1f} ms")
 
 
+# Seconds between two change checks in view_draw() while the view does not change
+VIEW_CHANGE_CHECK_INTERVAL = 0.5
+
+
+def _view_state(context):
+    """Everything view_draw() can see change without a view_update() call"""
+    region = context.region
+    region_data = context.region_data
+    space = context.space_data
+    return (
+        region.width,
+        region.height,
+        region_data.view_perspective,
+        tuple(tuple(row) for row in region_data.view_matrix),
+        tuple(tuple(row) for row in region_data.window_matrix),
+        region_data.view_distance,
+        region_data.view_camera_zoom,
+        tuple(region_data.view_camera_offset),
+        space.lens,
+        space.clip_start,
+        space.clip_end,
+        space.camera,
+        space.use_render_border,
+        space.render_border_min_x,
+        space.render_border_min_y,
+        space.render_border_max_x,
+        space.render_border_max_y,
+        space.shading.type,
+    )
+
+
 def view_draw(engine, context, depsgraph):
     scene = depsgraph.scene_eval
 
@@ -227,7 +258,17 @@ def view_draw(engine, context, depsgraph):
 
     # Check for changes because some actions in Blender (e.g. moving the viewport
     # camera) do not trigger a view_update() call, but only a view_draw() call.
-    changes = engine.exporter.get_viewport_changes(depsgraph, context)
+    # The check exports the whole config, so only run it when the view changed,
+    # and at a low rate for what the view state does not cover (addon preferences)
+    view_state = _view_state(context)
+    now = time()
+    if (view_state != engine.viewport_last_view_state
+            or now - engine.viewport_last_change_check > VIEW_CHANGE_CHECK_INTERVAL):
+        engine.viewport_last_view_state = view_state
+        engine.viewport_last_change_check = now
+        changes = engine.exporter.get_viewport_changes(depsgraph, context)
+    else:
+        changes = export.Change.NONE
 
     if changes & export.Change.REQUIRES_VIEW_UPDATE:
         engine.tag_redraw()

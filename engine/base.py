@@ -71,6 +71,8 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
         self.viewport_fatal_error = None
         self.time_of_last_viewport_resize = 0
         self.last_viewport_size = (0, 0)
+        self.viewport_last_view_state = None
+        self.viewport_last_change_check = 0
 
     def __del__(self):
         # Note: this method is also called when unregister() is called (for some reason I don't understand)

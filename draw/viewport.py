@@ -54,9 +54,12 @@ class FrameBuffer:
             else pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE
         )
 
-        self.buffer = gpu.types.Buffer(
-            "FLOAT", [self._width * self._height * bufferdepth]
+        self._data = np.zeros(
+            self._width * self._height * bufferdepth, dtype=np.float32
         )
+        self.buffer = gpu.types.Buffer("FLOAT", self._data.size, self._data)
+        # Built from the buffer on the first draw after an update
+        self._texture = None
         self._init_opengl()
 
         # Denoiser
@@ -97,6 +100,7 @@ class FrameBuffer:
         )
 
     def __del__(self):
+        self._texture = None
         del self.buffer
 
     def needs_replacement(self, context, scene):
@@ -209,28 +213,26 @@ class FrameBuffer:
         # infinty, leading to a black viewport.
         # Here, I need to get the data into a separate numpy array to handle
         # the clamping.
-        bufferdepth = 4 if self._transparent else 3
-        size = self._width * self._height * bufferdepth
-        data = np.empty(size, dtype=np.float32)
+        data = self._data
         luxcore_session.GetFilm().GetOutputFloat(
             self._output_type,
             data,
             0,  # index
             execute_imagepipeline
         )
-        data[data > 65519] = 65519
-        self.buffer = gpu.types.Buffer(
-            "FLOAT", [self._width * self._height * bufferdepth], data
-        )
+        np.minimum(data, 65519, out=data)
+        self.buffer = gpu.types.Buffer("FLOAT", data.size, data)
+        self._texture = None
 
     def draw(self):
-        format = "RGBA16F" if self._transparent else "RGB16F"
-        image = gpu.types.GPUTexture(
-            size=(self._width, self._height),
-            layers=0,
-            is_cubemap=False,
-            format=format,
-            data=self.buffer,
-        )
-        self.shader.uniform_sampler("image", image)
+        if self._texture is None:
+            format = "RGBA16F" if self._transparent else "RGB16F"
+            self._texture = gpu.types.GPUTexture(
+                size=(self._width, self._height),
+                layers=0,
+                is_cubemap=False,
+                format=format,
+                data=self.buffer,
+            )
+        self.shader.uniform_sampler("image", self._texture)
         self.batch.draw(self.shader)
