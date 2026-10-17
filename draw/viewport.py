@@ -5,8 +5,8 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 import math
-import threading
 import os
+from time import sleep
 import numpy as np
 import tempfile
 from shutil import which
@@ -22,16 +22,18 @@ if _needs_reload:
     importlib.reload(utils)
 
 
-def run_denoiser(framebuffer, engine):
-    """Denoiser worker."""
-    session = engine.session
-    film = session.GetFilm()
-    film.ApplyOIDN(0)  # Apply on first stage in pipeline
-
-    framebuffer.update(session, execute_imagepipeline=False)
-    framebuffer.draw()
-    framebuffer.denoised = True
-    engine.tag_redraw()
+def denoiser_imagepipeline_props(pipeline_props):
+    """The viewport image pipeline with OIDN appended (as Film.ApplyOIDN() does)"""
+    prefix = "film.imagepipelines.000."
+    props = pyluxcore.Properties()
+    props.Set(pipeline_props)
+    indices = [int(field) for field in
+               (name[len(prefix):].split(".")[0] for name in props.GetAllNames(prefix))
+               if field.isdigit()]
+    index = max(indices) + 1 if indices else 0
+    props.Set(pyluxcore.Property(f"{prefix}{index}.type", "INTEL_OIDN"))
+    props.Set(pyluxcore.Property(f"{prefix}{index}.sharpness", 0.0))
+    return props
 
 
 class FrameBuffer:
@@ -62,9 +64,10 @@ class FrameBuffer:
         self._texture = None
         self._init_opengl()
 
-        # Denoiser
+        # Denoiser: runs as an asynchronous image pipeline, so Blender does not block
         self.denoised = False  # Set to true after denoising
-        self._denoiser_thread = None
+        self._denoiser_session = None
+        self._denoiser_restore_props = None
 
     def _initialize_transparency(self, scene, context):
         if utils.is_valid_camera(
@@ -190,23 +193,50 @@ class FrameBuffer:
             0.5 - 2 * zoom * view_camera_offset
         ) * region_width + aspect * base * (2 * border_min - 1)
 
-    def start_denoiser(self, engine):
-        self._denoiser_thread = threading.Thread(
-            target=run_denoiser,
-            args=(self, engine),
-        )
-        self._denoiser_thread.run()
+    def start_denoiser(self, session, pipeline_props):
+        """Start OIDN on the paused session; pipeline_props is the image pipeline it uses"""
+        session.Parse(denoiser_imagepipeline_props(pipeline_props))
+        self._denoiser_session = session
+        self._denoiser_restore_props = pipeline_props
+        session.GetFilm().AsyncExecuteImagePipeline(0)
 
     def is_denoiser_active(self):
-        return self._denoiser_thread and self._denoiser_thread.is_alive()
+        return self._denoiser_session is not None
+
+    def poll_denoiser(self):
+        """Load the denoised image once OIDN is done, return True then"""
+        session = self._denoiser_session
+        if session is None or not session.GetFilm().HasDoneAsyncExecuteImagePipeline():
+            return False
+        try:
+            self.update(session, execute_imagepipeline=False)
+            self.denoised = True
+        finally:
+            self._end_denoiser()
+        return True
+
+    def wait_denoiser(self):
+        """Wait for a running denoiser, before the session is edited or stopped"""
+        session = self._denoiser_session
+        if session is None:
+            return
+        # Polling instead of WaitAsyncExecuteImagePipeline(): older pyluxcore
+        # builds join the thread a second time in the film destructor
+        film = session.GetFilm()
+        while not film.HasDoneAsyncExecuteImagePipeline():
+            sleep(0.005)
+        self._end_denoiser()
+
+    def _end_denoiser(self):
+        # Back to the image pipeline without OIDN
+        session = self._denoiser_session
+        self._denoiser_session = None
+        session.Parse(self._denoiser_restore_props)
+        self._denoiser_restore_props = None
 
     def reset_denoiser(self):
-        self.denoiser_result_cached = False  # TODO
-        print("RESET DENOISER")
+        self.wait_denoiser()
         self.denoised = False
-        if self._denoiser_thread is None:
-            return
-        self._denoiser_thread = None
 
     def update(self, luxcore_session, execute_imagepipeline=True):
         # The gpu buffer uses 16-bit float. Values >= 65520 get cast to

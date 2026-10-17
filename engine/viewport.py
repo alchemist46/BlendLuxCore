@@ -58,9 +58,16 @@ def force_session_restart(engine):
     and delete the session to trigger a full re-export of the scene and a fresh
     restart of the viewport render.
     """
+    wait_denoiser(engine)
     if engine.session is not None:
         engine.session.Stop()
         engine.session = None
+
+
+def wait_denoiser(engine):
+    """A running viewport denoiser must finish before the session changes"""
+    if engine.framebuffer:
+        engine.framebuffer.wait_denoiser()
 
 
 def view_update(engine, context, depsgraph, changes=None):
@@ -148,15 +155,14 @@ def view_update(engine, context, depsgraph, changes=None):
             force_session_restart(engine)
             return
         s = time()
+        if engine.framebuffer:
+            engine.framebuffer.reset_denoiser()
         # We have to re-assign the session because it might have been replaced
         # due to filmsize change
         engine.session = engine.exporter.update(
             depsgraph, context, engine.session, changes
         )
         engine.viewport_start_time = time()
-
-        if engine.framebuffer:
-            engine.framebuffer.reset_denoiser()
         delta_t = (time() - s) * 1000
         print(f"[BLC] view_update(): applying changes took {delta_t:.1f} ms")
 
@@ -252,6 +258,7 @@ def view_draw(engine, context, depsgraph):
     if not engine.framebuffer or engine.framebuffer.needs_replacement(
         context, scene
     ):
+        wait_denoiser(engine)
         engine.framebuffer = FrameBuffer(engine, context, scene)
 
     framebuffer = engine.framebuffer
@@ -280,11 +287,11 @@ def view_draw(engine, context, depsgraph):
         # for everything else we call view_update().
         # We have to re-assign the session because it might have been
         # replaced due to filmsize change.
+        framebuffer.reset_denoiser()
         engine.session = engine.exporter.update(
             depsgraph, context, engine.session, changes
         )
         engine.viewport_start_time = time()
-        framebuffer.reset_denoiser()
 
     if utils.in_material_shading_mode(context):
         if not engine.session.IsInPause():
@@ -322,9 +329,14 @@ def view_draw(engine, context, depsgraph):
         if use_oidn and not framebuffer.denoised:
             if not framebuffer.is_denoiser_active():
                 print("Starting OIDN denoiser...")
-                framebuffer.start_denoiser(engine)
-            status_message = "(Paused, OIDN Denoiser Working ...)"
-            engine.tag_redraw()
+                framebuffer.start_denoiser(
+                    engine.session, engine.exporter.imagepipeline_cache.props
+                )
+            if framebuffer.poll_denoiser():
+                status_message = "(Paused, OIDN Denoiser Done)"
+            else:
+                status_message = "(Paused, OIDN Denoiser Working ...)"
+                engine.tag_redraw()
         else:
             if use_oidn:
                 status_message = "(Paused, OIDN Denoiser Done)"
