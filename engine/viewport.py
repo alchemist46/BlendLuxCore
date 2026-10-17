@@ -111,9 +111,11 @@ def view_update(engine, context, depsgraph, changes=None):
             # Start in separate thread to avoid blocking the UI
             engine.starting_session = True
             engine.is_first_viewport_start = False
-            import _thread
+            import threading
 
-            _thread.start_new_thread(start_session, (engine,))
+            threading.Thread(
+                target=start_session, args=(engine,), name="BLC session start", daemon=True
+            ).start()
         except Exception as error:
             if engine.session is not None:
                 # in case engine.session was already set in the try block
