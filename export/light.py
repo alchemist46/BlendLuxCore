@@ -122,8 +122,9 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
         spot_fix = Matrix.Rotation(math.radians(-90.0), 4, "Z")
         definitions["transformation"] = utils.luxutils.matrix_to_list(transform @ spot_fix)
 
-        # Multiplier to reach similar brightness as Cycles, found by eyeballing.
-        gain *= 0.07
+        # Cycles gives a spot light the intensity of a point light of the same power, P / (4 pi),
+        # and LuxCore's spot intensity is the gain itself
+        gain /= 4 * math.pi
     elif light.type == "AREA":
         if light.cycles.is_portal:
             return pyluxcore.Properties(), None
@@ -137,9 +138,9 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
         transform_matrix = calc_area_light_transformation(light, transform)
         scale = transform_matrix.to_scale()
         area_gain = gain / (scale.x * scale.y)
-        # Multiplier to reach similar brightness as Cycles.
-        # Found through render comparisons, not super precise.
-        area_gain *= 0.06504
+        # Cycles emits the power from one side of the light: radiance P / (pi * area).
+        # The light mesh is 2x2 before the transformation, so its area is 4 * scale.x * scale.y
+        area_gain /= 4 * math.pi
 
         # Material
         mat_name = luxcore_name + "_AREA_LIGHT_MAT"
