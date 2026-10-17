@@ -28,6 +28,7 @@ classes = (
     sampling.LUXCORE_RENDER_PT_sampling,
     sampling.LUXCORE_RENDER_PT_sampling_tiled_multipass,
     sampling.LUXCORE_RENDER_PT_sampling_adaptivity,
+    sampling.LUXCORE_RENDER_PT_sampling_bluenoise,
     sampling.LUXCORE_RENDER_PT_sampling_pixel_filtering,
     sampling.LUXCORE_RENDER_PT_sampling_advanced,
     image_resize_policy.LUXCORE_RENDER_PT_image_resize_policy,

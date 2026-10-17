@@ -27,6 +27,19 @@ BIDIR_DESC = (
 )
 
 SOBOL_DESC = "Optimized random noise pattern. Supports noise-aware adaptive sampling"
+SOBOL_BLUENOISE_DESC = (
+    "Distribute the noise as blue noise across the pixels: the error looks finer at equal "
+    "samples and denoises more cleanly. The pattern is sized from the Samples halt condition, "
+    "so it is strongest when the render ends there"
+)
+SOBOL_BLUENOISE_FIRST_DESC = (
+    "Take the first sample of every pixel from a separate one-sample blue-noise pattern. "
+    "Bluer at very low sample counts and with adaptive sampling, slightly more noise at a few samples"
+)
+SOBOL_BLUENOISE_SPP_DESC = (
+    "Samples per pixel the blue-noise pattern is sized for when the render has no Samples "
+    "halt condition (time or noise halt). Past it, each pixel continues with a pattern of its own"
+)
 METROPOLIS_DESC = "Sampler that focuses samples on brighter parts of the image. Not noise-aware. Suited for rendering caustics"
 
 TILED_DESCRIPTION = (
@@ -442,6 +455,14 @@ class LuxCoreConfig(PropertyGroup):
     # SOBOL properties
     sobol_adaptive_strength: FloatProperty(name="Adaptive Strength", default=0.9, min=0, max=0.95,
                                             description=SOBOL_ADAPTIVE_STRENGTH_DESC)
+
+    # SOBOL blue-noise pixel ordering (sampler.sobol.bluenoise.*)
+    sobol_bluenoise: BoolProperty(name="Blue Noise", default=True,
+                                  description=SOBOL_BLUENOISE_DESC)
+    sobol_bluenoise_first: BoolProperty(name="First Sample", default=False,
+                                        description=SOBOL_BLUENOISE_FIRST_DESC)
+    sobol_bluenoise_spp: IntProperty(name="Pattern Samples", default=64, min=2, soft_max=1024,
+                                     description=SOBOL_BLUENOISE_SPP_DESC)
 
     # Noise estimation (used by the adaptive SOBOL sampler)
     noise_estimation: PointerProperty(type=LuxCoreConfigNoiseEstimation)

@@ -382,6 +382,16 @@ def _convert_final_engine(scene, definitions, config):
         )
         definitions[f"sampler.{sampler_type}.supersampling"] = supersampling
         definitions[f"sampler.{sampler_type}.overlapping"] = overlapping
+
+        # Blue-noise pixel ordering: exported only when not the engine
+        # default, so older pyluxcore builds keep working
+        if not config.sobol_bluenoise:
+            definitions[f"sampler.{sampler_type}.bluenoise.enable"] = False
+        else:
+            if config.sobol_bluenoise_first:
+                definitions[f"sampler.{sampler_type}.bluenoise.first"] = True
+            if config.sobol_bluenoise_spp != 64:
+                definitions[f"sampler.{sampler_type}.bluenoise.spp"] = config.sobol_bluenoise_spp
     elif sampler == "METROPOLIS":
         _convert_metropolis_settings(definitions, config)
 

@@ -146,6 +146,33 @@ class LUXCORE_RENDER_PT_sampling_adaptivity(RenderButtonsPanel, Panel):
             col.prop(config.noise_estimation, "warmup")
             col.prop(config.noise_estimation, "step")
 
+class LUXCORE_RENDER_PT_sampling_bluenoise(RenderButtonsPanel, Panel):
+    COMPAT_ENGINES = {"LUXCORE"}
+    bl_parent_id = "LUXCORE_RENDER_PT_sampling"
+    bl_label = "Blue Noise"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        config = context.scene.luxcore.config
+        return config.get_sampler() == "SOBOL" and not config.using_tiled_path()
+
+    def draw_header(self, context):
+        config = context.scene.luxcore.config
+        self.layout.prop(config, "sobol_bluenoise", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        config = context.scene.luxcore.config
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.active = config.sobol_bluenoise
+
+        col = layout.column(align=True)
+        col.prop(config, "sobol_bluenoise_first")
+        col.prop(config, "sobol_bluenoise_spp")
+
 class LUXCORE_RENDER_PT_sampling_pixel_filtering(RenderButtonsPanel, Panel):
     COMPAT_ENGINES = {"LUXCORE"}
     bl_parent_id = "LUXCORE_RENDER_PT_sampling"
