@@ -1,16 +1,16 @@
 _needs_reload = "bpy" in locals()
 import bpy
 
-from .. import export, draw, pyluxcore
+from .. import export, draw
 from ..export.image import ImageExporter
 import pyluxcore
 
 if _needs_reload:
     import importlib
+    # pyluxcore is a compiled module: reloading it does nothing
     modules = (
         export,
         draw,
-        pyluxcore,
     )
     for module in modules:
         importlib.reload(module)

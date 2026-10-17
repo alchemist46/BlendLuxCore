@@ -33,9 +33,6 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
     # to see if we should render a preview.
     bl_use_preview = True
 
-    # Has something to do with tiled EXR render output, not sure about the details.
-    bl_use_save_buffers = False
-
     # Hides Cycles node trees in the node editor.
     bl_use_shading_nodes_custom = False
 
