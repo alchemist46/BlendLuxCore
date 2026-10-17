@@ -66,11 +66,10 @@ def convert(
 
         # Points
         vertex_points = get_ndarray(mesh.vertices, "co", 3, np.float32)
-        loop_points = vertex_points[loop_vertices]
 
-        # Normals
-        vertex_normals = get_ndarray(mesh.vertices, "normal", 3, np.float32)
-        loop_normals = vertex_normals[loop_vertices]
+        # Normals: one per corner, exact for flat faces, sharp edges and
+        # custom normals (no need to split the faces)
+        loop_normals = get_ndarray(mesh.corner_normals, "vector", 3, np.float32)
 
         # Triangle loop indices
         triangle_loops = get_ndarray(
@@ -105,8 +104,6 @@ def convert(
             )
             for attribute in mesh.color_attributes
         ]
-        rgb = [rgba[:, :3] for rgba in rgba_colors]
-        alphas = [rgba[:, 3] for rgba in rgba_colors]
 
         # Transformation
         if is_viewport_render or use_instancing:
@@ -128,28 +125,30 @@ def convert(
             suffix = "layers" if nlayers > 1 else "layer"
             return f"{nlayers} {layer_name} {suffix}"
         print(f"[BLC] Exporting '{str(mesh_key)}' - {len(unique_mats)} submesh(es)")
-        print(f"[BLC] - {len(loop_points)} points")
-        print(f"[BLC] - {len(loop_normals)} normals")
+        print(f"[BLC] - {len(vertex_points)} points, {len(loop_vertices)} corners")
         print(f"[BLC] - {fmt_layer(uvs, 'uv')}")
-        print(f"[BLC] - {fmt_layer(rgb, 'color')}")
-        print(f"[BLC] - {fmt_layer(alphas, 'alpha')}")
+        print(f"[BLC] - {fmt_layer(rgba_colors, 'color')}")
 
         mesh_definitions = []
         for mat in unique_mats:
             mat_triangles = triangle_loops[loop_triangle_materials == mat]
             name = f"{str(mesh_key)}{mat:03d}"
 
-
-            print(f"[BLC] - Submesh #{mat:03d}: {len(mat_triangles)} triangles")
+            # One LuxCore vertex per distinct corner of this submesh
+            loops, triangles = _share_corners(
+                mat_triangles, loop_vertices, loop_normals, uvs, rgba_colors
+            )
+            print(f"[BLC] - Submesh #{mat:03d}: {len(mat_triangles)} triangles, "
+                  f"{len(loops)} vertices")
 
             luxcore_scene.DefineMeshExt(
                 name=name,
-                points=loop_points,
-                triangles=mat_triangles,
-                normals=loop_normals,
-                uvs=uvs,
-                colors=rgb,
-                alphas=alphas,
+                points=vertex_points[loop_vertices[loops]],
+                triangles=triangles,
+                normals=loop_normals[loops],
+                uvs=[uv[loops] for uv in uvs],
+                colors=[np.ascontiguousarray(rgba[loops, :3]) for rgba in rgba_colors],
+                alphas=[np.ascontiguousarray(rgba[loops, 3]) for rgba in rgba_colors],
                 transformation=mesh_transform,
             )
             mesh_definitions.append((name, mat))
@@ -161,6 +160,65 @@ def convert(
         print("[BLC]")
 
         return caches.exported_data.ExportedMesh(mesh_definitions)
+
+
+def _share_corners(triangle_loops, loop_vertices, loop_normals, uvs, rgba_colors):
+    """Merge the corners of the triangles that have the same vertex and attributes.
+
+    Returns the loop index of each LuxCore vertex and the triangles as indices
+    into them. Corners are merged only when all their data is equal, so seams,
+    sharp edges and flat faces keep their own vertices.
+    """
+    # Work on loops: the loops of a quad or an n-gon are corners of several triangles
+    used_loops = np.zeros(len(loop_vertices), dtype=bool)
+    used_loops[triangle_loops] = True
+    all_loops = bool(used_loops.all())
+    loops = None if all_loops else np.flatnonzero(used_loops)
+
+    def of_loops(array):
+        return array if all_loops else array[loops]
+
+    vertices = of_loops(loop_vertices)
+    attributes = [of_loops(a) for a in [loop_normals] + uvs + rgba_colors]
+
+    # Most loops of a vertex carry the same data: one representative loop per
+    # vertex, and the loops equal to it share its LuxCore vertex
+    representative = np.empty(int(vertices.max()) + 1, dtype=np.intp)
+    representative[vertices] = np.arange(len(vertices))
+    reference = representative[vertices]
+    same = np.ones(len(vertices), dtype=bool)
+    for attribute in attributes:
+        same &= (attribute == attribute[reference]).all(axis=1)
+
+    used = np.zeros(len(representative), dtype=bool)
+    used[vertices] = True
+    used_vertices = np.flatnonzero(used)
+    vertex_index = np.cumsum(used) - 1
+
+    inverse = np.empty(len(vertices), dtype=np.int64)
+    inverse[same] = vertex_index[vertices[same]]
+    first = representative[used_vertices]
+
+    # The other loops (seams, sharp edges, flat faces): exact comparison of
+    # whole rows, vertex included
+    others = np.flatnonzero(~same)
+    if len(others):
+        rows = np.ascontiguousarray(np.hstack(
+            [vertices[others, None]] + [a[others].view(np.uint32) for a in attributes]))
+        rows = rows.view(np.dtype((np.void, rows.dtype.itemsize * rows.shape[1]))).ravel()
+        _, other_first, other_inverse = np.unique(rows, return_index=True, return_inverse=True)
+        inverse[others] = len(used_vertices) + other_inverse.ravel()
+        first = np.concatenate([first, others[other_first]])
+
+    if all_loops:
+        triangles = inverse[triangle_loops]
+        vertex_loops = first
+    else:
+        loop_to_vertex = np.empty(len(loop_vertices), dtype=np.int64)
+        loop_to_vertex[loops] = inverse
+        triangles = loop_to_vertex[triangle_loops]
+        vertex_loops = loops[first]
+    return vertex_loops, triangles.astype(np.uint32)
 
 
 @contextmanager
@@ -200,9 +258,6 @@ def _prepare_mesh(obj, depsgraph):
                     object_eval.to_mesh_clear()
                     mesh = None
 
-            # TODO implement new normals handling
-            if mesh:
-                mesh.split_faces()  # Applies smooth by angle operator
 
         yield mesh
     finally:
