@@ -90,6 +90,14 @@ DLSC_DESC = (
     "Only used during final render"
 )
 
+LIGHT_TREE_DESC = (
+    "Pick the light to sample by its importance at the shaded point (distance, "
+    "orientation, brightness), and learn from the shadow rays which lights really "
+    "reach each region of the scene: less noise with many lights, with lights far "
+    "apart, or with a sun or a window that only lights part of the scene. "
+    "Needs LuxCore 2.11 or newer"
+)
+
 LARGE_STEP_RATE_DESC = (
     "Probability of generating a large sample mutation. "
     "Low values cause the sampler to focus more on "
@@ -530,6 +538,7 @@ class LuxCoreConfig(PropertyGroup):
         ("LOG_POWER", "Log Power", LOG_POWER_DESC, 0),
         ("POWER", "Power", POWER_DESC, 1),
         ("UNIFORM", "Uniform", UNIFORM_DESC, 2),
+        ("LIGHT_TREE", "Light Tree", LIGHT_TREE_DESC, 3),
     ]
     light_strategy: EnumProperty(name="Light Strategy", items=light_strategy_items, default="LOG_POWER",
                                   description="Decides how the lights in the scene are sampled")
