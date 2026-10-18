@@ -42,7 +42,6 @@ class LuxCoreNodeMatGlossyCoating(LuxCoreNodeMaterial, bpy.types.Node):
         self.outputs.new("LuxCoreSocketMaterial", "Material")
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "multibounce")
         layout.prop(self, "use_ior")
         Roughness.draw(self, context, layout)
 

@@ -12,9 +12,13 @@ IOR_DESCRIPTION = (
     "specify reflection strength"
 )
 
+# Multibounce is no longer drawn: pyluxcore 3.0 layers the coatings by albedo
+# scaling, which includes the energy it approximated, and ignores it. The
+# properties stay (saved files keep their value, and older pyluxcore builds
+# still read it)
 MULTIBOUNCE_DESCRIPTION = (
     "Simulate multiple bounces in the glossy coating (not counting as actual light ray bounce). "
-    "Gives the material a fuzzy sheen"
+    "Gives the material a fuzzy sheen (ignored by pyluxcore 3.0)"
 )
 
 
@@ -106,14 +110,12 @@ class LuxCoreNodeMatGlossyTranslucent(LuxCoreNodeMaterial, bpy.types.Node):
         self.outputs.new("LuxCoreSocketMaterial", "Material")
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "multibounce")
         layout.prop(self, "use_ior")
         Roughness.draw(self, context, layout)
 
         layout.prop(self, "use_backface", toggle=True)
 
         if self.use_backface:
-            layout.prop(self, "multibounce_bf")
             layout.prop(self, "use_ior_bf")
 
         utils_node.draw_transmission_info(self, layout)
