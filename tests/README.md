@@ -23,6 +23,7 @@ suite takes under 10 seconds.
 | `test_mesh_export` | Every exported triangle corner has Blender's position, corner normal, UVs and colors; corners with the same data share one vertex (flat, smooth, smooth by angle, custom normals, several materials, UV and color layers, UV seams) |
 | `test_cycles_lights` | Lights with "Use Cycles settings" have Cycles' brightness within 3% (point, sphere, spot, sun, sharp sun, square and rectangle area), and a Blackbody color node becomes the light temperature |
 | `test_cycles_mapping` | An image texture behind a Mapping node matches Cycles (identity, scale, rotation, translation, Vector type) |
+| `test_subsurface` | Cycles' Subsurface Scattering node (Random Walk), read by the Cycles node reader, matches Cycles relative to a diffuse sphere within 8% per channel (white medium 0.2%, coloured 1-4%); the LuxCore Subsurface node exports and renders |
 
 `harness.py` has the shared setup (`setup()`, `Checks`, `render()`). A test
 prints one `OK` or `FAIL` line per check and exits with status 1 when a check
