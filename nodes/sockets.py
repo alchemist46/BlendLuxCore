@@ -258,11 +258,14 @@ class LuxCoreSocketBumpHeight(bpy.types.NodeSocket, LuxCoreSocketFloat):
 
 
 class LuxCoreSocketFloatDisneySheen(bpy.types.NodeSocket, LuxCoreSocketFloat):
+    # pyluxcore 3.0 makes the sheen an energy-conserving fiber layer and
+    # clamps it to 1; the maximum stays 100 so older files keep their value
+    # (older pyluxcore builds still accept values above 1)
     default_value: FloatProperty(
         min=0,
         max=100,
-        soft_max=10.0,
-        description="Sheen value",
+        soft_max=1.0,
+        description="Sheen value (pyluxcore 3.0 clamps it to 1)",
         update=utils_node.force_viewport_update,
         precision=FLOAT_UI_PRECISION,
     )
