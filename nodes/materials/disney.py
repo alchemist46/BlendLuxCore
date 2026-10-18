@@ -18,11 +18,6 @@ class LuxCoreNodeMatDisney(LuxCoreNodeMaterial, bpy.types.Node):
     use_thinfilmcoating: BoolProperty(name="Thin Film Coating", default=False,
                                       description=THIN_FILM_DESCRIPTION,
                                       update=update_use_thinfilmcoating)
-    multiscattering: BoolProperty(name="Energy Compensation", default=False,
-                                  description="Add the energy lost by the single-scattering specular and "
-                                              "clearcoat lobes, which makes rough surfaces too dark "
-                                              "(needs a pyluxcore build with energy compensation support)",
-                                  update=utils_node.force_viewport_update)
 
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Base Color", [0.7] * 3)
@@ -44,7 +39,6 @@ class LuxCoreNodeMatDisney(LuxCoreNodeMaterial, bpy.types.Node):
         
     def draw_buttons(self, context, layout):
         layout.prop(self, "use_thinfilmcoating")
-        layout.prop(self, "multiscattering")
 
     def sub_export(self, exporter, depsgraph, props, luxcore_name=None, output_socket=None):
         definitions = {
@@ -69,10 +63,6 @@ class LuxCoreNodeMatDisney(LuxCoreNodeMaterial, bpy.types.Node):
             if amount_socket.is_linked or amount > 0:
                 definitions["filmamount"] = amount
                 ThinFilmCoating.export(self, exporter, depsgraph, props, definitions)
-
-        # Only exported when enabled, so older pyluxcore builds get the same scene as before
-        if self.multiscattering:
-            definitions["multiscattering"] = True
 
         self.export_common_inputs(exporter, depsgraph, props, definitions)
         return self.create_props(props, definitions, luxcore_name)
