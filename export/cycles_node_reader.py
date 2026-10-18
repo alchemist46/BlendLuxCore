@@ -230,6 +230,16 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
             "kd": _socket(node.inputs["Color"], props, material, obj_name, group_node_stack),
             "bumptex": _socket(node.inputs["Normal"], props, material, obj_name, group_node_stack),
         }
+    elif node.bl_idname == "ShaderNodeBsdfSheen":
+        # LuxCore's velvet is the microfiber sheen of Cycles' Sheen BSDF
+        # (pyluxcore 3.0); the Ashikhmin distribution is mapped to it too
+        prefix = "scene.materials."
+        definitions = {
+            "type": "velvet",
+            "kd": _socket(node.inputs["Color"], props, material, obj_name, group_node_stack),
+            "roughness": _socket(node.inputs["Roughness"], props, material, obj_name, group_node_stack),
+            "bumptex": _socket(node.inputs["Normal"], props, material, obj_name, group_node_stack),
+        }
     elif node.bl_idname == "ShaderNodeBsdfGlossy":
         prefix = "scene.materials."
 
