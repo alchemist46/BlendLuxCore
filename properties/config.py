@@ -76,7 +76,8 @@ REGULARIZATION_DESC = (
     "Path regularization: after the first non-specular bounce, glossy lobes get a roughness floor "
     "and glass and mirror become rough, so the caustic paths that produce fireflies become samplable, "
     "blurred. Biased: caustics and reflections seen indirectly are softer and can be brighter. "
-    "Ignored when Add Light Tracing is enabled"
+    "With Add Light Tracing enabled, the light paths render the caustics on diffuse surfaces "
+    "sharp and only the rest is regularized"
 )
 REGULARIZATION_ROUGHNESS_DESC = (
     "The roughness floor given to the regularized lobes (a GGX alpha). Lobes rougher than "

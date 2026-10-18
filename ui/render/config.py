@@ -235,9 +235,6 @@ class LUXCORE_RENDER_PT_lightpaths_regularization(RenderButtonsPanel, Panel):
         layout.active = config.path.use_regularization
         layout.prop(config.path, "regularization_roughness")
 
-        if config.path.use_regularization and config.path.hybridbackforward_enable:
-            layout.label(text="Ignored while Add Light Tracing is enabled", icon=icons.INFO)
-
 
 def compatible_panels():
     panels = [
