@@ -450,12 +450,6 @@ class Roughness:
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
 
-    Optionally declare, for the energy compensation, a multiscattering
-    property like this (it is drawn and exported automatically if present):
-    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
-                                  description=Roughness.multiscattering_desc,
-                                  update=force_viewport_update)
-
     Call Roughness.init(self, default=0.1) in the init method of the material node
 
     Draw the use_anisotropy property in the draw_buttons method:
@@ -523,23 +517,6 @@ class Roughness:
     aniso_desc = ("Use different roughness values for "
                   "U- and V-directions (needs UV mapping)")
 
-    multiscattering_name = "Energy Compensation"
-    multiscattering_desc = ("Add the energy lost by the single-scattering microfacet model, which makes "
-                            "rough surfaces too dark (needs a pyluxcore build with energy "
-                            "compensation support)")
-
-    @staticmethod
-    def export_multiscattering(node, definitions):
-        # Only exported when enabled, so older pyluxcore builds get the
-        # same scene as before
-        if getattr(node, "multiscattering", False):
-            definitions["multiscattering"] = True
-
-    @staticmethod
-    def draw_multiscattering(node, layout):
-        if hasattr(node, "multiscattering"):
-            layout.prop(node, "multiscattering")
-
     @staticmethod
     def init(node, default=0.05, init_enabled=True):
         node.add_input("LuxCoreSocketRoughness", "Roughness", default, enabled=init_enabled)
@@ -552,7 +529,6 @@ class Roughness:
 
     @staticmethod
     def draw(node, context, layout):
-        Roughness.draw_multiscattering(node, layout)
         layout.prop(node, "use_anisotropy")
         if node.use_anisotropy:
             draw_uv_info(context, layout)
@@ -568,7 +544,6 @@ class Roughness:
 
         definitions["uroughness"] = uroughness
         definitions["vroughness"] = vroughness
-        Roughness.export_multiscattering(node, definitions)
 
         if Roughness.has_backface(node):
             if node.use_anisotropy:

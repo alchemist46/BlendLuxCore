@@ -29,10 +29,6 @@ class LuxCoreNodeMatGlossy2(LuxCoreNodeMaterial, bpy.types.Node):
                                   default=False,
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
-    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
-                                  description=Roughness.multiscattering_desc,
-                                  update=utils_node.force_viewport_update)
-
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Diffuse Color", [0.7] * 3)
         self.add_input("LuxCoreSocketColor", "Specular Color", [0.05] * 3)
@@ -46,7 +42,6 @@ class LuxCoreNodeMatGlossy2(LuxCoreNodeMaterial, bpy.types.Node):
         self.outputs.new("LuxCoreSocketMaterial", "Material")
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "multibounce")
         layout.prop(self, "use_ior")
         Roughness.draw(self, context, layout)
 

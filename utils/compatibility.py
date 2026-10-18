@@ -28,6 +28,7 @@ def run():
         update_invert_add_maximum_input(node_tree)
         update_brick_texture(node_tree)
         update_iorpreset_add_dispersion_output(node_tree)
+        update_velvet_microfiber_sheen(node_tree)
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
@@ -287,6 +288,25 @@ def update_glass_disney_add_film_sockets(node_tree):
             node.add_input("LuxCoreSocketFloat0to1", "Film Amount", 1, enabled=False)
         
         ThinFilmCoating.init(node)
+        print('Updated node "%s" in tree %s to new version' % (node.name, node_tree.name))
+
+
+def update_velvet_microfiber_sheen(node_tree):
+    # Velvet is the microfiber sheen since pyluxcore 3.0 (material-standards
+    # branch): a Roughness input, the Thickness and p1-p3 inputs of the old
+    # model are hidden (no longer exported)
+    for node in find_nodes(node_tree, "LuxCoreNodeMatVelvet", False):
+        if node.inputs.find("Roughness") != -1:
+            continue
+
+        node.add_input("LuxCoreSocketFloat0to1", "Roughness", 0.5)
+        # Keep it next to the color, as in a new node
+        node.inputs.move(len(node.inputs) - 1, 1)
+        for name in ("Thickness", "p1", "p2", "p3"):
+            socket_id = node.inputs.find(name)
+            if socket_id != -1:
+                node.inputs[socket_id].hide = True
+                node.inputs[socket_id].enabled = False
         print('Updated node "%s" in tree %s to new version' % (node.name, node_tree.name))
 
 

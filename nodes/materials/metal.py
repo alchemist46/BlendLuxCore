@@ -43,10 +43,6 @@ class LuxCoreNodeMatMetal(LuxCoreNodeMaterial, bpy.types.Node):
                                   default=False,
                                   description=Roughness.aniso_desc,
                                   update=Roughness.update_anisotropy)
-    multiscattering: BoolProperty(name=Roughness.multiscattering_name, default=False,
-                                  description=Roughness.multiscattering_desc,
-                                  update=utils_node.force_viewport_update)
-
     def init(self, context):
         self.add_input("LuxCoreSocketColor", "Color", (0.7, 0.7, 0.7))
         self.inputs.new("LuxCoreSocketFresnel", "Fresnel")
