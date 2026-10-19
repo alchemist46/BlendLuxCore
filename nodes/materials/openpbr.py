@@ -30,6 +30,8 @@ INPUTS = (
     ("Transmission Scatter", "LuxCoreSocketColor", (0, 0, 0), "transmission.scatter", "use_transmission", 1),
     ("Scatter Anisotropy", "LuxCoreSocketOpenPBRAnisotropy", 0, "transmission.scatteranisotropy",
      "use_transmission", 1),
+    ("Dispersion Scale", "LuxCoreSocketFloat0to1", 0, "transmission.dispersionscale", "use_transmission", 1),
+    ("Abbe Number", "LuxCoreSocketOpenPBRAbbe", 20, "transmission.dispersionabbenumber", "use_transmission", 1),
     ("Subsurface Weight", "LuxCoreSocketFloat0to1", 0, "subsurface.weight", "use_subsurface", 1),
     ("Subsurface Color", "LuxCoreSocketColor", (0.8, 0.8, 0.8), "subsurface.color", "use_subsurface", 1),
     ("Subsurface Radius", "LuxCoreSocketOpenPBRDistance", 1, "subsurface.radius", "use_subsurface", 1),
@@ -99,6 +101,19 @@ class LuxCoreSocketOpenPBRAnisotropy(bpy.types.NodeSocket, LuxCoreSocketFloat):
         precision=FLOAT_UI_PRECISION,
     )
     slider = True
+
+
+class LuxCoreSocketOpenPBRAbbe(bpy.types.NodeSocket, LuxCoreSocketFloat):
+    default_value: FloatProperty(
+        min=0,
+        soft_min=10,
+        soft_max=90,
+        description="Abbe number of the glass, the lower the stronger the dispersion "
+                    "(diamond 55, crown glass 59, flint glass 30, plastics 30-58); the "
+                    "IOR Preset node gives it for many materials. 0 is no dispersion",
+        update=utils_node.force_viewport_update,
+        precision=1,
+    )
 
 
 class LuxCoreSocketOpenPBRDistance(bpy.types.NodeSocket, LuxCoreSocketFloat):

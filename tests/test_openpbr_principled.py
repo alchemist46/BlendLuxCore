@@ -43,10 +43,13 @@ SAMPLES = 64
 
 # Name, Principled inputs, tolerance of the mean (per channel), tolerance of
 # the pixel error. Set from the first run (2026-10-19, 64 spp) with margin
-# for the noise. Known differences:
-# - the coat has no base specular (Specular IOR Level 0): Cycles keeps it at
-#   its IOR against air under the coat, OpenPBR takes the IOR relative to the
-#   coat (with Coat IOR = IOR it vanishes), 20% less red in this case;
+# for the noise. Known differences, where OpenPBR is the physical model and
+# Cycles leaves something out:
+# - the coat darkens the base by its internal reflections (Cycles doesn't):
+#   the coated base is white (no darkening) and has no specular (Specular IOR
+#   Level 0), which Cycles keeps at its IOR against air under the coat where
+#   OpenPBR takes the IOR relative to the coat (with Coat IOR = IOR it
+#   vanishes);
 # - subsurface: LuxCore is 2-4% brighter without the specular layer (the
 #   Subsurface node too), up to 10% in the short-radius channels with it
 #   (Cycles' walk exits through the rough dielectric, LuxCore's diffusely);
@@ -57,13 +60,15 @@ CASES = (
     ("metal", {"Base Color": (0.9, 0.6, 0.3), "Metallic": 1.0, "Roughness": 0.3}, 0.02, 0.08),
     ("anisotropic", {"Base Color": (0.9, 0.9, 0.9), "Metallic": 1.0, "Roughness": 0.4,
                      "Anisotropic": 0.8, "Anisotropic Rotation": 0.1}, 0.05, 0.35),
-    ("coat", {"Base Color": (0.1, 0.2, 0.6), "Roughness": 0.5, "Specular IOR Level": 0.0,
-              "Coat Weight": 1.0, "Coat Roughness": 0.1}, 0.03, 0.10),
+    ("coat", {"Base Color": (1.0, 1.0, 1.0), "Roughness": 0.5, "Specular IOR Level": 0.0,
+              "Coat Weight": 1.0, "Coat Roughness": 0.1, "Coat Tint": (0.6, 0.8, 1.0)}, 0.03, 0.10),
     ("sheen", {"Base Color": (0.2, 0.4, 0.1), "Roughness": 0.6, "Sheen Weight": 1.0,
                "Sheen Tint": (1.0, 0.8, 0.8)}, 0.02, 0.03),
     ("subsurface", {"Base Color": (0.8, 0.5, 0.4), "Roughness": 0.4, "Subsurface Weight": 1.0,
                     "Subsurface Radius": (1.0, 0.2, 0.1), "Subsurface Scale": 0.2}, 0.13, 0.30),
     ("glass", {"Base Color": (1.0, 1.0, 1.0), "Roughness": 0.1, "Transmission Weight": 1.0}, 0.03, 0.15),
+    # Smooth: delta lobes (SPECULAR events)
+    ("smooth glass", {"Base Color": (1.0, 1.0, 1.0), "Roughness": 0.0, "Transmission Weight": 1.0}, 0.03, 0.15),
 )
 
 scene = bpy.context.scene
@@ -171,6 +176,28 @@ node.inputs["Base Color"].default_value = (0.8, 0.3, 0.1)
 node.use_coat = True
 node.inputs[node.inputs.find("Fuzz Weight")].default_value = 0.7  # in a disabled group
 tree.links.new(node.outputs[0], output.inputs[0])
+
+# Dispersion from the IOR Preset node (diamond: 2.417, Abbe 55.3)
+exporter = type("Exporter", (), {"node_cache": {}, "scene": scene})()
+node.use_transmission = True
+node.inputs[node.inputs.find("Dispersion Scale")].default_value = 1
+preset = tree.nodes.new("LuxCoreNodeTexIORPreset")
+tree.links.new(preset.outputs["IOR"], node.inputs[node.inputs.find("Specular IOR")])
+tree.links.new(preset.outputs["Abbe Number"], node.inputs[node.inputs.find("Abbe Number")])
+exported = pyluxcore.Properties()
+node.export(exporter, None, exported, "d")
+abbe_tex = exported.Get("scene.materials.d.transmission.dispersionabbenumber").GetString()
+abbe = exported.Get(f"scene.textures.{abbe_tex}.value").GetFloat()
+checks.check(exported.Get("scene.materials.d.transmission.dispersionscale").GetFloat() == 1 and
+             abs(abbe - preset.abbe_number) < 1e-3 and preset.abbe_number > 0,
+             f"OpenPBR node exports the dispersion (Abbe {abbe:.1f} from the IOR Preset node)")
+for link in list(tree.links):
+    if link.from_node == preset:
+        tree.links.remove(link)
+tree.nodes.remove(preset)
+node.inputs[node.inputs.find("Dispersion Scale")].default_value = 0
+node.use_transmission = False
+node.inputs[node.inputs.find("Transmission Weight")].default_value = 0
 
 exported = pyluxcore.Properties()
 node.export(type("Exporter", (), {"node_cache": {}, "scene": scene})(), None, exported, "m")

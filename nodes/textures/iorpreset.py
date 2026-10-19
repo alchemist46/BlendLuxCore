@@ -43,6 +43,8 @@ class LuxCoreNodeTexIORPreset(LuxCoreNodeTexture, bpy.types.Node):
         self.label = "IOR Preset"
         self.outputs.new("LuxCoreSocketIOR", "IOR")
         self.outputs.new("LuxCoreSocketFloatPositive", "Dispersion")
+        # For the OpenPBR node (0 without dispersion data: no dispersion)
+        self.outputs.new("LuxCoreSocketFloatPositive", "Abbe Number")
         if not (self.ior_name_text and self.ior_value_text):
             item = LuxCoreIORPresetValues.get_item()
             self.ior_name_text = item[0]
@@ -92,6 +94,8 @@ class LuxCoreNodeTexIORPreset(LuxCoreNodeTexture, bpy.types.Node):
     def sub_export(self, exporter, depsgraph, props, luxcore_name=None, output_socket=None):
         if output_socket and output_socket.name == "Dispersion":
             value = self.get_dispersion()
+        elif output_socket and output_socket.name == "Abbe Number":
+            value = self.abbe_number
         else:
             value = self.ior_value_float
         definitions = {

@@ -943,7 +943,9 @@ def _principled_openpbr(node, props, material, luxcore_name, obj_name, group_nod
 
     Only the inputs that differ from the OpenPBR defaults are set. Both use
     perceptual roughness, and the base color is also the color of the
-    transmission and the subsurface scattering, as in Cycles.
+    transmission and the subsurface scattering, as in Cycles. The result is
+    the physical model of OpenPBR, not a copy of Cycles: the coat darkens
+    the base by its internal reflections, which Cycles leaves out.
     """
     definitions = {"type": "openpbr"}
 
@@ -1007,8 +1009,6 @@ def _principled_openpbr(node, props, material, luxcore_name, obj_name, group_nod
         put("coat.color", value("Coat Tint"), [1, 1, 1])
         put("coat.roughness", value("Coat Roughness"), 0)
         put("coat.ior", value("Coat IOR"), 1.6)
-        # Cycles' coat doesn't darken the base by its internal reflections
-        definitions["coat.darkening"] = 0
 
     sheen = value("Sheen Weight")
     if used(sheen):

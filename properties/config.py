@@ -219,6 +219,12 @@ class LuxCoreConfigPath(PropertyGroup):
     depth_glossy: IntProperty(name="Glossy", default=4, min=1, soft_max=128)
     # path.pathdepth.specular
     depth_specular: IntProperty(name="Specular", default=12, min=1, soft_max=128)
+    # path.pathdepth.transmission (pyluxcore 3.0; older builds count the
+    # refractions as specular, the rough ones as glossy)
+    depth_transmission: IntProperty(name="Transmission", default=12, min=1, soft_max=128,
+                                    description="Maximum number of refractions through glass and other "
+                                                "transmissive surfaces, rough or smooth (as Cycles' "
+                                                "transmission bounces)")
 
     hybridbackforward_enable: BoolProperty(name="Add Light Tracing", default=False,
                                            description=HYBRID_BACKFORWARD_DESC)

@@ -85,6 +85,7 @@ classes = (
     openpbr.LuxCoreSocketOpenPBRSpecularWeight,
     openpbr.LuxCoreSocketOpenPBRRotation,
     openpbr.LuxCoreSocketOpenPBRAnisotropy,
+    openpbr.LuxCoreSocketOpenPBRAbbe,
     openpbr.LuxCoreSocketOpenPBRDistance,
     openpbr.LuxCoreNodeMatOpenPBR,
     output.LuxCoreNodeMatOutput,

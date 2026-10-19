@@ -435,6 +435,9 @@ def _convert_path(
     definitions["path.pathdepth.diffuse"] = path.depth_diffuse + 1
     definitions["path.pathdepth.glossy"] = path.depth_glossy + 1
     definitions["path.pathdepth.specular"] = path.depth_specular
+    # pyluxcore 3.0 takes the specular depth when it isn't set
+    if path.depth_transmission != path.depth_specular:
+        definitions["path.pathdepth.transmission"] = path.depth_transmission
 
     if not utils.using_photongi_debug_mode(is_viewport_render, scene):
         if device == "OCL":
