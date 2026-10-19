@@ -89,3 +89,19 @@ def is_hiprt_available():
 def is_gpu_build():
     """Check if pyluxcore has been built with any GPU support."""
     return is_opencl_build() or is_cuda_build() or is_hip_build()
+
+
+_known_material_types = {}
+
+
+def has_material_type(type_name):
+    """Check if pyluxcore knows a material type (e.g. "openpbr", new in pyluxcore 3.0)"""
+    if type_name not in _known_material_types:
+        props = pyluxcore.Properties()
+        props.Set(pyluxcore.Property("scene.materials.__blc_probe__.type", type_name))
+        try:
+            pyluxcore.Scene().Parse(props)
+            _known_material_types[type_name] = True
+        except RuntimeError:
+            _known_material_types[type_name] = False
+    return _known_material_types[type_name]
