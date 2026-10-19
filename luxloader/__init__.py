@@ -9,6 +9,7 @@ import shutil
 from textwrap import dedent
 import base64
 import hashlib
+import importlib
 from enum import Enum, IntEnum
 import types
 import json
@@ -16,6 +17,7 @@ import configparser
 import gzip
 import pickle
 import re
+import zipfile
 
 import bpy
 import addon_utils
@@ -314,12 +316,17 @@ def _update_manifest(wheel_list):
         path.touch()
 
 
+def _wheel_dirs():
+    """Return Blender's local wheel directory and its site-packages."""
+    local_dir = EXTENSIONS_FOLDER / ".local"
+    pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    return local_dir, local_dir / "lib" / pyver / "site-packages"
+
+
 def _apply_wheels(p_wheel_list):
     """Wrap call to wheel_manager.apply_action."""
 
-    local_dir = EXTENSIONS_FOLDER / ".local"
-    pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
-    site_packages = local_dir / "lib" / pyver / "site-packages"
+    local_dir, site_packages = _wheel_dirs()
 
     wheel_manager.apply_action(
         local_dir=str(local_dir),
@@ -358,8 +365,54 @@ def _install_wheels():
     # Install new wheels
     _apply_wheels(wheel_list)
 
+    # On a first install, Blender has not put site-packages on sys.path (it
+    # does only when the folder exists, at startup and wheel syncs)
+    _, site_packages = _wheel_dirs()
+    if site_packages.is_dir() and str(site_packages) not in sys.path:
+        sys.path.append(str(site_packages))
+        importlib.invalidate_caches()
+
     # Update wheel information in blender_manifest.toml and create fake wheels
     _update_manifest(wheel_list)
+
+
+def _unstage_stale_wheels():
+    """Keep Blender from deleting the installed wheels at its next start.
+
+    When BlendLuxCore is reinstalled while pyluxcore is loaded, Blender's
+    wheel sync can't remove the old wheels (Windows locks loaded DLLs). It
+    stages them as stale in '.local/.~stale~' and removes them at its next
+    start, although BlendLuxCore has installed them again since. A folder it
+    could not rename keeps its name in the list, and pyluxcore.libs (the DLLs)
+    is then deleted: pyluxcore fails to import with "DLL load failed".
+    """
+    remove_paths = getattr(addon_utils, "stale_pending_remove_paths", None)
+    if remove_paths is None:
+        return
+
+    local_dir, site_packages = _wheel_dirs()
+    if not (local_dir / ".~stale~").exists():
+        return
+
+    # The top-level paths of the wheels, and the {name}.libs folder that
+    # delvewheel adds outside the RECORD
+    paths = set()
+    for wheel in WHEEL_DL_FOLDER.glob("*.whl"):
+        try:
+            with zipfile.ZipFile(wheel) as zip_fh:
+                names = zip_fh.namelist()
+        except (OSError, zipfile.BadZipFile):
+            continue
+        for name in names:
+            top = name.split("/", 1)[0]
+            if top and top != "..":
+                paths.add(top)
+        paths.add(wheel.name.partition("-")[0] + ".libs")
+
+    existing = [str(site_packages / p) for p in sorted(paths) if (site_packages / p).exists()]
+    if existing:
+        print("[BLC] Removing the installed wheels from Blender's stale files")
+        remove_paths(str(local_dir), existing)
 
 
 class WheelSource(IntEnum):
@@ -472,6 +525,16 @@ def _fetch_wheels():
                 "[BLC] Warning: pyluxcore should already be installed, "
                 "but it is not possible to find it! Reinstalling..."
             )
+        except ImportError as err:
+            # Files of the installation are missing, e.g. pyluxcore.libs
+            # (see _unstage_stale_wheels). Other import errors (an
+            # unsupported CPU) are not fixed by a reinstall.
+            if not any(msg in str(err) for msg in ("DLL load failed", "cannot open shared object")):
+                return FetchWheelStatus.CACHE, wheel_hash
+            print(
+                f"[BLC] Warning: pyluxcore is installed but can't be loaded ({err}). "
+                "Reinstalling..."
+            )
         else:
             return FetchWheelStatus.CACHE, wheel_hash
 
@@ -536,3 +599,5 @@ def ensure_pyluxcore():
         )
     elif fetch_result == FetchWheelStatus.ERROR:
         print(ENSURE_ERROR_MSG)
+
+    _unstage_stale_wheels()
