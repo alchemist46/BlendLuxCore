@@ -29,6 +29,7 @@ def run():
         update_brick_texture(node_tree)
         update_iorpreset_add_dispersion_output(node_tree)
         update_velvet_microfiber_sheen(node_tree)
+        update_subsurface_scatter_color(node_tree)
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
@@ -348,4 +349,45 @@ def update_iorpreset_add_dispersion_output(node_tree):
         item = LuxCoreIORPresetValues.find_by_name(node.ior_name_text)
         if item and item[2]:
             node.abbe_number = item[2]
+        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+
+
+def update_subsurface_scatter_color(node_tree):
+    # The Subsurface node (addon-modernization branch) had a Scale float and a
+    # Radius vector; now a Scatter Color and a Radius that is one distance
+    # (expandable per channel). The mean free path Scatter Color * Radius is
+    # the old Radius * Scale.
+    for node in find_nodes(node_tree, "LuxCoreNodeMatSubsurface", False):
+        if node.inputs.find("Scatter Color") != -1:
+            continue
+
+        old_scale = node.inputs[node.inputs.find("Scale")]
+        old_radius = node.inputs[node.inputs.find("Radius")]
+        old_radius.name = "Radius (old)"
+        scale = old_scale.default_value
+        radius = list(old_radius.default_value)
+
+        scatter_socket = node.add_input("LuxCoreSocketColor", "Scatter Color", (1, 1, 1))
+        radius_socket = node.add_input("LuxCoreSocketSubsurfaceRadius", "Radius", (scale, scale, scale))
+        node.inputs.move(len(node.inputs) - 2, 1)
+        node.inputs.move(len(node.inputs) - 1, 2)
+
+        if old_radius.is_linked or old_scale.is_linked:
+            # The old values as they were: Scatter Color = old Radius
+            scatter_socket.default_value = radius
+            for link in old_radius.links:
+                node_tree.links.new(link.from_socket, scatter_socket)
+            for link in old_scale.links:
+                node_tree.links.new(link.from_socket, radius_socket)
+        else:
+            # The Scatter Color normalized to 1, its maximum in the Radius
+            peak = max(radius)
+            if peak > 0:
+                scatter_socket.default_value = [r / peak for r in radius]
+                radius_socket.default_value = (scale * peak,) * 3
+            else:
+                radius_socket.default_value = (0, 0, 0)
+
+        node.inputs.remove(old_radius)
+        node.inputs.remove(old_scale)
         print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))

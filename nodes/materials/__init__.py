@@ -89,6 +89,7 @@ classes = (
     openpbr.LuxCoreSocketOpenPBRDistance,
     openpbr.LuxCoreNodeMatOpenPBR,
     output.LuxCoreNodeMatOutput,
+    subsurface.LuxCoreSocketSubsurfaceRadius,
     subsurface.LuxCoreNodeMatSubsurface,
     tree.LuxCoreMaterialNodeTree,
     twosided.LuxCoreNodeMatTwoSided,

@@ -125,8 +125,53 @@ material.luxcore.node_tree = tree
 output = tree.nodes.new("LuxCoreNodeMatOutput")
 node = tree.nodes.new("LuxCoreNodeMatSubsurface")
 node.inputs["Color"].default_value = (0.8, 0.5, 0.4)
-node.inputs["Scale"].default_value = 0.2
+node.inputs["Scatter Color"].default_value = (1.0, 0.2, 0.1)
+node.inputs["Radius"].radius = 0.2
 tree.links.new(node.outputs[0], output.inputs[0])
+
+
+def exported_mean_free_path(node):
+    import pyluxcore
+    props = pyluxcore.Properties()
+    definitions = {}
+    node.export_mean_free_path(None, None, props, definitions)
+    if isinstance(definitions["radius"], str):
+        return definitions["radius"]
+    return [r * definitions["scale"] for r in definitions["radius"]]
+
+
+def close(a, b):
+    return bool(np.allclose(a, b, atol=1e-5))
+
+
+# Radius: one value collapsed, scaling the channels together
+radius = node.inputs["Radius"]
+checks.check(close(radius.default_value, (0.2, 0.2, 0.2)), f"Radius sets the 3 channels {list(radius.default_value)}")
+checks.check(close(exported_mean_free_path(node), (0.2, 0.04, 0.02)), "uniform Radius: Scatter Color * Radius")
+radius.default_value = (0.2, 0.1, 0.1)
+checks.check(close(exported_mean_free_path(node), (0.2, 0.02, 0.01)), "per-channel Radius: Scatter Color * Radius")
+radius.radius = 0.4
+checks.check(close(radius.default_value, (0.4, 0.2, 0.2)), f"Radius keeps the channel ratios {list(radius.default_value)}")
+radius.default_value = (0.2, 0.2, 0.2)
+
+# An old node (Scale and a Radius vector) is converted, same mean free path
+from blendluxcore.utils import compatibility
+old_tree = bpy.data.node_groups.new("old_sss", "luxcore_material_nodes")
+old = old_tree.nodes.new("LuxCoreNodeMatSubsurface")
+old.inputs.remove(old.inputs["Scatter Color"])
+old.inputs.remove(old.inputs["Radius"])
+old.add_input("LuxCoreSocketFloatPositive", "Scale", 0.05)
+old.add_input("LuxCoreSocketVector", "Radius", (2, 0.4, 0.2))
+old.inputs.move(len(old.inputs) - 2, 1)
+old.inputs.move(len(old.inputs) - 1, 2)
+compatibility.update_subsurface_scatter_color(old_tree)
+names = [s.name for s in old.inputs][:4]
+checks.check(names == ["Color", "Scatter Color", "Radius", "IOR"], f"old node converted: {names}")
+checks.check(close(old.inputs["Scatter Color"].default_value, (1, 0.2, 0.1))
+             and close(old.inputs["Radius"].default_value, (0.1, 0.1, 0.1)),
+             "old node: Scatter Color normalized, Radius the old Scale * max(Radius)")
+checks.check(close(exported_mean_free_path(old), (0.1, 0.02, 0.01)), "old node: the same mean free path")
+bpy.data.node_groups.remove(old_tree)
 sphere.data.materials.clear()
 sphere.data.materials.append(material)
 LuxCoreErrorLog.clear()
@@ -134,6 +179,16 @@ pixels = harness.render(scene, "LUXCORE", os.path.join(OUT, "node_luxcore.exr"),
 mean = sphere_mean(pixels)
 checks.check(not LuxCoreErrorLog.errors, "Subsurface node: no export errors")
 checks.check(bool(mean[0] > 0.02 and mean[0] > mean[2]), f"Subsurface node renders (mean {np.round(mean, 3)})")
+
+# A texture in Radius: the mean free path is a scale texture, the same render
+value = tree.nodes.new("LuxCoreNodeTexConstfloat1")
+value.value = 0.2
+tree.links.new(value.outputs[0], node.inputs["Radius"])
+LuxCoreErrorLog.clear()
+linked = sphere_mean(harness.render(scene, "LUXCORE", os.path.join(OUT, "node_linked_luxcore.exr"), 16))
+checks.check(not LuxCoreErrorLog.errors, "Subsurface node, texture in Radius: no export errors")
+checks.check(bool(np.all(np.abs(linked / mean - 1) < 0.03)),
+             f"Subsurface node, texture in Radius: as the value (ratio {np.round(linked / mean, 3)})")
 
 print("images in", OUT)
 checks.finish()
