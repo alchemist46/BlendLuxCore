@@ -30,6 +30,7 @@ def run():
         update_iorpreset_add_dispersion_output(node_tree)
         update_velvet_microfiber_sheen(node_tree)
         update_subsurface_scatter_color(node_tree)
+        update_glossycoating_add_darkening_input(node_tree)
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
@@ -390,4 +391,16 @@ def update_subsurface_scatter_color(node_tree):
 
         node.inputs.remove(old_radius)
         node.inputs.remove(old_scale)
+        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+
+
+def update_glossycoating_add_darkening_input(node_tree):
+    # The Darkening input (pyluxcore 3.0), off as before
+    for node in find_nodes(node_tree, "LuxCoreNodeMatGlossyCoating", False):
+        if node.inputs.find("Darkening") != -1:
+            continue
+
+        node.add_input("LuxCoreSocketFloat0to1", "Darkening", 0)
+        # After Absorption Depth, as in a new node
+        node.inputs.move(len(node.inputs) - 1, node.inputs.find("Absorption Depth (nm)") + 1)
         print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
