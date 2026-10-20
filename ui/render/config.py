@@ -34,11 +34,21 @@ def luxcore_render_draw(panel, context):
                     text="No CUDA support in this BlendLuxCore version",
                     icon=icons.ERROR,
                 )
-            if gpu_backend == "HIP" and not utils.luxutils.is_hip_build():
-                col_device.label(
-                    text="HIP not available (needs an AMD GPU and the ROCm runtime)",
-                    icon=icons.ERROR,
-                )
+            if gpu_backend == "HIP":
+                if not utils.luxutils.is_hip_build():
+                    col_device.label(
+                        text="HIP not available (needs an AMD GPU and its driver, "
+                        "on Linux the ROCm runtime)",
+                        icon=icons.ERROR,
+                    )
+                elif not utils.luxutils.is_hiprtc_available():
+                    # Only the precompiled kernels can be used: the GPUs
+                    # without them need the HIP run-time compiler
+                    if utils.luxutils.has_hip_precompiled_kernels():
+                        text = "Precompiled for RDNA2-4 GPUs: older ones need the HIP SDK"
+                    else:
+                        text = "No HIP compiler: install the AMD HIP SDK (ROCm on Linux)"
+                    col_device.label(text=text, icon=icons.INFO)
     else:
         col_device.enabled = False
         col_device.prop(config, "bidir_device", text="Device")

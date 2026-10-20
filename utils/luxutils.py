@@ -86,6 +86,28 @@ def is_hiprt_available():
     return platform_desc.Get("compile.LUXRAYS_ENABLE_HIPRT").GetBool()
 
 
+def is_hiprtc_available():
+    """Check if pyluxcore found the HIP run-time compiler (hiprtc).
+
+    Without it, HIP renders only on the GPUs pyluxcore has precompiled
+    kernels for. The Windows AMD driver doesn't ship it: it comes with the HIP
+    SDK (on Linux, with ROCm)."""
+    platform_desc = pyluxcore.GetPlatformDesc()
+    # pyluxcore versions without the property require hiprtc to use HIP at all
+    if not platform_desc.IsDefined("compile.LUXRAYS_ENABLE_HIPRTC"):
+        return is_hip_build()
+    return platform_desc.Get("compile.LUXRAYS_ENABLE_HIPRTC").GetBool()
+
+
+def has_hip_precompiled_kernels():
+    """Check if pyluxcore ships precompiled HIP kernels (AMD RDNA2, RDNA3 and
+    RDNA4 GPUs), so they render without hiprtc and without compiling."""
+    platform_desc = pyluxcore.GetPlatformDesc()
+    if not platform_desc.IsDefined("compile.LUXRAYS_HIP_PRECOMPILED_KERNELS"):
+        return False
+    return platform_desc.Get("compile.LUXRAYS_HIP_PRECOMPILED_KERNELS").GetBool()
+
+
 def is_gpu_build():
     """Check if pyluxcore has been built with any GPU support."""
     return is_opencl_build() or is_cuda_build() or is_hip_build()

@@ -67,7 +67,7 @@ class LuxCoreAddonPreferences(AddonPreferences):
             "HIP",
             "HIP",
             "Use HIP for GPU acceleration on AMD GPUs (experimental). "
-            "Requires the AMD ROCm runtime",
+            "Requires the AMD driver on Windows, the ROCm runtime on Linux",
             2,
         ),
     ]
