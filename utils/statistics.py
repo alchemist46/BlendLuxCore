@@ -74,8 +74,8 @@ def path_depths_to_string(depths):
         # Path (total/diffuse/glossy/specular)
         return "T %d (D %d, G %d, S %d)" % depths
     elif len(depths) == 5:
-        # Path (total/diffuse/glossy/specular/transmission)
-        return "T %d (D %d, G %d, S %d, Tr %d)" % depths
+        # Path (total/diffuse/glossy/transmission/subsurface)
+        return "T %d (D %d, G %d, Tr %d, SSS %d)" % depths
     else:
         raise NotImplementedError("Unkown number of depth values")
 

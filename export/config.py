@@ -433,11 +433,18 @@ def _convert_path(
     # direct light with MIS, and depth 3 onwards would finally be direct + indirect light with MIS.
     definitions["path.pathdepth.total"] = path.depth_total + 1
     definitions["path.pathdepth.diffuse"] = path.depth_diffuse + 1
+    # The glossy depth covers the sharp reflections too (pyluxcore 3.0, where
+    # it is at least the specular depth); older builds count them in the
+    # specular depth, so both get the same value
     definitions["path.pathdepth.glossy"] = path.depth_glossy + 1
-    definitions["path.pathdepth.specular"] = path.depth_specular
+    definitions["path.pathdepth.specular"] = path.depth_glossy + 1
     # pyluxcore 3.0 takes the specular depth when it isn't set
-    if path.depth_transmission != path.depth_specular:
+    if path.depth_transmission != path.depth_glossy + 1:
         definitions["path.pathdepth.transmission"] = path.depth_transmission
+    # pyluxcore 3.0 takes the diffuse depth when it isn't set (older builds
+    # count the walks there)
+    if path.depth_subsurface != path.depth_diffuse:
+        definitions["path.pathdepth.subsurface"] = path.depth_subsurface + 1
 
     if not utils.using_photongi_debug_mode(is_viewport_render, scene):
         if device == "OCL":

@@ -575,8 +575,8 @@ class Exporter(object):
                 path_settings.depth_total,
                 path_settings.depth_diffuse,
                 path_settings.depth_glossy,
-                path_settings.depth_specular,
                 path_settings.depth_transmission,
+                path_settings.depth_subsurface,
             )
         stats.path_depths.value = path_depths
 

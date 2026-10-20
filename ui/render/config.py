@@ -98,8 +98,8 @@ class LUXCORE_RENDER_PT_lightpaths_bounces(RenderButtonsPanel, Panel):
             col = layout.column(align=True)
             draw_bounce_prop(col, "depth_diffuse")
             draw_bounce_prop(col, "depth_glossy")
-            draw_bounce_prop(col, "depth_specular")
             draw_bounce_prop(col, "depth_transmission")
+            draw_bounce_prop(col, "depth_subsurface")
         else:
             # Bidir options
             col.prop(config, "bidir_path_maxdepth")

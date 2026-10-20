@@ -215,16 +215,23 @@ class LuxCoreConfigPath(PropertyGroup):
     depth_total: IntProperty(name="Total Path Depth", default=12, min=1, soft_max=128)
     # path.pathdepth.diffuse
     depth_diffuse: IntProperty(name="Diffuse", default=4, min=1, soft_max=128)
-    # path.pathdepth.glossy
-    depth_glossy: IntProperty(name="Glossy", default=4, min=1, soft_max=128)
-    # path.pathdepth.specular
-    depth_specular: IntProperty(name="Specular", default=12, min=1, soft_max=128)
+    # path.pathdepth.glossy (pyluxcore 3.0: the sharp reflections too; older
+    # builds count them in path.pathdepth.specular, exported with the same value)
+    depth_glossy: IntProperty(name="Glossy", default=4, min=1, soft_max=128,
+                              description="Maximum number of reflections, rough or sharp (as Cycles' "
+                                          "glossy bounces)")
     # path.pathdepth.transmission (pyluxcore 3.0; older builds count the
     # refractions as specular, the rough ones as glossy)
     depth_transmission: IntProperty(name="Transmission", default=12, min=1, soft_max=128,
                                     description="Maximum number of refractions through glass and other "
                                                 "transmissive surfaces, rough or smooth (as Cycles' "
                                                 "transmission bounces)")
+    # path.pathdepth.subsurface (pyluxcore 3.0; older builds count the walks
+    # in the diffuse depth)
+    depth_subsurface: IntProperty(name="Subsurface", default=4, min=0, soft_max=128,
+                                  description="Maximum number of subsurface random walks along a path; "
+                                              "beyond it, subsurface materials are shaded as diffuse "
+                                              "surfaces (0 turns the random walk off)")
 
     hybridbackforward_enable: BoolProperty(name="Add Light Tracing", default=False,
                                            description=HYBRID_BACKFORWARD_DESC)
