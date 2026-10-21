@@ -47,6 +47,8 @@ class FrameBuffer:
             context, scene, self._border
         )
         self._pixel_size = int(scene.luxcore.viewport.pixel_size)
+        # The upscaling filter (pixel size > 1), set again by view_draw()
+        self.use_filter = scene.luxcore.viewport.mag_filter == "LINEAR"
 
         self._transparent = self._initialize_transparency(scene, context)
         bufferdepth = 4 if self._transparent else 3
@@ -264,5 +266,9 @@ class FrameBuffer:
                 format=format,
                 data=self.buffer,
             )
+        # GPUTexture.filter_mode() is missing from older Blender versions:
+        # they keep the default sampler
+        if hasattr(self._texture, "filter_mode"):
+            self._texture.filter_mode(self.use_filter)
         self.shader.uniform_sampler("image", self._texture)
         self.batch.draw(self.shader)
