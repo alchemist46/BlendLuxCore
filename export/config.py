@@ -210,7 +210,8 @@ def _convert_opencl_settings(scene, definitions, is_final_render):
                 definitions["opencl.native.threads.count"] = (
                     scene.render.threads
                 )
-            # If no thread count is specified, LuxCore automatically uses all available cores
+            # If no thread count is specified, LuxCore uses all the hardware
+            # threads but one per GPU (one for each GPU's feeder thread)
         else:
             # Disable hybrid rendering
             definitions["opencl.native.threads.count"] = 0
