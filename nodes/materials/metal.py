@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import FloatProperty, BoolProperty, EnumProperty
+from bpy.props import BoolProperty, EnumProperty
 from ..base import LuxCoreNodeMaterial
 from ... import utils
 from ...utils import node as utils_node

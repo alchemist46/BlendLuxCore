@@ -3,7 +3,6 @@ from bpy.props import BoolProperty
 from ..base import LuxCoreNodeMaterial
 from .glass import THIN_FILM_DESCRIPTION
 from ...utils.node import ThinFilmCoating
-from ...utils import node as utils_node
 
 
 class LuxCoreNodeMatDisney(LuxCoreNodeMaterial, bpy.types.Node):

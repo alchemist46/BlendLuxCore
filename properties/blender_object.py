@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import PointerProperty, BoolProperty, FloatProperty, IntProperty
+from bpy.props import PointerProperty, BoolProperty, IntProperty
 from bpy.types import PropertyGroup
 from .hair import LuxCoreHair
 

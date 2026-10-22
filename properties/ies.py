@@ -7,7 +7,6 @@ from bpy.props import (
     IntProperty,
 )
 
-from ..utils import node as utils_node
 
 
 USE_IES_DESCRIPTION = (

@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import StringProperty, BoolProperty
+from bpy.props import StringProperty
 from .utils import init_vol_node_tree, poll_node, use_cycles_settings, use_cycles_material_nodes
 from ..utils.errorlog import LuxCoreErrorLog
 

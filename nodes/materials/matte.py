@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import FloatProperty, BoolProperty
+from bpy.props import FloatProperty
 from ..base import LuxCoreNodeMaterial
 from ..sockets import LuxCoreSocketFloat
 from ...utils import node as utils_node

@@ -1,10 +1,9 @@
 import bpy
-from bpy.props import FloatProperty, EnumProperty, BoolProperty
+from bpy.props import FloatProperty, EnumProperty
 from ..base import LuxCoreNodeMaterial
 from ..sockets import LuxCoreSocketFloat
 from ... import icons
 from ...utils import node as utils_node
-from ...utils.node import Roughness
 
 REFLECTION_DESCRIPTION = "Glossy layer reflection value"
 

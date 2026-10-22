@@ -1,7 +1,7 @@
 import math
 import pyluxcore
 from .. import utils
-from .caches.exported_data import ExportedObject, ExportedLight
+from .caches.exported_data import ExportedObject
 
 
 # TODO fix motion blur of area lights, they get a wrong transformation

@@ -17,7 +17,6 @@ from ..hair import (
 from .exported_data import ExportedObject, ExportedPart
 from .. import light, material
 from ...utils.errorlog import LuxCoreErrorLog
-from ...utils.log import logger
 from ...utils import node as utils_node
 from ...utils import MESH_OBJECTS
 from ...utils.node import get_active_output

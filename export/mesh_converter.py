@@ -8,7 +8,6 @@ import bpy
 
 from . import caches
 from .. import utils
-from ..utils.errorlog import LuxCoreErrorLog
 from ..utils.log import logger
 
 if _needs_reload:

@@ -3,7 +3,6 @@ from bpy.props import BoolProperty, IntProperty
 from ..output import LuxCoreNodeOutput, update_active
 from ..materials.output import MATERIAL_ID_DESC
 from ... import utils
-import pyluxcore
 from ...utils.errorlog import LuxCoreErrorLog
 from ... import icons
 

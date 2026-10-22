@@ -1,4 +1,3 @@
-import bpy
 from time import time
 from .. import utils
 from ..utils.log import logger

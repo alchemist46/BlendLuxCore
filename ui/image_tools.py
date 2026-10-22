@@ -1,6 +1,5 @@
 from bpy.types import Panel
 from .. import icons
-from ..utils import ui as utils_ui
 from ..engine.base import LuxCoreRenderEngine, template_refresh_button
 from ..properties.denoiser import LuxCoreDenoiser
 from ..properties.display import LuxCoreDisplaySettings

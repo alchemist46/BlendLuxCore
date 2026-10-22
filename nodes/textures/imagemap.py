@@ -3,8 +3,7 @@ _needs_reload = "bpy" in locals()
 import bpy
 
 from bpy.props import (
-    PointerProperty, EnumProperty, StringProperty, IntProperty,
-    BoolProperty, FloatProperty,
+    PointerProperty, EnumProperty, BoolProperty, FloatProperty,
 )
 
 from .. import base

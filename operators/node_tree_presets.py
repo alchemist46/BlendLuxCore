@@ -1,6 +1,6 @@
 from collections import OrderedDict
 import bpy
-from bpy.props import StringProperty, IntProperty
+from bpy.props import StringProperty
 from mathutils import Color, Vector
 from .. import utils
 from .utils import poll_object, make_nodetree_name, show_nodetree

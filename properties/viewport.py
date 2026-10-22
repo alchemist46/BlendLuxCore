@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import IntProperty, EnumProperty, BoolProperty, FloatProperty
+from bpy.props import IntProperty, EnumProperty, BoolProperty
 from .. import utils
 import pyluxcore
 

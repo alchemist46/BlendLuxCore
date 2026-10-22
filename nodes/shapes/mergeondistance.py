@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import IntProperty, FloatProperty, BoolProperty
+from bpy.props import IntProperty, BoolProperty
 from ..base import LuxCoreNodeShape
 from ...utils import node as utils_node
 

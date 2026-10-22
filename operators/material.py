@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import IntProperty, StringProperty, EnumProperty
+from bpy.props import IntProperty, EnumProperty
 from .. import utils
 from .utils import (
     poll_object, poll_material, init_mat_node_tree, make_nodetree_name,

@@ -1,7 +1,6 @@
 import bpy
 import mathutils
 from bpy.props import (
-    EnumProperty,
     FloatProperty,
     FloatVectorProperty,
     BoolProperty,

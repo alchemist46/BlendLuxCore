@@ -22,8 +22,7 @@
 #
 # #####
 
-import bpy
-from os.path import basename, dirname, join, isfile, splitext
+from os.path import join
 
 from bpy.types import Operator
 from ...utils.lol import utils as utils

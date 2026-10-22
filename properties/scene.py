@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import PointerProperty, IntProperty
+from bpy.props import PointerProperty
 from . import (
     config, debug, denoiser, display, halt, lightgroups, devices, statistics, viewport,
 )

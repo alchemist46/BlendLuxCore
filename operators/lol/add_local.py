@@ -27,10 +27,10 @@ import json
 import hashlib
 
 from bpy.types import Operator
-from bpy.props import BoolProperty, IntProperty, StringProperty, CollectionProperty, PointerProperty
+from bpy.props import IntProperty
 
 from os import listdir
-from os.path import basename, dirname, isfile, join, splitext, exists
+from os.path import dirname, isfile, join, splitext, exists
 from ...utils.lol import utils as lol_utils
 from ...utils import get_addon_preferences
 

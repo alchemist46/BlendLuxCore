@@ -1,11 +1,9 @@
 import bpy
-from bpy.props import BoolProperty, PointerProperty, IntProperty, FloatVectorProperty
+from bpy.props import BoolProperty, IntProperty, FloatVectorProperty
 import pyluxcore
 from ... import utils
 from ...utils import node as utils_node
 from ... import icons
-from ...utils.errorlog import LuxCoreErrorLog
-from ...utils.node import get_active_output
 from ..output import update_active, LuxCoreNodeOutput
 
 SHADOWCATCHER_DESC = (

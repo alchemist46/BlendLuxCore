@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import StringProperty, IntProperty
+from bpy.props import IntProperty
 from .utils import poll_node, LUXCORE_OT_set_node_tree, LUXCORE_MT_node_tree, show_nodetree
 
 

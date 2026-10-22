@@ -1,7 +1,7 @@
 import bpy
 import mathutils
 from time import time
-from bpy.props import EnumProperty, PointerProperty, StringProperty
+from bpy.props import EnumProperty, PointerProperty
 from ..base import LuxCoreNodeTexture
 from ... import utils
 import pyluxcore

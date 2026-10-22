@@ -4,8 +4,6 @@ import bpy
 from bpy.app.handlers import persistent
 from .. import utils
 from ..utils import node as utils_node
-from ..utils import openVDB_sequence_resolve_all
-from ..utils import clamp
 
 if _needs_reload:
     import importlib

@@ -1,7 +1,5 @@
 from bl_ui.properties_view_layer import ViewLayerButtonsPanel
 from bpy.types import Panel
-from .. import utils
-from .. import icons
 
 class LUXCORE_VIEWLAYER_PT_layer(ViewLayerButtonsPanel, Panel):
     bl_label = "View Layer"

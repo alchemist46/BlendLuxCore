@@ -1,5 +1,5 @@
 import bpy
-from nodeitems_utils import NodeCategory, NodeItem, NodeItemCustom
+from nodeitems_utils import NodeCategory, NodeItem
 from ... import icons
 from ...utils import node as utils_node
 from ..nodeitems import Separator, NodeItemMultiImageImport

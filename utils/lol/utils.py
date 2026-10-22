@@ -29,15 +29,13 @@
 # #####
 
 import bpy
-import uuid
-from os.path import basename, dirname, join, isfile, splitext, exists, getsize
+from os.path import dirname, join, isfile, splitext, exists, getsize
 import hashlib
 import tempfile
 import os
-import urllib.error
 from mathutils import Vector, Matrix
 import threading
-from threading import _MainThread, Thread, Lock
+from threading import _MainThread, Thread
 from .timer import timer_update
 from ...utils import get_addon_preferences, compatibility
 from ..log import logger

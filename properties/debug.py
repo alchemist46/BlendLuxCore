@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import IntProperty, BoolProperty
+from bpy.props import BoolProperty
 
 
 class LuxCoreDebugSettings(bpy.types.PropertyGroup):

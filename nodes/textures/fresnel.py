@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import PointerProperty, EnumProperty, StringProperty, FloatVectorProperty
+from bpy.props import EnumProperty, StringProperty, FloatVectorProperty
 from ..base import LuxCoreNodeTexture
 from ..sockets import FLOAT_UI_PRECISION
 from ... import icons

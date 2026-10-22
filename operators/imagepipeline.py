@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import EnumProperty, StringProperty, IntProperty
+from bpy.props import EnumProperty
 
 # Valid CRF preset names (case sensitive):
 # See lux/core/cameraresponse.cpp to keep this up to date

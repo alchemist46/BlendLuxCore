@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import (
     PointerProperty, EnumProperty, FloatProperty,
-    FloatVectorProperty, IntProperty, BoolProperty,
+    FloatVectorProperty, BoolProperty,
     StringProperty,
 )
 from .light import (

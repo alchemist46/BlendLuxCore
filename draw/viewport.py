@@ -5,12 +5,8 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 import math
-import os
 from time import sleep
 import numpy as np
-import tempfile
-from shutil import which
-from os.path import dirname
 import pyluxcore
 from .. import utils
 
