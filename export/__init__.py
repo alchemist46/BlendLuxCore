@@ -107,6 +107,13 @@ class Exporter(object):
         # to export, because we don't have one global properties object.
         self.node_cache = {}
 
+        # {luxcore material name: (luxcore_name, props)} of the materials read
+        # from their Cycles nodes (export/material.py). The reader has no node
+        # cache, so without this a material is read again for every object and
+        # slot using it. Entries are dropped when the material changes
+        # (MaterialCache.update()).
+        self.cycles_material_cache = {}
+
         # If a light/material uses a lightgroup, the id is stored here during export
         self.lightgroup_cache = set()
 

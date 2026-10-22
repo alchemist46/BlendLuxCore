@@ -32,7 +32,14 @@ def convert(exporter, depsgraph, material, is_viewport_render, obj_name=""):
             matusenodes = material.use_nodes
 
         if matusenodes and (material.luxcore.use_cycles_nodes or is_asset_without_lux_mat):
-            return cycles_node_reader.convert(material, props, luxcore_name, obj_name)
+            # Read once per export: every caller only adds the props to the scene
+            cache = getattr(exporter, "cycles_material_cache", None)
+            if cache is not None and luxcore_name in cache:
+                return cache[luxcore_name]
+            result = cycles_node_reader.convert(material, props, luxcore_name, obj_name)
+            if cache is not None:
+                cache[luxcore_name] = result
+            return result
 
         if node_tree is None:
             LuxCoreErrorLog.add_warning(f'Material "{material.name}": Missing node tree', obj_name=obj_name)

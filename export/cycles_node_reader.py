@@ -912,9 +912,9 @@ def _uv_mapping(vector_socket, material, obj_name):
     if node and not (node.bl_idname == "ShaderNodeTexCoord" or node.bl_idname == "ShaderNodeUVMap"):
         LuxCoreErrorLog.add_warning(f"In material {material.name}: unsupported texture coordinates "
                                     f"from {node.name}, using the UVs", obj_name=obj_name)
-    elif node and node.bl_idname == "ShaderNodeTexCoord" and _texcoord_output(vector_socket) != "UV":
+    elif node and node.bl_idname == "ShaderNodeTexCoord" and texcoord_output(vector_socket) != "UV":
         LuxCoreErrorLog.add_warning(f"In material {material.name}: unsupported texture coordinates "
-                                    f"{_texcoord_output(vector_socket)}, using the UVs", obj_name=obj_name)
+                                    f"{texcoord_output(vector_socket)}, using the UVs", obj_name=obj_name)
 
     # LuxCore: R(-rotation) * (uvscale * uv) + uvdelta, see UVMapping2D::Map()
     return {
@@ -925,7 +925,7 @@ def _uv_mapping(vector_socket, material, obj_name):
     }
 
 
-def _texcoord_output(socket):
+def texcoord_output(socket):
     """Name of the Texture Coordinate output behind socket (through a Mapping node)"""
     link = utils_node.get_link(socket)
     while link and link.from_node.bl_idname == "ShaderNodeMapping":
@@ -1077,3 +1077,5 @@ def _convert_to_float(color_or_texture, props):
         return tex_name
     elif isinstance(color_or_texture, list):
         return sum(color_or_texture) / len(color_or_texture)
+    # Already a float
+    return color_or_texture
