@@ -588,11 +588,6 @@ def get_default_directory():
     return home + os.sep + 'LuxCoreOnlineLibrary_data'
 
 
-def get_scene_id():
-    '''gets scene id and possibly also generates a new one'''
-    bpy.context.scene['uuid'] = bpy.context.scene.get('uuid', str(uuid.uuid4()))
-    return bpy.context.scene['uuid']
-
 def get_thumbnail(imagename):
     # Prepend a dot so the image is hidden to users, e.g. in Blender's search
     imagename_blender = '.' + imagename

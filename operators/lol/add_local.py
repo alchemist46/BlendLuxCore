@@ -70,10 +70,6 @@ def calc_hash(filename):
     return file_hash.hexdigest()
 
 
-def scale_scene(context):
-    depsgraph = context.evaluated_depsgraph_get()
-
-
 def render_thumbnail(args):
     from ...utils.compatibility import run
     (context, assetfile, asset_type) = args

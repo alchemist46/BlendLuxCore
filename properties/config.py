@@ -617,10 +617,7 @@ class LuxCoreConfig(PropertyGroup):
     seed: IntProperty(name="Seed", default=1, min=1, description=SEED_DESC)
     use_animated_seed: BoolProperty(name="Animated Seed", default=False, description=ANIM_SEED_DESC)
 
-    # Min. epsilon settings (drawn in ui/units.py)
-    show_min_epsilon: BoolProperty(name="Advanced LuxCore Settings", default=False,
-                                    description="Show/Hide advanced LuxCore features. "
-                                                "Only change them if you know what you are doing")
+    # Min. epsilon settings (drawn in ui/scene_units.py)
     min_epsilon: FloatProperty(name="Min. Epsilon", default=1e-5, soft_min=1e-6, soft_max=1e-1,
                                 precision=5,
                                 description="User higher values when artifacts due to floating point precision "

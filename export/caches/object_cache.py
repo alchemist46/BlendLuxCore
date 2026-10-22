@@ -426,7 +426,6 @@ class ObjectCache2:
                     engine,
                 )
 
-        # self._debug_info()
         return instances
 
     def duplicate_instances(self, instances, luxcore_scene, stats):
@@ -463,15 +462,6 @@ class ObjectCache2:
 
         if stats:
             stats.export_time_instancing.value = time() - start_time
-
-    def _debug_info(self):
-        logger.debug(f"Objects in cache: {len(self.exported_objects)}")
-        logger.debug(f"Meshes in cache: {len(self.exported_meshes)}")
-        # for key, exported_mesh in self.exported_meshes.items():
-        #     if exported_mesh:
-        #         print(key, exported_mesh.mesh_definitions)
-        #     else:
-        #         print(key, "mesh is None")
 
     def _get_mesh_key(self, obj, use_instancing, is_viewport_render=True):
         # Important: we need the data of the original object, not the evaluated one.
@@ -920,5 +910,3 @@ class ObjectCache2:
                     scene_props,
                     is_viewport_render,
                 )
-
-        # self._debug_info()

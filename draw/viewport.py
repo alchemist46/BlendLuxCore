@@ -13,7 +13,6 @@ from shutil import which
 from os.path import dirname
 import pyluxcore
 from .. import utils
-from ..utils import pfm
 
 if _needs_reload:
     import importlib

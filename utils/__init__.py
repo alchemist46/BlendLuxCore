@@ -81,10 +81,6 @@ def make_key_from_instance(dg_obj_instance):
     return key
 
 
-def make_name_from_instance(dg_obj_instance):
-    return sanitize_luxcore_name(make_key_from_instance(dg_obj_instance))
-
-
 def get_pretty_name(datablock):
     name = datablock.name
 
@@ -112,13 +108,6 @@ def get_luxcore_name(datablock, is_viewport_render=True):
         key = get_pretty_name(datablock) + key
 
     return sanitize_luxcore_name(key)
-
-
-def obj_from_key(key, objects):
-    for obj in objects:
-        if key == make_key(obj):
-            return obj
-    return None
 
 
 def persistent_id_to_str(persistent_id):
@@ -765,14 +754,6 @@ def get_version_string():
     with open(manifest_path, "rb") as f:
         manifest_data = tomllib.load(f)
     return manifest_data["version"]
-
-
-def get_user_dir(name):
-    """Get a user writeable directory, create it if not existing."""
-    logger.debug(f"Module id: {get_module_id()}")
-    return pathlib.Path(
-        bpy.utils.extension_path_user(get_module_id(), path=name, create=True)
-    )
 
 
 def register_module(module_name, classes, submodules=[]):

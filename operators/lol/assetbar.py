@@ -815,22 +815,6 @@ class LOLAssetBarOperator(Operator):
             self.exit_modal()
             return {"CANCELLED"}
 
-            newarea = None
-            for a in context.window.screen.areas:
-                if a.type == "VIEW_3D":
-                    self.area = a
-                    for r in a.regions:
-                        if r.type == "WINDOW":
-                            self.region = r
-                    newarea = a
-                    break
-
-            # we check again and quit if things weren't fixed this way.
-            if newarea == None:
-                self.exit_modal()
-                ui_props.assetbar_on = False
-                return {"CANCELLED"}
-
         if not assetbar_props.wcount > 0:
             ui_props.turn_off = True
 

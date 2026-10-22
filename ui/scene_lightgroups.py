@@ -5,10 +5,6 @@ from .. import icons
 from ..icons import icon_manager
 
 
-def lightgroup_icon(enabled):
-    return icons.LIGHTGROUP_ENABLED if enabled else icons.LIGHTGROUP_DISABLED
-
-
 def settings_toggle_icon(enabled):
     return icons.EXPANDABLE_OPENED if enabled else icons.EXPANDABLE_CLOSED
 

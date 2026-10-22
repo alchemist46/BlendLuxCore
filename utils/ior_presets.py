@@ -103,10 +103,6 @@ class LuxCoreIORPresetValues():
         return cls._ior_values[key]
 
     @classmethod
-    def get_value(cls, key=default_key):
-        return cls._ior_values[key][1]
-
-    @classmethod
     def find_by_name(cls, name):
         """The item with this display name, or None"""
         for item in cls._ior_values.values():

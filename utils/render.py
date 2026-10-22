@@ -58,13 +58,6 @@ def sampler_to_str(sampler):
         return "Unkown"
 
 
-def light_strategy_to_str(light_strategy):
-    try:
-        return LIGHT_STRATEGY_TO_STR[light_strategy]
-    except KeyError:
-        return "Unkown"
-
-
 def update_stats(session):
     try:
         # Note: this can be an expensive operation when the filmsize is large
@@ -242,14 +235,6 @@ def get_pretty_stats(config, stats, scene, context=None):
     return " | ".join(pretty)
 
 
-def shortest_display_interval(scene):
-    # Magic formula to compute shortest possible display interval (found through testing).
-    # If the interval is any shorter, the CPU won't be able to keep up.
-    # Only used for final renders.
-    width, height = calc_filmsize(scene)
-    return (width * height) / 852272.0 * 1.1
-
-
 def find_suggested_clamp_value(session, scene=None):
     """
     Find suggested clamp value.
@@ -274,22 +259,3 @@ def find_suggested_clamp_value(session, scene=None):
             traceback.print_exc()
 
     return suggested_clamping_value
-
-
-def find_suggested_tonemap_scale(session):
-    """
-    This is the same code as in the TONEMAP_AUTOLINEAR imagepipeline plugin.
-    If you use the return value as the scale of the TONEMAP_LINEAR plugin,
-    you emulate the autolinear tonemapper.
-    """
-    avg_film_luminance = session.GetFilm().GetFilmY()
-    return (1.25 / avg_film_luminance * (118 / 255))
-
-    # TODO
-    # measure this all the time, show a message to the user if
-    # abs(old - new) > threshold
-    # so the user can set the new value with one click
-
-    # imagepipeline = scene.camera.data.luxcore.imagepipeline
-    # imagepipeline.tonemapper.linear_scale = suggested_linear_scale
-    # imagepipeline.tonemapper.use_autolinear = False

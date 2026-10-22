@@ -44,21 +44,6 @@ def template_node_tree(layout, data, property, icon,
         row.operator(operator_unlink, text="", icon=icons.CLEAR)
 
 
-def get_all_spaces(context, area_type, space_type):
-    """
-    Get all spaces of a specific area and space type.
-    Area types: https://docs.blender.org/api/2.79/bpy.types.Area.html?highlight=area#bpy.types.Area.type
-    Space types: https://docs.blender.org/api/2.79/bpy.types.Space.html?highlight=space#bpy.types.Space.type
-    """
-    spaces = []
-    for area in context.screen.areas:
-        if area.type == area_type:
-            for space in area.spaces:
-                if space.type == space_type:
-                    spaces.append(space)
-    return spaces
-
-
 def get_all_regions(context, area_type, region_type):
     """
     Get all regions of a specific area and region type.

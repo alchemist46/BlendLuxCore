@@ -164,13 +164,6 @@ class LuxCoreAddonPreferences(AddonPreferences):
         default=f"BlendLuxCore/{utils.get_version_string()}",
     )
 
-    max_assetbar_rows: IntProperty(
-        name="Max Assetbar Rows",
-        description="max rows of assetbar in the 3d view",
-        default=1,
-        min=0,
-        max=20,
-    )
     thumb_size: IntProperty(
         name="Assetbar Thumbnail Size", default=96, min=-1, max=256
     )

@@ -47,18 +47,6 @@ class ConvertFilmChannelOutput:
                 f"AOV: Bad value for source dtype: '{self.src_dtype}'"
             )
 
-    @staticmethod
-    def check_size(render_engine, width, height):
-        """Check consistency between LuxCore and Blender buffer sizes."""
-        resx, resy = render_engine.resolutionx, render_engine.resolutiony
-
-        if resx != width or resy != height:
-            msg = (
-                f"Size mismatch: Blender buffer size: {resx}x{resy} "
-                f"versus LuxCore size: {width}x{height}"
-            )
-            raise ValueError(msg)
-
     def __call__(
         self,
         film: pyluxcore.Film,

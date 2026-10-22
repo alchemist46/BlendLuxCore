@@ -403,13 +403,6 @@ def get_hair_material_index(psys):
     return psys.settings.material - 1
 
 
-def get_strand_seg(idx, strand):
-    if idx >= len(strand.points):
-        return [0.0, 0.0, 0.0]
-    else:
-        return strand.points[idx].position
-
-
 # Code for Hair Curves in Blender 3.5
 def convert_hair_curves(
     exporter, depsgraph, obj, obj_key, luxcore_scene, is_for_duplication

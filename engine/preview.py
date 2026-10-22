@@ -27,8 +27,6 @@ Note: you can find the Blender preview scene in the sources at this path:
 blender/release/datafiles/preview.blend
 """
 
-# Diameter of the default sphere, in meters
-DEFAULT_SPHERE_SIZE = 0.1
 
 class PreviewType(Enum):
     NONE = 0

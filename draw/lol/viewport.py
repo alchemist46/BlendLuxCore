@@ -153,11 +153,6 @@ def draw_downloader(x, y, percent=0, img=None):
     draw_rect(x - 3, y - 3, 6, 6, (1, 0, 0, .3))
 
 
-def draw_progress(x, y, text='', percent=None, color=(.2, 1, .2, .7)):
-    draw_rect(x, y, percent, 5, color)
-    draw_text(text, x, y + 8, 16, color)
-
-
 def draw_text(text, x, y, size, color=(1, 1, 1, 0.5)):
     font_id = 0
     # bgl.glColor4f(*color)
@@ -266,38 +261,6 @@ def update_ui_size(context, area, region):
         assetbar_props.hcount = math.floor(assetbar_props.height / (ui_props.thumb_size + 2*assetbar_props.margin))
     else:
         assetbar_props.hcount = 1
-
-
-def get_largest_3dview():
-    maxsurf = 0
-    maxa = None
-    maxw = None
-    region = None
-    for w in bpy.context.window_manager.windows:
-        screen = w.screen
-        for a in screen.areas:
-            if a.type == 'VIEW_3D':
-                asurf = a.width * a.height
-                if asurf > maxsurf:
-                    maxa = a
-                    maxw = w
-                    maxsurf = asurf
-
-                    for r in a.regions:
-                        if r.type == 'WINDOW':
-                            region = r
-    global active_area, active_window, active_region
-    active_window = maxw
-    active_area = maxa
-    active_region = region
-    return maxw, maxa, region
-
-
-def mouse_in_area(mx, my, x, y, w, h):
-    if x < mx < x + w and y < my < y + h:
-        return True
-    else:
-        return False
 
 
 def mouse_in_asset_bar(context, mx, my):

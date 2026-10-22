@@ -199,38 +199,6 @@ def _restore_backup_wheels():
         shutil.move(WHEEL_BACKUP_FOLDER / file, WHEEL_DL_FOLDER / file)
 
 
-def _check_offline_content(install_offline_folder):
-    """Check if offline folder contains something to install."""
-    files = os.listdir(install_offline_folder)
-    if len(files) == 0:
-        raise RuntimeError(
-            "BlendLuxCore Installation Error: "
-            "The install_offline/ directory exists but is empty!"
-        )
-
-    versions = (f.split("-")[1] for f in files if f.startswith("pyluxcore"))
-    for version in versions:
-        break
-    else:
-        version = None  # no valid file was found
-    return version
-
-
-def _copy_offline_files(install_offline_folder):
-    """Copy offline folder content to wheel folder."""
-    files = os.listdir(install_offline_folder)
-    for file in files:
-        shutil.copy(install_offline_folder / file, WHEEL_DL_FOLDER / file)
-
-
-def _delete_install_offline(install_offline_folder):
-    """Clear offline folder content."""
-    files = os.listdir(install_offline_folder)
-    for file in files:
-        os.remove(install_offline_folder / file)
-    os.rmdir(install_offline_folder)
-
-
 DEFAULT_SETTINGS = {
     "wheel_source": 0,
     "wheel_version": "",

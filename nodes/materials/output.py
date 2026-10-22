@@ -212,22 +212,6 @@ class LuxCoreNodeMatOutput(LuxCoreNodeOutput, bpy.types.Node):
 
         props.Set(utils.luxutils.create_props(prefix, definitions))
 
-    def _convert_volume(self, exporter, depsgraph, node_tree, props):
-        if node_tree is None:
-            return None
-
-        try:
-            luxcore_name = utils.get_luxcore_name(node_tree)
-            active_output = get_active_output(node_tree)
-            active_output.export(exporter, depsgraph, props, luxcore_name)
-            return luxcore_name
-        except Exception as error:
-            msg = 'Node Tree "%s": %s' % (node_tree.name, error)
-            LuxCoreErrorLog.add_warning(msg)
-            import traceback
-            traceback.print_exc()
-            return None
-
     def _convert_fallback(self, props, luxcore_name):
         prefix = "scene.materials." + luxcore_name + "."
         props.Set(pyluxcore.Property(prefix + "type", "matte"))
