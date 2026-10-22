@@ -28,3 +28,10 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Problem: Blender stopped responding (one core busy) shortly after right-clicking a thumbnail in the Asset Bar, while a thumbnail download thread was still running.
 - Reproduce: not reliable. Blender 5.2.2 on Windows with simulated input (`--enable-event-simulate`): Update ToC (after a first try that failed on the missing library folder), Asset Bar, hover and right-click a thumbnail. Six scripted replays of the same steps, on the code before and after the cleanup commits, did not hang.
 - Notes: py-spy showed the main thread in native Blender code with no Python frame, and Thread-4 (`bg_download_thumbnails`) in an SSL read. Main suspect: that thread loaded and scaled the images with the bpy API. Since the thumbnail fix of 2026-10-22 it only downloads the files, and the images are loaded in the main thread; three replays since then did not hang. Remove this entry if it does not happen again.
+
+### Persistent cache overwrite never deletes the old file for `//` paths
+- Found: 2026-10-22
+- Area: export
+- Problem: `get_persistent_cache_file_path` (`utils/__init__.py:708`) tests and removes `file_path` (the relative `//name.pgi` the load handler fills in) instead of `file_path_abs`, so with the default paths "Compute and overwrite" leaves the old file and LuxCore loads the stale cache instead of recomputing it.
+- Reproduce: Blender 5.2, PhotonGI with "Compute and overwrite" on and the default file path; render, change a light, render again: the first cache is used.
+- Notes: one-line fix (LuxCore ROADMAP CA, the addon step).
