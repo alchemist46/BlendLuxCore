@@ -34,6 +34,10 @@ For iterating without rebuilding the extension zip each time, use `debug-helpers
 
 `pyluxcore` is NOT vendored; it's installed at runtime as a pip wheel by `luxloader/__init__.py` (`ensure_pyluxcore()`), called from the top-level `__init__.py` before any other BlendLuxCore submodule is imported. The target PyPI version is pinned in `luxloader/__init__.py` as `PYLUXCORE_VERSION` — bump this only after the corresponding `pyluxcore` release is actually on PyPI. Wheel source (PyPI vs local file/folder) is controlled by a JSON settings file typically written by the external "BlendLuxHelper" tool.
 
+## Roadmap and bug list
+
+[ROADMAP.md](ROADMAP.md) lists the open work on the addon; update its status table when an item is done. [BUGS.md](BUGS.md) lists the known addon bugs that are not fixed yet. Add an entry as soon as a problem is found, before moving on, even when it is unrelated to the current task or only suspected; do not add a problem that is fixed in the same task. When an entry is fixed, remove it and name it in the fix commit message. Bugs in the LuxCore core go in the core's own `BUGS.md`.
+
 ## Architecture
 
 ### Import hierarchy (critical — read `doc/mandatory.md`)

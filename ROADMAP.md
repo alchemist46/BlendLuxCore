@@ -1,4 +1,8 @@
-# BlendLuxCore modernization review
+# BlendLuxCore roadmap
+
+The open work on the addon, from the modernization review below. Known bugs are
+in [BUGS.md](BUGS.md). The work that needs core changes first is also tracked
+in LuxCore's own `ROADMAP.md`.
 
 Reviewed: 2026-10-14, branch `hip-backend` at commit `ca163c68` (v2.11.1).
 Scope: the full addon source (241 Python files): render engine lifecycle, exporter
