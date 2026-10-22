@@ -9,6 +9,7 @@ import bpy
 from . import caches
 from .. import utils
 from ..utils.errorlog import LuxCoreErrorLog
+from ..utils.log import logger
 
 if _needs_reload:
     import importlib
@@ -124,10 +125,10 @@ def convert(
             nlayers = len(layers)
             suffix = "layers" if nlayers > 1 else "layer"
             return f"{nlayers} {layer_name} {suffix}"
-        print(f"[BLC] Exporting '{str(mesh_key)}' - {len(unique_mats)} submesh(es)")
-        print(f"[BLC] - {len(vertex_points)} points, {len(loop_vertices)} corners")
-        print(f"[BLC] - {fmt_layer(uvs, 'uv')}")
-        print(f"[BLC] - {fmt_layer(rgba_colors, 'color')}")
+        logger.debug(f"Exporting '{str(mesh_key)}' - {len(unique_mats)} submesh(es)")
+        logger.debug(f"- {len(vertex_points)} points, {len(loop_vertices)} corners")
+        logger.debug(f"- {fmt_layer(uvs, 'uv')}")
+        logger.debug(f"- {fmt_layer(rgba_colors, 'color')}")
 
         mesh_definitions = []
         for mat in unique_mats:
@@ -138,8 +139,8 @@ def convert(
             loops, triangles = _share_corners(
                 mat_triangles, loop_vertices, loop_normals, uvs, rgba_colors
             )
-            print(f"[BLC] - Submesh #{mat:03d}: {len(mat_triangles)} triangles, "
-                  f"{len(loops)} vertices")
+            logger.debug(f"- Submesh #{mat:03d}: {len(mat_triangles)} triangles, "
+                         f"{len(loops)} vertices")
 
             luxcore_scene.DefineMeshExt(
                 name=name,
@@ -156,8 +157,7 @@ def convert(
         duration = time() - start_time
         if exporter and exporter.stats:
             exporter.stats.export_time_meshes.value += duration
-        print(f"[BLC] Export duration: {duration:.3f}s")
-        print("[BLC]")
+        logger.debug(f"Export duration: {duration:.3f}s")
 
         return caches.exported_data.ExportedMesh(mesh_definitions)
 

@@ -40,6 +40,7 @@ import threading
 from threading import _MainThread, Thread, Lock
 from .timer import timer_update
 from ...utils import get_addon_preferences, compatibility
+from ..log import logger
 
 
 def urlopen(req, timeout=60):
@@ -221,12 +222,10 @@ def download_table_of_contents(context):
         bg_task.start()
         return True
     except ConnectionError as error:
-        print("[LOL] Connection error: Could not download table of contents")
-        print(error)
+        logger.error(f"[LOL] Connection error: Could not download table of contents ({error})")
         return False
     except urllib.error.URLError as error:
-        print("[LOL] URL error: Could not download table of contents")
-        print(error)
+        logger.error(f"[LOL] URL error: Could not download table of contents ({error})")
         return False
 
     finally:
@@ -379,7 +378,7 @@ class Downloader(threading.Thread):
             temp_zip_path = os.path.join(temp_dir_path, filename)
             urlstr = LOL_HOST_URL + "/" + tcom.passargs['asset type'].lower() + "/" + filename
             try:
-                print("[LOL] Downloading:", urlstr)
+                logger.info(f"[LOL] Downloading: {urlstr}")
                 req = urllib.request.Request(
                     urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
                 )
@@ -411,18 +410,16 @@ class Downloader(threading.Thread):
                         if self.stopped():
                             response.close()
                             return
-                print("[LOL] Download finished")
+                logger.info("[LOL] Download finished")
                 import zipfile
                 with zipfile.ZipFile(temp_zip_path) as zf:
-                    print("[LOL] Extracting zip to", os.path.join(user_preferences.global_dir, tcom.passargs['asset type'].lower()))
+                    logger.info(f"[LOL] Extracting zip to {os.path.join(user_preferences.global_dir, tcom.passargs['asset type'].lower())}")
                     zf.extractall(os.path.join(user_preferences.global_dir, tcom.passargs['asset type'].lower()))
 
             except TimeoutError as error:
-                print("[LOL] TimeoutError error: Could not download " + filename)
-                print(error)
+                logger.error(f"[LOL] TimeoutError error: Could not download {filename} ({error})")
             except urllib.error.URLError as error:
-                print("[LOL] Could not download: " + filename)
-                print(error)
+                logger.error(f"[LOL] Could not download: {filename} ({error})")
 
             finally:
                 tcom.finished = True
@@ -517,7 +514,7 @@ def append_material(context, asset, target_object, target_slot):
                 bpy.data.objects[target_object].material_slots[target_slot].material = data_to.materials[0]
         compatibility.run()
     else:
-        print('[LOL] Error in material asset file ' + splitext(filename)[0] + '.blend' + ': Asset name does not match material name.')
+        logger.error(f"[LOL] In material asset file {splitext(filename)[0]}.blend: Asset name does not match material name.")
 
 
 def load_asset(context, asset, location, rotation, target_object, target_slot):
@@ -540,11 +537,11 @@ def load_asset(context, asset, location, rotation, target_object, target_slot):
     else:
         hash = calc_hash(filepath)
         if hash != asset["hash"]:
-            print("[LOL] hash number doesn't match: %s" % hash)
+            logger.info(f"[LOL] hash number doesn't match: {hash}")
             download = True
 
     if download:
-        print("[LOL] Download asset")
+        logger.info("[LOL] Download asset")
         download_file(ui_props.asset_type, asset, location, rotation, target_object, target_slot)
     else:
         if ui_props.asset_type == 'MATERIAL':
@@ -725,10 +722,10 @@ def bg_download_thumbnails(context, download_queue):
         tpath = join(user_preferences.global_dir, asset_type.lower(), 'preview', imagename)
 
         if not bpy.app.online_access:
-            print("[LOL] Online access is disabled, not downloading thumbnails")
+            logger.warning("[LOL] Online access is disabled, not downloading thumbnails")
             break
 
-        print("[LOL] Downloading ", imagename)
+        logger.debug(f"[LOL] Downloading {imagename}")
         urlstr = LOL_HOST_URL + "/"+ asset_type.lower() +"/preview/" + imagename
         req = urllib.request.Request(
             urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
@@ -752,7 +749,7 @@ def bg_download_thumbnails(context, download_queue):
                 asset['thumbnail'] = bpy.data.images.load(tpath)
                 asset['thumbnail'].name = '.LOL_preview'
             else:
-                print("[LOL] Download error ", response.status_code, ": ", urlstr)
+                logger.warning(f"[LOL] Download error {response.status_code}: {urlstr}")
 
     for threaddata in bg_threads:
         tag, bg_task = threaddata

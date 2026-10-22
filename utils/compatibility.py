@@ -1,6 +1,7 @@
 import bpy
 from ..utils.node import find_nodes, TREE_TYPES, ThinFilmCoating
 from ..utils.ior_presets import LuxCoreIORPresetValues
+from .log import logger
 
 
 """
@@ -74,7 +75,7 @@ def update_mat_output_volume_change(node_tree):
                 volume_pointer.node_tree = interior
                 volume_pointer.location = (new_out.location.x - 250, new_out.location.y - 100)
                 node_tree.links.new(volume_pointer.outputs["Volume"], new_out.inputs["Interior Volume"])
-                print("linked interior", node_tree.name)
+                logger.info(f"Linked interior volume in tree {node_tree.name}")
 
             exterior = old_output["exterior_volume"]
 
@@ -86,7 +87,7 @@ def update_mat_output_volume_change(node_tree):
         except KeyError:
             pass
 
-        print('Updated output node "%s" in tree %s to new version' % (old_output.name, node_tree.name))
+        logger.info('Updated output node "%s" in tree %s to new version' % (old_output.name, node_tree.name))
         node_tree.nodes.remove(old_output)
 
 
@@ -102,7 +103,7 @@ def update_glossy_ior_change(node_tree):
             # Note: the IOR input will be at the very bottom, but at least the export works
             node.add_input("LuxCoreSocketIOR", "IOR", 1.5)
             node.inputs["IOR"].enabled = False
-            print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_volume_asymmetry_change(node_tree):
@@ -120,7 +121,7 @@ def update_volume_asymmetry_change(node_tree):
         if asymmetry_socket.bl_idname == "NodeSocketUndefined":
             node.inputs.remove(asymmetry_socket)
             node.add_input("LuxCoreSocketVolumeAsymmetry", "Asymmetry", (0, 0, 0))
-            print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_colormix_remove_min_max_sockets(node_tree):
@@ -136,7 +137,7 @@ def update_colormix_remove_min_max_sockets(node_tree):
             node.mode_clamp_max = socket_max.default_value
             node.inputs.remove(socket_min)
             node.inputs.remove(socket_max)
-            print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_imagemap_remove_gamma_brightness_sockets(node_tree):
@@ -159,7 +160,7 @@ def update_imagemap_remove_gamma_brightness_sockets(node_tree):
             updated = True
 
         if updated:
-            print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_cloth_remove_repeat_sockets(node_tree):
@@ -175,7 +176,7 @@ def update_cloth_remove_repeat_sockets(node_tree):
             node.repeat_v = socket_repeat_v.default_value
             node.inputs.remove(socket_repeat_u)
             node.inputs.remove(socket_repeat_v)
-            print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_imagemap_add_alpha_output(node_tree):
@@ -185,7 +186,7 @@ def update_imagemap_add_alpha_output(node_tree):
         node_id = node.outputs.find("Alpha")
         if node_id == -1:
             node.outputs.new("LuxCoreSocketFloatUnbounded", "Alpha")
-            print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_smoke_multiple_output_channels(node_tree):
@@ -220,7 +221,7 @@ def update_smoke_multiple_output_channels(node_tree):
         node_id = node.outputs.find("Value")
         node.outputs.remove(node.outputs[node_id])
 
-        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_smoke_mantaflow_simulation(node_tree):
@@ -265,7 +266,7 @@ def update_smoke_mantaflow_simulation(node_tree):
             except KeyError:
                 pass
 
-        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 def update_mat_output_add_shape_input(node_tree):
     # commit e20355a7567b22df4d05e8b303c98dbc697b9c08
@@ -274,7 +275,7 @@ def update_mat_output_add_shape_input(node_tree):
         node_id = node.inputs.find("Shape")
         if node_id == -1:
             node.inputs.new("LuxCoreSocketShape", "Shape")
-            print('Updated output node "%s" in tree %s to new version' % (node.name, node_tree.name))
+            logger.info('Updated output node "%s" in tree %s to new version' % (node.name, node_tree.name))
 
 
 def update_glass_disney_add_film_sockets(node_tree):
@@ -290,7 +291,7 @@ def update_glass_disney_add_film_sockets(node_tree):
             node.add_input("LuxCoreSocketFloat0to1", "Film Amount", 1, enabled=False)
         
         ThinFilmCoating.init(node)
-        print('Updated node "%s" in tree %s to new version' % (node.name, node_tree.name))
+        logger.info('Updated node "%s" in tree %s to new version' % (node.name, node_tree.name))
 
 
 def update_velvet_microfiber_sheen(node_tree):
@@ -309,7 +310,7 @@ def update_velvet_microfiber_sheen(node_tree):
             if socket_id != -1:
                 node.inputs[socket_id].hide = True
                 node.inputs[socket_id].enabled = False
-        print('Updated node "%s" in tree %s to new version' % (node.name, node_tree.name))
+        logger.info('Updated node "%s" in tree %s to new version' % (node.name, node_tree.name))
 
 
 def update_invert_add_maximum_input(node_tree):
@@ -319,7 +320,7 @@ def update_invert_add_maximum_input(node_tree):
         node_id = node.inputs.find("Maximum")
         if node_id == -1:
             node.add_input("LuxCoreSocketFloatPositive", "Maximum", 1)
-            print('Updated invert node "%s" in tree %s to new version' % (node.name, node_tree.name))
+            logger.info('Updated invert node "%s" in tree %s to new version' % (node.name, node_tree.name))
 
 
 def update_brick_texture(node_tree):
@@ -337,7 +338,7 @@ def update_brick_texture(node_tree):
         node_id = node.inputs.find("brickmodtex")
         node.inputs[node_id].name = "Brick Color 2"
 
-        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_iorpreset_add_dispersion_output(node_tree):
@@ -350,7 +351,7 @@ def update_iorpreset_add_dispersion_output(node_tree):
         item = LuxCoreIORPresetValues.find_by_name(node.ior_name_text)
         if item and item[2]:
             node.abbe_number = item[2]
-        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_subsurface_scatter_color(node_tree):
@@ -391,7 +392,7 @@ def update_subsurface_scatter_color(node_tree):
 
         node.inputs.remove(old_radius)
         node.inputs.remove(old_scale)
-        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
 
 
 def update_glossycoating_add_darkening_input(node_tree):
@@ -403,4 +404,4 @@ def update_glossycoating_add_darkening_input(node_tree):
         node.add_input("LuxCoreSocketFloat0to1", "Darkening", 0)
         # After Absorption Depth, as in a new node
         node.inputs.move(len(node.inputs) - 1, node.inputs.find("Absorption Depth (nm)") + 1)
-        print('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))

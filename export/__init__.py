@@ -8,6 +8,7 @@ from .. import utils
 from ..utils import render as utils_render
 from ..utils import compatibility as utils_compatibility
 from ..utils.errorlog import LuxCoreErrorLog
+from ..utils.log import logger
 from . import (
     caches,
     camera,
@@ -115,7 +116,7 @@ class Exporter(object):
         # Notes:
         # In final render, context is None
 
-        print("[Exporter] Creating session")
+        logger.info("[Exporter] Creating session")
         start = time()
         # TODO 2.8 I'm not too happy about this, we shouldn't keep any
         # reference to temporary data, even if only for a while
@@ -213,13 +214,13 @@ class Exporter(object):
             scene.luxcore.debug.enabled
             and scene.luxcore.debug.print_properties
         ):
-            print("-" * 50)
-            print("DEBUG: Scene Properties:\n")
-            print(
-                "(Note: does not contain dupli props, only the props of the base object)\n"
+            logger.info(
+                "-" * 50 + "\n"
+                "Scene Properties:\n\n"
+                "(Note: does not contain dupli props, only the props of the base object)\n\n"
+                f"{scene_props}\n"
+                + "-" * 50
             )
-            print(scene_props)
-            print("-" * 50)
         luxcore_scene.Parse(scene_props)
         # We can only duplicate the instances *after* the scene_props were
         # parsed so the base objects are available for luxcore_scene
@@ -273,10 +274,12 @@ class Exporter(object):
             scene.luxcore.debug.enabled
             and scene.luxcore.debug.print_properties
         ):
-            print("-" * 50)
-            print("DEBUG: Config Properties:\n")
-            print(config_props)
-            print("-" * 50)
+            logger.info(
+                "-" * 50 + "\n"
+                "Config Properties:\n\n"
+                f"{config_props}\n"
+                + "-" * 50
+            )
         renderconfig = pyluxcore.RenderConfig(config_props, luxcore_scene)
 
         # Regularly check if we should abort the export (important in heavy
@@ -285,7 +288,7 @@ class Exporter(object):
             return None
 
         export_time = time() - start
-        print("Export took %.1f s" % export_time)
+        logger.info("Export took %.1f s" % export_time)
         if stats:
             stats.export_time.value = export_time
             self._init_stats(stats, config_props, scene)
@@ -441,7 +444,7 @@ class Exporter(object):
 
     def update(self, depsgraph, context, session, changes):
         self.scene = depsgraph.scene_eval
-        print("[Exporter] Update because of:", Change.to_string(changes))
+        logger.info(f"[Exporter] Update because of: {Change.to_string(changes)}")
         # Invalidate node cache
         self.node_cache.clear()
 
@@ -472,7 +475,7 @@ class Exporter(object):
 
                 traceback.print_exc()
                 LuxCoreErrorLog.add_error(error)
-                print("Fatal error, stopping session.")
+                logger.error("Fatal error, stopping session.")
                 session.Stop()  # TODO not sure if this works
                 raise
 
@@ -527,7 +530,7 @@ class Exporter(object):
 
         if changes & Change.VISIBILITY:
             for key in self.visibility_cache.objects_to_remove:
-                print("Removing object with key", key)
+                logger.debug(f"Removing object with key {key}")
 
                 try:
                     exported_obj = self.object_cache2.exported_objects.pop(key)

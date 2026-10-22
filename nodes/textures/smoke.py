@@ -9,6 +9,7 @@ from ...export import smoke
 from ...utils import node as utils_node
 from ... import icons
 from ...utils.errorlog import LuxCoreErrorLog
+from ...utils.log import logger
 
 class LuxCoreNodeTexSmoke(LuxCoreNodeTexture, bpy.types.Node):
     bl_label = "Smoke"
@@ -62,8 +63,8 @@ class LuxCoreNodeTexSmoke(LuxCoreNodeTexture, bpy.types.Node):
 
     def sub_export(self, exporter, depsgraph, props, luxcore_name=None, output_socket=None):
         start_time = time()
-        print("[Node Tree: %s][Smoke Domain: %s] Beginning smoke export of channel %s"
-              % (self.id_data.name, self.domain.name, output_socket.name))
+        logger.info("[Node Tree: %s][Smoke Domain: %s] Beginning smoke export of channel %s"
+                    % (self.id_data.name, self.domain.name, output_socket.name))
 
         if not self.domain:
             error = "No Domain object selected."
@@ -153,7 +154,7 @@ class LuxCoreNodeTexSmoke(LuxCoreNodeTexture, bpy.types.Node):
         props.Set(prop)
 
         elapsed_time = time() - start_time
-        print("[Node Tree: %s][Smoke Domain: %s] Smoke export of channel %s took %.3f s"
-              % (self.id_data.name, self.domain.name, output_socket.name, elapsed_time))
+        logger.info("[Node Tree: %s][Smoke Domain: %s] Smoke export of channel %s took %.3f s"
+                    % (self.id_data.name, self.domain.name, output_socket.name, elapsed_time))
 
         return luxcore_name

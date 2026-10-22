@@ -72,8 +72,14 @@ submodules = (properties, nodes, operators, handlers, engine, ui)
 def register():
     utils.register_module("Main", [], submodules)
 
+    try:
+        utils.log.set_verbose(utils.get_addon_preferences(bpy.context).display_luxcore_logs)
+    except (KeyError, AttributeError):
+        # No preferences yet, keep the default level
+        pass
+
     pyluxcore.Init(utils.log.LuxCoreLog.add)
-    print(
+    utils.log.logger.info(
         f"BlendLuxCore {utils.get_version_string()} registered "
         f"(with pyluxcore {version('pyluxcore')})"
     )

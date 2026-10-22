@@ -8,6 +8,7 @@ from .. import export, utils, draw, properties
 from ..draw.final import FrameBufferFinal
 from ..utils import render as utils_render
 from ..utils.errorlog import LuxCoreErrorLog
+from ..utils.log import logger
 from ..utils import view_layer as utils_view_layer
 from ..properties.denoiser import LuxCoreDenoiser
 from ..properties.display import LuxCoreDisplaySettings
@@ -23,7 +24,7 @@ if _needs_reload:
 
 
 def render(engine, depsgraph):
-    print("=" * 50)
+    logger.info("=" * 50)
     scene = depsgraph.scene_eval
     LuxCoreErrorLog.clear()
     statistics = scene.luxcore.statistics.get_active()
@@ -39,7 +40,7 @@ def render(engine, depsgraph):
 
     layer = depsgraph.view_layer_eval
 
-    print('[Engine/Final] Rendering layer "%s"' % layer.name)
+    logger.info(f'[Engine/Final] Rendering layer "{layer.name}"')
 
     dummy_result = engine.begin_result(0, 0, 1, 1, layer=layer.name)
 
@@ -62,7 +63,7 @@ def render(engine, depsgraph):
         # Blender skips the rest of the render layers anyway
         return
 
-    print('[Engine/Final] Finished rendering layer "%s"' % layer.name)
+    logger.info(f'[Engine/Final] Finished rendering layer "{layer.name}"')
     
 
 def _render_layer(engine, depsgraph, statistics, view_layer):
@@ -73,7 +74,7 @@ def _render_layer(engine, depsgraph, statistics, view_layer):
 
     if engine.session is None:
         # session is None, but no error was thrown
-        print("[Engine/Final] Export cancelled by user.")
+        logger.info("[Engine/Final] Export cancelled by user.")
         return
 
     engine.framebuffer = FrameBufferFinal(scene)
@@ -82,7 +83,7 @@ def _render_layer(engine, depsgraph, statistics, view_layer):
     start = time()
     engine.session.Start()
     session_init_time = time() - start
-    print("Session started in %.1f s" % session_init_time)
+    logger.info(f"Session started in {session_init_time:.1f} s")
     statistics.session_init_time.value = session_init_time
 
     session_config = engine.session.GetRenderConfig()
@@ -171,7 +172,7 @@ def _render_layer(engine, depsgraph, statistics, view_layer):
             samples = stats.Get("stats.renderengine.pass").GetInt()
             if not checked_optimal_clamp and samples > clamp_warmup_samples:
                 clamp_value = utils_render.find_suggested_clamp_value(engine.session, depsgraph.scene)
-                print("Recommended clamp value:", clamp_value)
+                logger.info(f"Recommended clamp value: {clamp_value}")
                 checked_optimal_clamp = True
 
         # Check before we sleep

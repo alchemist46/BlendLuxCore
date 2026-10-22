@@ -10,7 +10,7 @@ from ..draw.viewport import FrameBuffer
 from .. import utils
 from ..utils import render as utils_render
 from ..utils import get_addon_preferences
-from ..utils.log import LuxCoreLog
+from ..utils.log import LuxCoreLog, logger, set_verbose
 from ..utils.errorlog import LuxCoreErrorLog
 from ..export.config import convert_viewport_engine
 
@@ -103,14 +103,15 @@ def view_update(engine, context, depsgraph, changes=None):
             display_luxcore_logs = get_addon_preferences(
                 bpy.context
             ).display_luxcore_logs
+            set_verbose(display_luxcore_logs)
             if display_luxcore_logs:
                 pyluxcore.SetLogHandler(LuxCoreLog.add)
             else:
                 pyluxcore.SetLogHandler(LuxCoreLog.silent)
 
         try:
-            print("=" * 50)
-            print("[Engine/Viewport] New session")
+            logger.info("=" * 50)
+            logger.info("[Engine/Viewport] New session")
             engine.exporter = export.Exporter()
             engine.session = engine.exporter.create_session(
                 depsgraph, context, engine=engine
@@ -144,8 +145,8 @@ def view_update(engine, context, depsgraph, changes=None):
     s = time()
     changes = engine.exporter.get_changes(depsgraph, context, changes)
     delta_t = (time() - s) * 1000
-    print(
-        f"[BLC] view_update(): checking for other changes took {delta_t:.1f} ms"
+    logger.debug(
+        f"view_update(): checking for other changes took {delta_t:.1f} ms"
     )
 
     if changes:
@@ -164,10 +165,10 @@ def view_update(engine, context, depsgraph, changes=None):
         )
         engine.viewport_start_time = time()
         delta_t = (time() - s) * 1000
-        print(f"[BLC] view_update(): applying changes took {delta_t:.1f} ms")
+        logger.debug(f"view_update(): applying changes took {delta_t:.1f} ms")
 
     delta_t = (time() - start) * 1000
-    print(f"[BLC] view_update() took {delta_t:.1f} ms")
+    logger.debug(f"view_update() took {delta_t:.1f} ms")
 
 
 # Seconds between two change checks in view_draw() while the view does not change
@@ -307,7 +308,7 @@ def view_draw(engine, context, depsgraph):
             samples = stats.Get("stats.renderengine.pass").GetInt()
 
             if samples >= 5:
-                print("[Engine/Viewport] Pausing session")
+                logger.info("[Engine/Viewport] Pausing session")
                 engine.session.Pause()
             else:
                 engine.tag_redraw()
@@ -323,7 +324,7 @@ def view_draw(engine, context, depsgraph):
     if rendered_time > halt_time:
         # Put in pause...
         if not engine.session.IsInPause():
-            print("[Engine/Viewport] Pausing session")
+            logger.info("[Engine/Viewport] Pausing session")
             engine.session.Pause()
         status_message = "(Paused)"
 
@@ -331,7 +332,7 @@ def view_draw(engine, context, depsgraph):
         use_oidn = context.scene.luxcore.viewport.get_denoiser(context) == "OIDN"
         if use_oidn and not framebuffer.denoised:
             if not framebuffer.is_denoiser_active():
-                print("Starting OIDN denoiser...")
+                logger.info("Starting OIDN denoiser...")
                 framebuffer.start_denoiser(
                     engine.session, engine.exporter.imagepipeline_cache.props
                 )
@@ -352,7 +353,7 @@ def view_draw(engine, context, depsgraph):
         try:
             engine.session.UpdateStats()
         except RuntimeError as error:
-            print("[Engine/Viewport] Error during UpdateStats():", error)
+            logger.warning(f"[Engine/Viewport] Error during UpdateStats(): {error}")
         framebuffer.update(engine.session)
         engine.tag_redraw()
 

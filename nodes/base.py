@@ -4,6 +4,7 @@ from mathutils import Color
 from .. import utils
 from ..utils import node as utils_node
 from ..utils import ui as utils_ui
+from ..utils.log import logger
 from .. import icons
 from ..utils.node import TREE_TYPES, TREE_ICONS, get_active_output
 
@@ -405,7 +406,7 @@ class LuxCoreNodeTreePointer(LuxCoreNode, bpy.types.Node):
         output = get_active_output(self.node_tree)
 
         if output is None:
-            print("ERROR: no active output found in node tree", self.node_tree.name)
+            logger.error(f"no active output found in node tree {self.node_tree.name}")
             return None
 
         # Ignore the passed-in luxcore_name here.

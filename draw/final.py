@@ -9,6 +9,7 @@ from ..properties.denoiser import LuxCoreDenoiser
 from ..properties.display import LuxCoreDisplaySettings
 from ..properties.aovs import AOVS as AOV_TABLE
 from ..utils import view_layer as utils_view_layer
+from ..utils.log import logger
 from .utils import ConvertFilmChannelOutput
 
 
@@ -118,7 +119,7 @@ class FrameBufferFinal:
                         engine,
                     )
                 except RuntimeError as error:
-                    print(f"Error on import of AOV {output_name}: {error}")
+                    logger.error(f"Error on import of AOV {output_name}: {error}")
 
             # Light groups
             lightgroup_pass_names = scene.luxcore.lightgroups.get_pass_names()
@@ -144,7 +145,7 @@ class FrameBufferFinal:
                         name,
                     )
                 except RuntimeError as error:
-                    print(
+                    logger.error(
                         "Error on import of Lightgroup AOV of group "
                         f"{name}: {error}"
                     )
@@ -237,13 +238,13 @@ class FrameBufferFinal:
         if render_stopped and samples == self.denoiser_last_samples:
             # No new samples, do not run the denoiser. Saves time when the user
             # cancels the render wile the denoiser is running, for example.
-            print(
+            logger.info(
                 "No new samples since last denoiser run, skipping denoising."
             )
             refresh_denoised = False
 
         if refresh_denoised:
-            print("Refreshing DENOISED")
+            logger.info("Refreshing DENOISED")
             self.denoiser_last_samples = samples
 
             # Update the imagepipeline
@@ -285,7 +286,7 @@ class FrameBufferFinal:
                     execute_imagepipeline=False,
                 )
             except RuntimeError as error:
-                print(f"Error on import of denoised result: {error}")
+                logger.error(f"Error on import of denoised result: {error}")
 
             if not was_paused and session.IsInPause():
                 session.Resume()

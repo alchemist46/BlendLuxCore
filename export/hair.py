@@ -8,6 +8,7 @@ import pyluxcore
 from .image import ImageExporter
 from time import time
 from ..utils.errorlog import LuxCoreErrorLog
+from ..utils.log import logger
 
 
 def find_psys_modifier(obj, psys):
@@ -174,7 +175,7 @@ def convert_hair(
         mod = find_psys_modifier(obj, psys)
 
         msg = "[%s: %s] Exporting hair" % (obj.name, psys.name)
-        print(msg)
+        logger.info(msg)
         if engine:
             engine.update_stats("Exporting...", msg)
 
@@ -288,7 +289,7 @@ def convert_hair(
         if len(uvs) == 0:
             copy_uvs = False
 
-        print(
+        logger.debug(
             "Collecting Blender hair information took %.3f s"
             % (time() - collection_start)
         )
@@ -343,7 +344,7 @@ def convert_hair(
         time_elapsed = time() - start_time
         if exporter.stats:
             exporter.stats.export_time_hair.value += time_elapsed
-        print(
+        logger.info(
             "[%s: %s] Hair export finished (%.3f s)"
             % (obj.name, psys.name, time_elapsed)
         )

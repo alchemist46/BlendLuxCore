@@ -14,6 +14,7 @@ from .statistics import (
     get_rays_per_sample,
 )
 from .errorlog import LuxCoreErrorLog
+from .log import logger
 from . import view_layer
 
 ENGINE_TO_STR = {
@@ -69,7 +70,7 @@ def update_stats(session):
         # Note: this can be an expensive operation when the filmsize is large
         session.UpdateStats()
     except RuntimeError as error:
-        print("Error during UpdateStats():", error)
+        logger.warning(f"Error during UpdateStats(): {error}")
 
     return session.GetStats()
 
@@ -268,7 +269,7 @@ def find_suggested_clamp_value(session, scene=None):
             # TODO: rework this so it can't fail anymore (some users have reported that it throws an AttributeError)
             scene.luxcore.config.path.suggested_clamping_value = suggested_clamping_value
         except AttributeError:
-            print("Warning: could not set suggested_clamping_value property")
+            logger.warning("Could not set suggested_clamping_value property")
             import traceback
             traceback.print_exc()
 

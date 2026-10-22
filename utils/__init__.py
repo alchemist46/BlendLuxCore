@@ -25,13 +25,15 @@ _needs_reload = "bpy" in locals()
 import bpy
 import mathutils
 
-from . import view_layer, errorlog, misc, colorspace
+from . import log, view_layer, errorlog, misc, colorspace
 
 from .misc import get_name_with_lib, pluralize
+from .log import logger
 
 if _needs_reload:
     import importlib
 
+    log = importlib.reload(log)
     view_layer = importlib.reload(view_layer)
     errorlog = importlib.reload(errorlog)
     misc = importlib.reload(misc)
@@ -767,13 +769,10 @@ def get_version_string():
 
 def get_user_dir(name):
     """Get a user writeable directory, create it if not existing."""
-    print(f"[BLC] Module id: {get_module_id()}")
+    logger.debug(f"Module id: {get_module_id()}")
     return pathlib.Path(
         bpy.utils.extension_path_user(get_module_id(), path=name, create=True)
     )
-
-
-VERBOSE_REGISTER = False  # Set to true to see per-class info (debug)
 
 
 def register_module(module_name, classes, submodules=[]):
@@ -783,13 +782,12 @@ def register_module(module_name, classes, submodules=[]):
     - A collection of classes, registered with bpy.utils.classes
     - A collection of submodules (optional), for which 'register' method is called
     """
-    print(f"[BLC] Registering '{module_name}'")
+    logger.debug(f"Registering '{module_name}'")
     for mod in submodules:
         mod.register()
 
     for cls in classes:
-        if VERBOSE_REGISTER:
-            print(f"[BLC] Registering {module_name}.{cls.__name__}")
+        logger.debug(f"Registering {module_name}.{cls.__name__}")
         try:
             bpy.utils.register_class(cls)
         except Exception as err:
@@ -805,10 +803,9 @@ def unregister_module(module_name, classes, submodules=[]):
     The registration encompasses 2 collections, see register_module.
     The registration is operated in reverse order.
     """
-    print(f"[BLC] Unregistering '{module_name}'")
+    logger.debug(f"Unregistering '{module_name}'")
     for cls in reversed(classes):
-        if VERBOSE_REGISTER:
-            print(f"[BLC] Unregistering {module_name}.{cls.__name__}")
+        logger.debug(f"Unregistering {module_name}.{cls.__name__}")
         bpy.utils.unregister_class(cls)
 
     for mod in reversed(submodules):

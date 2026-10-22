@@ -17,6 +17,7 @@ from ..hair import (
 from .exported_data import ExportedObject, ExportedPart
 from .. import light, material
 from ...utils.errorlog import LuxCoreErrorLog
+from ...utils.log import logger
 from ...utils import node as utils_node
 from ...utils import MESH_OBJECTS
 from ...utils.node import get_active_output
@@ -464,8 +465,8 @@ class ObjectCache2:
             stats.export_time_instancing.value = time() - start_time
 
     def _debug_info(self):
-        print("Objects in cache:", len(self.exported_objects))
-        print("Meshes in cache:", len(self.exported_meshes))
+        logger.debug(f"Objects in cache: {len(self.exported_objects)}")
+        logger.debug(f"Meshes in cache: {len(self.exported_meshes)}")
         # for key, exported_mesh in self.exported_meshes.items():
         #     if exported_mesh:
         #         print(key, exported_mesh.mesh_definitions)

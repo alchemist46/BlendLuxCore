@@ -3,6 +3,7 @@ from bpy.props import StringProperty, BoolProperty
 from ..base import LuxCoreNodeTexture
 from ... import icons
 from ...utils import node as utils_node
+from ...utils.log import logger
 
 
 def convert(string):
@@ -23,7 +24,7 @@ class LuxCoreNodeTexIrregularData(LuxCoreNodeTexture, bpy.types.Node):
             self.equal_length = len(wavelengths_converted) == len(data_converted)
             self.error = ""
         except ValueError as error:
-            print(error)
+            logger.warning(error)
             self.error = str(error)
         utils_node.force_viewport_update(self, context)
 

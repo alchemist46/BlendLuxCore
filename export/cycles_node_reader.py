@@ -3,6 +3,7 @@ import pyluxcore
 from .. import utils
 from ..utils import node as utils_node
 from ..utils.errorlog import LuxCoreErrorLog
+from ..utils.log import logger
 from .image import ImageExporter
 from mathutils import Matrix
 
@@ -432,7 +433,7 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
             if blend_type == "MIX":
                 definitions["amount"] = fac
                 if fac == 1:
-                    print("yolo")
+                    logger.debug(f"MixRGB node {node.name}: factor is 1, using the second color only")
                     return tex2
         else:
             LuxCoreErrorLog.add_warning(f"Unsupported MixRGB mode: {blend_type}", obj_name=obj_name)
@@ -853,7 +854,7 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
             links = node.internal_links[0].from_socket.links
             if links:
                 link = links[0]
-                print("current node", node.name, "failed, testing next node:", link.from_node.name)
+                logger.debug(f"current node {node.name} failed, testing next node: {link.from_node.name}")
                 return _node(link.from_node, link.from_socket, props, material, luxcore_name, obj_name, group_node_stack)
 
         return ERROR_VALUE

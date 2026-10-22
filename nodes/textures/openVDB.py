@@ -9,6 +9,7 @@ import pyluxcore
 
 from ... import icons
 from ...utils.errorlog import LuxCoreErrorLog
+from ...utils.log import logger
 from ...handlers import frame_change_pre
 
 
@@ -139,7 +140,7 @@ class LuxCoreNodeTexOpenVDB(LuxCoreNodeTexture, bpy.types.Node):
                 id = id + str(hex(ord(domain.name[i])))[-2:]
 
         if point_cache.use_library_path:
-            print("use_library_path has not been implemented yet")
+            logger.warning("use_library_path has not been implemented yet")
 
         if point_cache.use_external:
             folder = point_cache.filepath

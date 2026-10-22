@@ -8,6 +8,7 @@ from bpy_extras.image_utils import load_image
 from mathutils import Vector
 
 from ..utils.node import TREE_TYPES
+from ..utils.log import logger
 
 # Blender images always include an alpha channel
 IMAGE_CHANNEL_COUNT = 4
@@ -77,7 +78,7 @@ class LUXCORE_OT_import_multiple_images(bpy.types.Operator, ImportHelper):
         location = context.space_data.cursor_location
 
         for file_elem in self.files:
-            print("Importing image:", file_elem.name)
+            logger.info(f"Importing image: {file_elem.name}")
             filepath = os.path.join(self.directory, file_elem.name)
 
             image = load_image(filepath, check_existing=True)
@@ -96,6 +97,6 @@ class LUXCORE_OT_import_multiple_images(bpy.types.Operator, ImportHelper):
                     node.is_normal_map = True
             else:
                 self.report({"ERROR"}, "Failed: " + file_elem.name)
-                print("ERROR: Could not import", filepath)
+                logger.error(f"Could not import {filepath}")
 
         return {'FINISHED'}

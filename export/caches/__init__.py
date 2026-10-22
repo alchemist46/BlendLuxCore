@@ -1,6 +1,7 @@
 import bpy
 from ... import utils
 from ...utils import EXPORTABLE_OBJECTS
+from ...utils.log import logger
 from .. import camera, material
 
 from .object_cache import ObjectCache2, supports_live_transform
@@ -55,7 +56,7 @@ class MaterialCache:
             for dg_update in depsgraph.updates:
                 if isinstance(dg_update.id, bpy.types.Material):
                     self.changed_materials.add(dg_update.id)
-                    print("mat update:", dg_update.id.name)
+                    logger.debug(f"mat update: {dg_update.id.name}")
         return self.changed_materials
 
     def update(self, exporter, depsgraph, is_viewport_render, props):

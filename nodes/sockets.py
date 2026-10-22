@@ -9,6 +9,7 @@ from bpy.props import (
 from ..utils import node as utils_node
 from ..utils.luxutils import matrix_to_list
 from ..utils.errorlog import LuxCoreErrorLog
+from ..utils.log import logger
 from .. import icons
 
 # The rules for socket classes are these:
@@ -168,7 +169,7 @@ class LuxCoreSocketMatEmission(bpy.types.NodeSocket, LuxCoreNodeSocket):
                     exporter, depsgraph, props, definitions
                 )
             else:
-                print("ERROR: can't export emission; not an emission node")
+                logger.error("can't export emission; not an emission node")
 
 
 class LuxCoreSocketBump(bpy.types.NodeSocket, LuxCoreNodeSocket):

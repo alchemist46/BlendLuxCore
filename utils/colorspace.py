@@ -14,6 +14,8 @@ import os
 
 import bpy
 
+from .log import logger
+
 # Blender's interop ids of the working spaces, to LuxCore's values
 _WORKING_SPACES = {
     "lin_rec709_scene": "rec709",
@@ -183,10 +185,10 @@ def sync_luxcore_colors():
         config = OCIO.Config.CreateFromFile(get_ocio_config())
         cpu = config.getProcessor(previous, current).getDefaultCPUProcessor()
     except Exception as error:
-        print(f"[BLC] Could not convert the LuxCore colours from {previous} to {current}: {error}")
+        logger.warning(f"Could not convert the LuxCore colours from {previous} to {current}: {error}")
         _store_space(current)
         return
 
-    print(f"[BLC] Converting the LuxCore colours from {previous} to {current}")
+    logger.info(f"Converting the LuxCore colours from {previous} to {current}")
     _convert_luxcore_colors(lambda rgb: cpu.applyRGB(list(rgb)))
     _store_space(current)

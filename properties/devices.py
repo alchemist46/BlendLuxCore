@@ -3,6 +3,7 @@ from bpy.props import StringProperty, CollectionProperty, BoolProperty
 from bpy.types import PropertyGroup
 import pyluxcore
 from ..utils import get_addon_preferences
+from ..utils.log import logger
 
 
 class LuxCoreOpenCLDevice(PropertyGroup):
@@ -21,7 +22,7 @@ class LuxCoreDeviceSettings(PropertyGroup):
                                  description="Use native C++ threads on the CPU (hybrid rendering)")
 
     def init_devices(self, device_props):
-        print("Updating device list")
+        logger.info("Updating device list")
         # Set hash here so it is also set when user forces init with operator
         new_devices_hash = self.get_devices_hash_str(device_props)
         self.devices_hash = new_devices_hash

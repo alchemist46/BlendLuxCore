@@ -6,6 +6,7 @@ from ..base import LuxCoreNodeVolume, COLORDEPTH_DESC
 from ... import utils
 from ...utils import node as utils_node
 from ...utils.light_descriptions import LIGHTGROUP_DESC
+from ...utils.log import logger
 from ... import icons
 
 
@@ -114,9 +115,12 @@ class LuxCoreNodeVolHeterogeneous(LuxCoreNodeVolume, bpy.types.Node):
             worst_case_maxcount = math.ceil(diagonal / step_size)
             definitions["steps.maxcount"] = worst_case_maxcount
 
-            print('INFO: "%s" in volume node tree "%s" Auto Step Settings:' % (self.name, self.id_data.name))
-            print("  Using steps.size = %.3f m" % step_size)
-            print("  Using steps.maxcount =", worst_case_maxcount)
+            logger.info(
+                '"%s" in volume node tree "%s" Auto Step Settings:\n'
+                "  Using steps.size = %.3f m\n"
+                "  Using steps.maxcount = %d"
+                % (self.name, self.id_data.name, step_size, worst_case_maxcount)
+            )
         else:
             definitions["steps.size"] = self.step_size
             definitions["steps.maxcount"] = self.maxcount

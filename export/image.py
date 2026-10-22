@@ -3,6 +3,7 @@
 import tempfile
 import os
 from .. import utils
+from ..utils.log import logger
 
 
 class ImageExporter:
@@ -44,7 +45,7 @@ class ImageExporter:
                 pass
             else:
                 # This is an already exported image
-                print(f"[BLC] '{key}' already exported - skip")
+                logger.debug(f"'{key}' already exported - skip")
                 result.append(temp_image.name)
                 continue
 
@@ -61,15 +62,15 @@ class ImageExporter:
                 delete=False, suffix=extension
             ) as temp_image:
                 packed.filepath = temp_image.name
-                print(
-                    f"[BLC] Unpacking image '{image.name}' to temp file "
+                logger.info(
+                    f"Unpacking image '{image.name}' to temp file "
                     f"'{temp_image.name}'"
                 )
 
                 try:
                     packed.save()
                 except RuntimeError as error:
-                    print("[BLC] Warning: could not save image. ", str(error))
+                    logger.warning(f"Could not save image: {error}")
                     continue
                 finally:
                     # The changes above altered the file path, so we have to
@@ -86,8 +87,8 @@ class ImageExporter:
         # If one day this limitation is removed, the code above is ready for
         # multiple packed files per image
         if (len(result)) > 1:
-            print(
-                f"[BLC] Warning: image '{image.name}' contains multiple "
+            logger.warning(
+                f"image '{image.name}' contains multiple "
                 "packed files but only one will be used"
             )
         return result[0] if result else None
@@ -183,7 +184,7 @@ class ImageExporter:
         for temp_image in cls.temp_images.values():
             filepath = temp_image.name
             temp_image.close()
-            print("Deleting temporary image:", filepath)
+            logger.debug(f"Deleting temporary image: {filepath}")
             os.remove(filepath)
 
         cls.temp_images.clear()

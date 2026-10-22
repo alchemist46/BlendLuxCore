@@ -1,5 +1,6 @@
 import bpy
 from . import ui as utils_ui
+from .log import logger
 
 
 def update_ui():
@@ -33,11 +34,11 @@ class LuxCoreErrorLog:
 
     @classmethod
     def add_error(cls, message, obj_name=""):
-        cls._add("ERROR:", cls.errors, message, obj_name)
+        cls._add(logger.error, cls.errors, message, obj_name)
 
     @classmethod
     def add_warning(cls, message, obj_name=""):
-        cls._add("WARNING:", cls.warnings, message, obj_name)
+        cls._add(logger.warning, cls.warnings, message, obj_name)
 
     @classmethod
     def clear(cls, force_ui_update=True):
@@ -46,14 +47,14 @@ class LuxCoreErrorLog:
         update_ui()
 
     @classmethod
-    def _add(cls, prefix, collection, message, obj_name):
+    def _add(cls, log_function, collection, message, obj_name):
         for elem in collection:
             if elem.message == message and elem.obj_name == obj_name:
                 elem.count += 1
                 # print("Error or warning already logged. Abort adding to collection.")
                 return
 
-        print(prefix, message)
+        log_function(message)
         new = LuxCoreError(message, obj_name)
         collection.append(new)
         update_ui()

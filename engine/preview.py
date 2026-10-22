@@ -11,6 +11,7 @@ import pyluxcore
 from .. import utils
 from .. import export
 from .. import draw
+from ..utils.log import logger
 from ..draw.final import FrameBufferFinal
 
 
@@ -48,7 +49,7 @@ def render(engine, depsgraph):
     if preview_type == PreviewType.MATERIAL and not active_mat is None:
         engine.session = _export_mat_scene(engine, depsgraph, active_mat)
     else:
-        print("Unsupported preview type")
+        logger.warning("Unsupported preview type")
         return 
 
 
@@ -59,7 +60,7 @@ def render(engine, depsgraph):
         try:
             engine.session.UpdateStats()
         except RuntimeError as error:
-            print("Error during UpdateStats():", error)
+            logger.warning(f"Error during UpdateStats(): {error}")
 
         if engine.session.HasDone():
             break

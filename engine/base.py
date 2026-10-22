@@ -6,7 +6,7 @@ import pyluxcore
 from . import final, preview, viewport
 from .. import icons, utils, properties
 from ..utils.statistics import TileStats
-from ..utils.log import LuxCoreLog
+from ..utils.log import LuxCoreLog, logger, set_verbose
 from ..utils.errorlog import LuxCoreErrorLog
 from ..utils import view_layer as utils_view_layer
 from ..utils import get_addon_preferences
@@ -77,7 +77,7 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
         try:
             if getattr(self, "session", None):
                 if not self.is_preview:
-                    print("[Engine] del: stopping session")
+                    logger.debug("[Engine] del: stopping session")
                 if hasattr(getattr(self, "framebuffer", None), "wait_denoiser"):
                     # A running viewport denoiser must finish first
                     self.framebuffer.wait_denoiser()
@@ -85,7 +85,7 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
                     self.session.Stop()
                 del self.session
         except ReferenceError:
-            print("[Engine] del: RenderEngine struct was already deleted")
+            logger.debug("[Engine] del: RenderEngine struct was already deleted")
 
     def log_listener(self, msg):
         if "Direct light sampling cache entries" in msg:
@@ -95,6 +95,7 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
 
     def render(self, depsgraph):
         display_luxcore_logs = get_addon_preferences(bpy.context).display_luxcore_logs
+        set_verbose(display_luxcore_logs)
         if display_luxcore_logs:
             pyluxcore.SetLogHandler(LuxCoreLog.add)
         else:

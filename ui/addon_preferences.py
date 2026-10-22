@@ -176,7 +176,12 @@ class LuxCoreAddonPreferences(AddonPreferences):
     )
     use_library: BoolProperty(name="Use LuxCore Online Library", default=True)
 
-    display_luxcore_logs: BoolProperty(name="Show LuxCore Logs", default=True)
+    display_luxcore_logs: BoolProperty(
+        name="Show LuxCore Logs", default=True,
+        description="Print the LuxCore log and the BlendLuxCore info messages to the console. "
+                    "BlendLuxCore warnings and errors are always printed",
+        update=lambda self, context: utils.log.set_verbose(self.display_luxcore_logs),
+    )
 
     # Read-only string property, returns the current date
     def get_pyluxcore_version(self):

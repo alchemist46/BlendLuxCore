@@ -1,6 +1,7 @@
 import bpy
 from time import time
 from .. import utils
+from ..utils.log import logger
 import array
 
 
@@ -46,6 +47,6 @@ def convert(smoke_obj, channel, depsgraph):
     if settings.use_noise:
         resolution = [res * settings.noise_scale for res in resolution]
 
-    print("conversion to array took %.3f s" % (time() - start))
+    logger.debug("conversion to array took %.3f s" % (time() - start))
 
     return resolution, channeldata
