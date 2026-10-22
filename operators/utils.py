@@ -175,7 +175,7 @@ class LUXCORE_MT_node_tree:
                 tree_type_pretty = tree_type.split("_")[1]
                 col.label(text="No " + tree_type_pretty + " node trees available")
 
-            if tree_type == "luxcore_material_nodetree":
+            if tree_type == "luxcore_material_nodes":
                 col.operator("luxcore.mat_nodetree_new", text="New Node Tree", icon=icons.ADD)
                 col.menu("LUXCORE_MT_node_tree_preset")
 
