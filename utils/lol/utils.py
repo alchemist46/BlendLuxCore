@@ -749,7 +749,7 @@ def bg_download_thumbnails(context, download_queue):
                 asset['thumbnail'] = bpy.data.images.load(tpath)
                 asset['thumbnail'].name = '.LOL_preview'
             else:
-                logger.warning(f"[LOL] Download error {response.status_code}: {urlstr}")
+                logger.warning(f"[LOL] Download error {response.getcode()}: {urlstr}")
 
     for threaddata in bg_threads:
         tag, bg_task = threaddata
