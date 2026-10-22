@@ -36,6 +36,7 @@ import os
 from mathutils import Vector, Matrix
 import threading
 from threading import _MainThread, Thread
+from queue import Queue
 from .timer import timer_update
 from ...utils import get_addon_preferences, compatibility
 from ..log import logger
@@ -51,6 +52,10 @@ def urlopen(req, timeout=60):
 download_threads = []
 bg_threads = []
 stop_check_cache = False
+# (asset type, image name, image path) of the thumbnails downloaded but not loaded yet
+downloaded_thumbnails = Queue()
+# Paths of the thumbnails queued for download or downloading, so each is downloaded once
+thumbnails_in_download = set()
 
 def load_local_TOC(context, asset_type):
     import json
@@ -640,10 +645,7 @@ def bg_load_previews(context, asset_type):
     clean_previmg()
 
     for asset in assets:
-        if asset_type == 'MATERIAL':
-            imagename = asset['name'].replace(" ", "_") + '.jpg'
-        else:
-            imagename = splitext(asset['url'])[0] + '.jpg'
+        imagename = thumbnail_name(asset_type, asset)
 
         tpath_full = join(user_preferences.global_dir, asset_type.lower(), 'preview', 'full', imagename)
         tpath = join(user_preferences.global_dir, asset_type.lower(), 'preview', imagename)
@@ -677,12 +679,24 @@ def bg_load_previews(context, asset_type):
                 img.name = '.LOL_preview'
 
                 asset["thumbnail"] = img
-            else:
-                download_queue.put((asset_type, imagename, asset))
+            elif tpath not in thumbnails_in_download:
+                thumbnails_in_download.add(tpath)
+                download_queue.put((asset_type, imagename))
 
-    bg_task = Thread(target=bg_download_thumbnails, args=(context, download_queue))
-    bg_threads.append(["bg_download_thumbnails", bg_task])
-    bg_task.start()
+    if not download_queue.empty():
+        # The thread gets plain values: it must not access Blender data
+        settings = {
+            "global_dir": user_preferences.global_dir,
+            "host_url": user_preferences.lol_host,
+            "http_host": user_preferences.lol_http_host,
+            "useragent": user_preferences.lol_useragent,
+            "online_access": bpy.app.online_access,
+        }
+        bg_task = Thread(target=bg_download_thumbnails, args=(download_queue, settings))
+        bg_threads.append(["bg_download_thumbnails", bg_task])
+        bg_task.start()
+        if not bpy.app.timers.is_registered(load_downloaded_thumbnails):
+            bpy.app.timers.register(load_downloaded_thumbnails, first_interval=0.2)
 
     for threaddata in bg_threads:
         tag, bg_task = threaddata
@@ -690,14 +704,18 @@ def bg_load_previews(context, asset_type):
             bg_threads.remove(threaddata)
 
 
-def bg_download_thumbnails(context, download_queue):
+def thumbnail_name(asset_type, asset):
+    if asset_type == 'MATERIAL':
+        return asset['name'].replace(" ", "_") + '.jpg'
+    return splitext(asset['url'])[0] + '.jpg'
+
+
+def bg_download_thumbnails(download_queue, settings):
+    """Download the thumbnails in a thread; load_downloaded_thumbnails() loads them in Blender"""
     import urllib.request
 
-    user_preferences = get_addon_preferences(context)
-    LOL_HOST_URL = user_preferences.lol_host
-    LOL_VERSION = user_preferences.lol_version
-    LOL_HTTP_HOST = user_preferences.lol_http_host
-    LOL_USERAGENT = user_preferences.lol_useragent
+    if not settings["online_access"]:
+        logger.warning("[LOL] Online access is disabled, not downloading thumbnails")
 
     while not download_queue.empty():
         # Stop download if Blender is closed
@@ -706,42 +724,79 @@ def bg_download_thumbnails(context, download_queue):
                 if not thread.is_alive():
                     break
 
-        asset_type, imagename, asset = download_queue.get()
+        asset_type, imagename = download_queue.get()
 
-        tpath_full = join(user_preferences.global_dir, asset_type.lower(), 'preview', 'full', imagename)
-        tpath = join(user_preferences.global_dir, asset_type.lower(), 'preview', imagename)
+        tpath_full = join(settings["global_dir"], asset_type.lower(), 'preview', 'full', imagename)
+        tpath = join(settings["global_dir"], asset_type.lower(), 'preview', imagename)
 
-        if not bpy.app.online_access:
-            logger.warning("[LOL] Online access is disabled, not downloading thumbnails")
-            break
+        try:
+            if not settings["online_access"]:
+                continue
 
-        logger.debug(f"[LOL] Downloading {imagename}")
-        urlstr = LOL_HOST_URL + "/"+ asset_type.lower() +"/preview/" + imagename
-        req = urllib.request.Request(
-            urlstr, headers={'User-Agent': LOL_USERAGENT, 'Host': LOL_HTTP_HOST}
-        )
-        with urlopen(req, timeout=60) as response, open(tpath, "wb") as file_handle:
-            if response.getcode() == 200:
-                file_handle.write(response.read())
+            logger.debug(f"[LOL] Downloading {imagename}")
+            urlstr = settings["host_url"] + "/" + asset_type.lower() + "/preview/" + imagename
+            req = urllib.request.Request(
+                urlstr, headers={'User-Agent': settings["useragent"], 'Host': settings["http_host"]}
+            )
+            try:
+                with urlopen(req, timeout=60) as response:
+                    if response.getcode() != 200:
+                        logger.warning(f"[LOL] Download error {response.getcode()}: {urlstr}")
+                        continue
+                    data = response.read()
+            except OSError as error:
+                logger.warning(f"[LOL] Download error {error}: {urlstr}")
+                continue
 
-                from shutil import copyfile
-                copyfile(tpath, tpath_full)
-                img = bpy.data.images.load(tpath)
-                img.scale(128, 128)
-                img.save()
-                # NOTE: The following line is commented because if can lead to crashes of Blender
-                # (only when executed as a Thread but that is done here)
-                # There is no console or any visible log entry why this happens
-                # Leads to about 100MB of additonal RAM usage at the moment when the preview images are first downloaded
-                # Hence not considered a problem and not treated further.
-                # bpy.data.images.remove(img)
-
-                asset['thumbnail'] = bpy.data.images.load(tpath)
-                asset['thumbnail'].name = '.LOL_preview'
-            else:
-                logger.warning(f"[LOL] Download error {response.getcode()}: {urlstr}")
+            # Write under a temporary name, so a file with the final name is always complete
+            # (bg_load_previews() loads the existing ones). The small one last: it marks the
+            # download as done.
+            for path in (tpath_full, tpath):
+                with open(path + ".part", "wb") as file_handle:
+                    file_handle.write(data)
+                os.replace(path + ".part", path)
+            downloaded_thumbnails.put((asset_type, imagename, tpath))
+        finally:
+            thumbnails_in_download.discard(tpath)
 
     for threaddata in bg_threads:
         tag, bg_task = threaddata
         if tag == "bg_download_thumbnails":
             bg_threads.remove(threaddata)
+
+
+def load_downloaded_thumbnails():
+    """Timer: load the thumbnails written by bg_download_thumbnails() in the main thread"""
+    loaded = {}  # {asset type: {image name: image}}
+    while not downloaded_thumbnails.empty():
+        asset_type, imagename, tpath = downloaded_thumbnails.get()
+        try:
+            img = bpy.data.images.load(tpath)
+            img.scale(128, 128)
+            img.save()
+        except RuntimeError as error:
+            logger.warning(f"[LOL] Could not load the thumbnail {tpath}: {error}")
+            continue
+        img.name = '.LOL_preview'
+        loaded.setdefault(asset_type, {})[imagename] = img
+
+    # Look the assets up now: the table of contents may have been reloaded since the
+    # download started
+    for asset_type, images in loaded.items():
+        for scene in bpy.data.scenes:
+            for asset in getattr(scene.luxcoreOL, asset_type.lower()).get('assets', []):
+                img = images.get(thumbnail_name(asset_type, asset))
+                if img:
+                    asset['thumbnail'] = img
+
+    if loaded:
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'VIEW_3D':
+                    area.tag_redraw()
+
+    # A thread puts its last thumbnail in the queue before it leaves bg_threads
+    downloading = any(tag == "bg_download_thumbnails" for tag, _ in list(bg_threads))
+    if downloading or not downloaded_thumbnails.empty():
+        return 0.2
+    return None

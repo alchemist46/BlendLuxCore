@@ -22,16 +22,9 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: Blender 5.2, 1000x700 window, PATH CPU, viewport denoiser on; orbit the view while a denoise pass is running.
 - Notes: the denoiser runs as an asynchronous image pipeline since `5bd9f1dc`, so the plain draw no longer blocks (longest draw 70 ms). The wait is in the session stop: the core cannot cancel a running image pipeline, so the fix needs a cancel call in the core first. See ROADMAP.md item 1.4.
 
-### Online library thumbnails load while their file is still open
-- Found: 2026-10-22
-- Area: online library
-- Problem: the thumbnail download thread fails on some images with "Image '<name>.jpg' failed to load image buffer" (`IMB_load_image_from_file_descriptor: couldn't get mapping`), and that thread stops downloading the rest of its queue.
-- Reproduce: Blender 5.2.2 on Windows, empty library folder; Update ToC from server, then open the Asset Bar. Happened in every run.
-- Notes: in `bg_download_thumbnails()` (utils/lol/utils.py), `bpy.data.images.load()` and `img.scale()` run inside the `with open(tpath, "wb")` block, so the file is still open and maybe not flushed. The thread also calls the bpy API outside the main thread, which is not thread-safe; a suspect for the GUI hang below.
-
 ### Blender hung with the online library asset bar open (suspected)
 - Found: 2026-10-22
 - Area: online library
 - Problem: Blender stopped responding (one core busy) shortly after right-clicking a thumbnail in the Asset Bar, while a thumbnail download thread was still running.
-- Reproduce: not reliable. Blender 5.2.2 on Windows with simulated input (`--enable-event-simulate`): Update ToC (after a failed first try, see above), Asset Bar, hover and right-click a thumbnail. Six scripted replays of the same steps, on the code before and after the cleanup commits, did not hang.
-- Notes: py-spy showed the main thread in native Blender code with no Python frame, and Thread-4 (`bg_download_thumbnails`) in an SSL read. Main suspect: the bpy calls from that thread (see "Online library thumbnails load while their file is still open").
+- Reproduce: not reliable. Blender 5.2.2 on Windows with simulated input (`--enable-event-simulate`): Update ToC (after a first try that failed on the missing library folder), Asset Bar, hover and right-click a thumbnail. Six scripted replays of the same steps, on the code before and after the cleanup commits, did not hang.
+- Notes: py-spy showed the main thread in native Blender code with no Python frame, and Thread-4 (`bg_download_thumbnails`) in an SSL read. Main suspect: that thread loaded and scaled the images with the bpy API. Since the thumbnail fix of 2026-10-22 it only downloads the files, and the images are loaded in the main thread; three replays since then did not hang. Remove this entry if it does not happen again.
