@@ -13,7 +13,7 @@ architecture level only.
 File paths are relative to the repository root; line numbers refer to the commit
 above.
 
-## Status (2026-10-17)
+## Status (2026-10-22)
 
 Measured with the headless tests in `tests/` and in a 1000x700 Blender 5.2
 window (PATH CPU).
@@ -35,14 +35,14 @@ window (PATH CPU).
 | 2.3 Legacy node add menu | Open |
 | 2.4 Viewport color management | Not needed in Blender 5.2: the viewport follows the view transform, look and exposure (measured: Standard, AgX, Filmic and +1 exposure all give different pixels) |
 | 2.5 Property-write hacks | Open |
-| 2.6 Pointer cache keys | Open |
+| 2.6 Pointer cache keys | Done, `0058e2ef`: `make_key()` uses `ID.session_uid`; not yet tested in Blender |
 | 2.7 Version drift, dead code | Done, `6af5ab61` and `bfa74776` |
-| 2.8 Node editor header copy | Open |
+| 2.8 Node editor header copy | Done, `4f993d90`: only the LuxCore material tree branch and the pin, parent and snap tail are left; not yet tested in Blender |
 | 2.9 Online library on the Asset Browser | Open (separate project) |
 | 3.1 Swallowed registration errors | Done, `6af5ab61` |
-| 3.2 AOV table in four places | Open |
+| 3.2 AOV table in four places | Done, `8fc2fcb6`: the table in `properties/aovs.py` generates the properties, both pass lists and the film converters; the film output loop in `export/aovs.py` still matches outputs to properties by name. Not yet tested in Blender |
 | 3.3 `bpy.context` on render paths | Left as is: `bpy.context.preferences` is the only way to read the addon preferences, and these are static settings |
-| 3.4 Logging, types, threading | Thread done, `178855f1`; logging open |
+| 3.4 Logging, types, threading | Thread done, `178855f1`; logging done, `d6437097` (not yet tested in Blender); `Change` as `IntFlag` and the dataclasses open |
 | 3.5 Tests | Done, `a88c7242`: `tests/run.sh` (smoke, mesh export, Cycles lights, Cycles Mapping); not run in CI yet, which needs a pyluxcore wheel there |
 
 Also found and fixed on the way, in the "Use Cycles settings" lights and the
