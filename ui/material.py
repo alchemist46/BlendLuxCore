@@ -3,6 +3,7 @@ from bpy.types import Panel
 from ..operators.node_tree_presets import LUXCORE_OT_preset_material
 from .. import icons
 from ..utils.node import uses_nodes
+from ..utils import eevee_nodes
 
 original_viewport_draw = None
 
@@ -98,7 +99,19 @@ class LUXCORE_PT_context_material(MaterialButtonsPanel, Panel):
                 layout.operator("luxcore.mat_nodetree_new", icon=icons.NODETREE, text="Use LuxCore Material Nodes")
 
             if uses_nodes(mat):
-                layout.prop(mat.luxcore, "use_cycles_nodes")
+                col = layout.column(align=True)
+                col.prop(mat.luxcore, "use_cycles_nodes")
+                # Only when the Cycles nodes are the source (not EEVEE nodes generated from LuxCore nodes)
+                if mat.luxcore.use_cycles_nodes or not mat.luxcore.node_tree:
+                    col.operator("luxcore.material_convert_cycles", text="Convert to LuxCore", icon=icons.NODETREE)
+
+            if mat.luxcore.node_tree and not mat.luxcore.use_cycles_nodes and not mat.library:
+                row = layout.row(align=True)
+                row.prop(mat.luxcore, "sync_eevee_nodes", text="Sync EEVEE Nodes")
+                row.operator("luxcore.material_update_eevee_nodes", text="", icon=icons.REFRESH)
+                if mat.luxcore.sync_eevee_nodes and not eevee_nodes.is_ours(mat):
+                    layout.label(text="EEVEE nodes were edited by hand, Update overwrites them",
+                                 icon=icons.WARNING)
 
 
 class LUXCORE_PT_material_presets(MaterialButtonsPanel, Panel):

@@ -120,6 +120,10 @@ class LUXCORE_OT_set_node_tree:
         # Flag datablock for update in viewport render
         datablock.update_tag()
 
+        if isinstance(datablock, bpy.types.Material) and prop == "node_tree":
+            # The generated EEVEE nodes follow the new tree
+            utils.eevee_sync.mark_material(datablock)
+
         if (isinstance(datablock, bpy.types.NodeTree)
                 and datablock.bl_idname == "luxcore_material_nodes"):
             # Also flag the materials for update

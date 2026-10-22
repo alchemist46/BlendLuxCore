@@ -3,7 +3,7 @@ from bpy.app.handlers import persistent
 from .. import utils
 
 @persistent
-def handler(scene):
+def handler(scene, depsgraph=None):
     # The working colour space may have changed (Blender's Working Space
     # selector): convert the LuxCore colours as Blender converted its own
     utils.colorspace.sync_luxcore_colors()
@@ -14,3 +14,13 @@ def handler(scene):
 
         if node_tree and node_tree.name != mat.name:
             node_tree.name = mat.name
+
+    # Safety net for the EEVEE node sync: LuxCore node tree changes that the
+    # node and socket update callbacks did not report. Material updates are
+    # ignored, so writing the generated Cycles nodes does not come back here.
+    if depsgraph is not None and depsgraph.id_type_updated("NODETREE"):
+        for update in depsgraph.updates:
+            node_tree = update.id
+            if (isinstance(node_tree, bpy.types.NodeTree)
+                    and node_tree.bl_idname in utils.eevee_sync.LUXCORE_TREE_TYPES):
+                utils.eevee_sync.mark_tree(getattr(node_tree, "original", node_tree))

@@ -43,7 +43,7 @@ def get_ocio_config():
     return os.path.join(bpy.utils.system_resource("DATAFILES"), "colormanagement", "config.ocio")
 
 
-def _is_linear_scene_space(name):
+def is_linear_scene_space(name):
     # Blender's scene linear colour spaces: the "Linear ..." ones and the ACES
     # linear ones (the encoded ones are "sRGB", "Filmic Log", "AgX Log", ...)
     return name.startswith("Linear") or name in {"ACEScg", "ACES2065-1"}
@@ -75,7 +75,7 @@ def image_colorspace_with_gamma(image, gamma):
         return {"gamma": gamma}
 
     settings = image.colorspace_settings
-    if settings.is_data or not _is_linear_scene_space(settings.name):
+    if settings.is_data or not is_linear_scene_space(settings.name):
         return {"colorspace": "nop"}
     return image_colorspace(image)
 

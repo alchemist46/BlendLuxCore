@@ -6,6 +6,7 @@ from .utils import (
     LUXCORE_OT_set_node_tree, LUXCORE_MT_node_tree, show_nodetree,
 )
 from .. import icons
+from ..utils import eevee_sync
 
 
 class LUXCORE_OT_material_new(bpy.types.Operator):
@@ -24,6 +25,8 @@ class LUXCORE_OT_material_new(bpy.types.Operator):
         node_tree = bpy.data.node_groups.new(name=tree_name, type="luxcore_material_nodes")
         init_mat_node_tree(node_tree)
         mat.luxcore.node_tree = node_tree
+        # EEVEE and Material Preview show an approximation of the LuxCore material
+        eevee_sync.enable(mat)
 
         obj = context.active_object
         if obj.material_slots:
@@ -234,6 +237,8 @@ class LUXCORE_OT_mat_nodetree_new(bpy.types.Operator):
 
         if mat:
             mat.luxcore.node_tree = node_tree
+            # Generates the EEVEE nodes unless the material has hand-made Cycles nodes
+            eevee_sync.enable(mat)
 
         show_nodetree(context, node_tree)
         return {"FINISHED"}

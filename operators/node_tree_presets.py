@@ -4,6 +4,7 @@ from bpy.props import StringProperty
 from mathutils import Color, Vector
 from .. import utils
 from .utils import poll_object, make_nodetree_name, show_nodetree
+from ..utils import eevee_sync
 
 
 def new_node(bl_idname, node_tree, previous_node, output=0, input=0):
@@ -97,6 +98,7 @@ class LUXCORE_OT_preset_material(bpy.types.Operator):
 
         # We have a material, but maybe it has no node tree attached
         node_tree = mat.luxcore.node_tree
+        created_tree = node_tree is None
 
         if node_tree is None:
             tree_name = make_nodetree_name(mat.name)
@@ -165,6 +167,10 @@ class LUXCORE_OT_preset_material(bpy.types.Operator):
             self._preset_colored_glass(obj, node_tree, output)
         elif self.preset == "Hybrid Glass":
             self._preset_hybrid_glass(obj, node_tree, output)
+
+        if created_tree:
+            # Generates the EEVEE nodes unless the material has hand-made Cycles nodes
+            eevee_sync.enable(mat)
 
         show_nodetree(context, node_tree)
         return {"FINISHED"}

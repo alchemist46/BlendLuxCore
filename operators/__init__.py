@@ -17,7 +17,10 @@ from .. import utils as blc_utils
 from . import (
     lol,
     camera,
+    cycles_converter,
+    cycles_convert,
     debug,
+    eevee_sync,
     general,
     imagepipeline,
     ior_presets,
@@ -42,7 +45,10 @@ if _needs_reload:
     import importlib
     modules = (
         camera,
+        cycles_converter,
+        cycles_convert,
         debug,
+        eevee_sync,
         general,
         imagepipeline,
         ior_presets,
@@ -66,6 +72,10 @@ if _needs_reload:
         importlib.reload(module)
 
 classes = (
+    cycles_convert.LUXCORE_OT_material_convert_cycles,
+    cycles_convert.LUXCORE_OT_convert_all_cycles_materials,
+    eevee_sync.LUXCORE_OT_material_update_eevee_nodes,
+    eevee_sync.LUXCORE_OT_sync_eevee_nodes_everywhere,
     camera.LUXCORE_OT_camera_new_volume_node_tree,
     camera.LUXCORE_OT_camera_unlink_volume_node_tree,
     camera.LUXCORE_OT_camera_set_volume_node_tree,

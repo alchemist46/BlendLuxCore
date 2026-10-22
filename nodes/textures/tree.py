@@ -1,6 +1,7 @@
 import bpy
 from nodeitems_utils import NodeCategory, NodeItem
 from ... import icons
+from ...utils import eevee_sync
 from ..nodeitems import Separator, NodeItemMultiImageImport
 from ..base import LuxCoreNodeTree
 
@@ -9,6 +10,11 @@ class LuxCoreTextureNodeTree(bpy.types.NodeTree, LuxCoreNodeTree):
     bl_idname = "luxcore_texture_nodes"
     bl_label = "LuxCore Texture Nodes"
     bl_icon = icons.NTREE_TEXTURE
+
+    def update(self):
+        super().update()
+        # Links or nodes changed: regenerate the EEVEE nodes of the materials using this tree
+        eevee_sync.mark_tree(self)
 
 
 class LuxCoreNodeCategoryTexture(NodeCategory):

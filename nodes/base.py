@@ -355,6 +355,7 @@ class LuxCoreNodeTreePointer(LuxCoreNode, bpy.types.Node):
             self.outputs[id].enabled = True
             id = self.outputs.find("Volume")
             self.outputs[id].enabled = True
+        utils_node.force_viewport_update(self, context)
 
     node_tree: PointerProperty(name="Node Tree", type=bpy.types.NodeTree, update=update_node_tree,
                                 description="Use the output of the selected node tree in this node tree")

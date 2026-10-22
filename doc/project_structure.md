@@ -75,6 +75,17 @@ Contains everything node-related.
 
 Custom operators, e.g. wrappers.
 
+`cycles_converter.py` turns the Cycles node tree of a material into a LuxCore
+material node tree, with the same mapping as the Cycles node reader in
+`export/cycles_node_reader.py` (change both together). `cycles_convert.py` has
+the "Convert Cycles Nodes to LuxCore" operators. Unsupported Cycles nodes become
+labelled, red placeholder nodes and warnings in the LuxCore error log; they never
+make a conversion fail.
+
+The opposite direction, EEVEE nodes generated from a LuxCore node tree and kept
+in sync, is in `utils/eevee_nodes.py` and `utils/eevee_sync.py`, with its
+operators in `eevee_sync.py`.
+
 ### properties
 
 All custom properties are registered and attached here.

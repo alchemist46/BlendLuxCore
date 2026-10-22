@@ -30,6 +30,7 @@ window (PATH CPU).
 | 1.8 Handlers scanning all materials | Not worth it for now: 0.9 ms per depsgraph update with 1000 materials. Filtering on `depsgraph.updates` would miss renames of unused materials, which produce no update entry |
 | 1.9 One vertex per loop | Done, `3508f3cb`: loops with equal data share a vertex, and each submesh gets only its own vertices. 3.7x fewer vertices on a smooth subdivided mesh; export plus session start take the same time |
 | 1.10 `split_faces()` normals | Done, `3508f3cb`: `Mesh.corner_normals`. Hair: `obj` is already the evaluated object there, and `Mesh.vertex_colors` is still what `mcol_on_emitter()` indexes, so no change |
+| 1.11 Cycles node reader per object and slot | Done (not committed yet): read once per material and export, dropped when the material changes; `test_cycles_reader_cache` (20 objects, one read). Also fixed: Math nodes with an unlinked constant input read the constant as 0 (`_convert_to_float()`) |
 | 2.1 `bpy.app.online_access` | Done, `8b2e2d04` (PyPI download and every online library request) |
 | 2.2 Loader internals | Open |
 | 2.3 Legacy node add menu | Open |
@@ -39,6 +40,7 @@ window (PATH CPU).
 | 2.7 Version drift, dead code | Done, `6af5ab61` and `bfa74776` |
 | 2.8 Node editor header copy | Done, `4f993d90`: only the LuxCore material tree branch and the pin, parent and snap tail are left; not yet tested in Blender |
 | 2.9 Online library on the Asset Browser | Open (separate project) |
+| 2.10 Cycles and LuxCore node trees not interchangeable | Done (not committed yet): "Convert Cycles Nodes to LuxCore" renders like the reader within 2% in the mean (`test_cycles_convert`, OpenPBR and Disney paths); "Keep EEVEE Nodes in Sync" generates and updates EEVEE nodes from LuxCore trees, keeps hand-made ones (`test_eevee_sync`). Tried in a Blender 5.2 window with simulated input: panel and header buttons, dialogs, a slider drag during a LuxCore viewport render, Material Preview and EEVEE render of the generated nodes, the hand-edit protection, undo and redo of a conversion |
 | 3.1 Swallowed registration errors | Done, `6af5ab61` |
 | 3.2 AOV table in four places | Done, `8fc2fcb6`: the table in `properties/aovs.py` generates the properties, both pass lists and the film converters; the film output loop in `export/aovs.py` still matches outputs to properties by name. Not yet tested in Blender |
 | 3.3 `bpy.context` on render paths | Left as is: `bpy.context.preferences` is the only way to read the addon preferences, and these are static settings |
@@ -182,6 +184,15 @@ Related: `export/hair.py:241-243` calls `obj.to_mesh(depsgraph=...)` on the
 original object instead of `obj.evaluated_get(depsgraph).to_mesh()`, and reads
 the deprecated `Mesh.vertex_colors` instead of `color_attributes`.
 
+### 1.11 Cycles node reader walks the tree per object and slot
+
+Added 2026-10-22. `export/cycles_node_reader.py` has no node cache: a material
+with "Use Cycles Nodes" was read again for every object and material slot using
+it (`export/caches/object_cache.py:212`), with its helper textures and image
+path checks. The reader result is now cached per material in the exporter
+(`Exporter.cycles_material_cache`) and dropped when the material changes
+(`MaterialCache.update()`).
+
 ## 2. Blender integration
 
 ### 2.1 No `bpy.app.online_access` check
@@ -281,6 +292,20 @@ the Asset Browser. Shipping the library as a Blender asset library with
 catalogs (`.blend` files plus `blender_assets.cats.txt`) would remove most of
 this code and give native previews, drag-and-drop and search. This is a larger
 project and should be scoped separately.
+
+### 2.10 Cycles and LuxCore node trees are not interchangeable
+
+Added 2026-10-22. With Cycles one node tree serves Cycles and EEVEE. With
+LuxCore, a material either renders its Cycles nodes through the reader (slower
+to export, fewer features) or has a LuxCore tree that EEVEE and Material Preview
+cannot show (gray). Two parts:
+
+- "Convert Cycles Nodes to LuxCore" (material panel, node editor headers, and
+  "Convert All Cycles Materials" in the render settings) builds a LuxCore tree
+  that renders like the reader (`operators/cycles_converter.py`).
+- "Keep EEVEE Nodes in Sync" generates an approximate Cycles/EEVEE tree from the
+  LuxCore tree and updates it while the LuxCore tree is edited, never
+  overwriting hand-made Cycles nodes (`utils/eevee_nodes.py`, `utils/eevee_sync.py`).
 
 ## 3. Maintainability
 

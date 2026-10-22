@@ -100,6 +100,8 @@ def handler(_):
     compatibility.run()
 
     frame_change_pre.have_to_check_node_trees = False
+    # Nothing of the previous file is pending (also drops the marks of the converters above)
+    utils.eevee_sync.reset()
     LuxCoreErrorLog.clear()
 
     # After loading a .blend file, make it possible to execute the conversion operator again

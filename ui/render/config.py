@@ -66,6 +66,9 @@ def luxcore_render_draw(panel, context):
         "luxcore.render_settings_helper",
         icon_value=icon_manager.get_icon_id("help"),
     )
+    col = layout.column(align=True)
+    col.operator("luxcore.convert_all_cycles_materials", text="Convert All Materials", icon=icons.NODETREE)
+    col.operator("luxcore.sync_eevee_nodes_everywhere", text="Sync All EEVEE Nodes", icon=icons.REFRESH)
 
 
 class LUXCORE_RENDER_PT_lightpaths(RenderButtonsPanel, Panel):

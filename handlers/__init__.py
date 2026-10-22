@@ -8,6 +8,7 @@ from . import (
     depsgraph_update_post, draw_imageeditor,
     exit, frame_change_pre, load_post,
 )
+from ..utils import eevee_sync
 
 if _needs_reload:
     import importlib
@@ -42,3 +43,5 @@ def unregister():
     bpy.app.handlers.frame_change_pre.remove(frame_change_pre.handler)
     bpy.app.handlers.load_post.remove(load_post.handler)
     SpaceImageEditor.draw_handler_remove(draw_imageeditor.handle, 'WINDOW')
+    # Do not leave a timer that points to this version of the module (Reload Scripts)
+    eevee_sync.reset()

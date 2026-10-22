@@ -2,6 +2,7 @@ import bpy
 from nodeitems_utils import NodeCategory, NodeItem
 from ... import icons
 from ...utils import node as utils_node
+from ...utils import eevee_sync
 from ..nodeitems import Separator, NodeItemMultiImageImport
 from ..base import LuxCoreNodeTree
 
@@ -32,6 +33,9 @@ class LuxCoreMaterialNodeTree(bpy.types.NodeTree, LuxCoreNodeTree):
     # This block updates the preview, when socket links change
     def update(self):
         super().update()
+
+        # Links or nodes changed: regenerate the EEVEE nodes of the materials using this tree
+        eevee_sync.mark_tree(self)
 
         # Force viewport update of the corresponding material
         try:

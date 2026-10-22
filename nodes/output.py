@@ -27,7 +27,7 @@ def update_active(output_node, context):
     output_node.enable_update_callback = True
 
     output_node.disable_other_outputs()
-    utils_node.update_opengl_materials(None, context)
+    utils_node.update_opengl_materials(output_node, context)
 
 
 class LuxCoreNodeOutput(LuxCoreNode):

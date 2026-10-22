@@ -2,6 +2,7 @@ import bpy
 import mathutils
 import pyluxcore
 from .errorlog import LuxCoreErrorLog
+from . import eevee_sync
 from .. import icons
 
 
@@ -275,6 +276,10 @@ def force_viewport_update(_, context):
     updated, so we can update it during viewport render.
     Corresponding bug report: https://developer.blender.org/T66521
     """
+    # Keep the generated EEVEE nodes in sync (before the context check: the
+    # node tree is known even without an active object, e.g. headless)
+    eevee_sync.mark_tree(getattr(_, "id_data", None))
+
     if not getattr(context, "object", None) or not getattr(context.object, "active_material", None):
         return
     mat = context.object.active_material
@@ -304,6 +309,9 @@ def force_viewport_mesh_update2(node_tree):
 
 
 def update_opengl_materials(_, context):
+    # The update callback of colour sockets: keep the generated EEVEE nodes in sync
+    eevee_sync.mark_tree(getattr(_, "id_data", None))
+
     # TODO should be in upper scope, but there is a circular reference
     from ..utils.node import get_active_output
 

@@ -25,7 +25,7 @@ _needs_reload = "bpy" in locals()
 import bpy
 import mathutils
 
-from . import log, view_layer, errorlog, misc, colorspace
+from . import log, view_layer, errorlog, misc, colorspace, eevee_nodes, eevee_sync
 
 from .misc import get_name_with_lib, pluralize
 from .log import logger
@@ -38,6 +38,8 @@ if _needs_reload:
     errorlog = importlib.reload(errorlog)
     misc = importlib.reload(misc)
     colorspace = importlib.reload(colorspace)
+    eevee_nodes = importlib.reload(eevee_nodes)
+    eevee_sync = importlib.reload(eevee_sync)
 
 MESH_OBJECTS = {"MESH", "CURVES", "SURFACE", "META", "FONT"}
 EXPORTABLE_OBJECTS = MESH_OBJECTS | {"LIGHT"}
