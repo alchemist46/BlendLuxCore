@@ -11,6 +11,7 @@ from ..utils.errorlog import LuxCoreErrorLog
 from ..utils import view_layer as utils_view_layer
 from ..utils import get_addon_preferences
 from ..properties.display import LuxCoreDisplaySettings
+from ..properties.aovs import AOVS
 
 
 if _needs_reload:
@@ -176,85 +177,10 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
 
         aovs = renderlayer.luxcore.aovs
 
-        # Notes:
-        # - It seems like Blender can not handle passes with 2 elements. They must have 1, 3 or 4 elements.
-        # - The last argument must be in ("COLOR", "VECTOR", "VALUE") and controls the socket color.
-        if aovs.rgb:
-            self.register_pass(scene, renderlayer, "RGB", 3, "RGB", "COLOR")
-        if aovs.rgba:
-            self.register_pass(scene, renderlayer, "RGBA", 4, "RGBA", "COLOR")
-        if aovs.alpha:
-            self.register_pass(scene, renderlayer, "ALPHA", 1, "A", "VALUE")
-        if aovs.depth:
-            # In the compositor we need to register the Depth pass
-            self.register_pass(scene, renderlayer, "Depth", 1, "Z", "VALUE")
-        if aovs.albedo:
-            self.register_pass(scene, renderlayer, "ALBEDO", 3, "RGB", "COLOR")
-        if aovs.material_id:
-            self.register_pass(scene, renderlayer, "MATERIAL_ID", 1, "X", "VALUE")
-        if aovs.material_id_color:
-            self.register_pass(scene, renderlayer, "MATERIAL_ID_COLOR", 3, "RGB", "COLOR")
-        if aovs.object_id:
-            self.register_pass(scene, renderlayer, "OBJECT_ID", 1, "X", "VALUE")
-        if aovs.emission:
-            self.register_pass(scene, renderlayer, "EMISSION", 3, "RGB", "COLOR")
-        if aovs.caustic:
-            self.register_pass(scene, renderlayer, "CAUSTIC", 3, "RGB", "COLOR")
-        if aovs.direct_diffuse:
-            self.register_pass(scene, renderlayer, "DIRECT_DIFFUSE", 3, "RGB", "COLOR")
-        if aovs.direct_diffuse_reflect:
-            self.register_pass(scene, renderlayer, "DIRECT_DIFFUSE_REFLECT", 3, "RGB", "COLOR")
-        if aovs.direct_diffuse_transmit:
-            self.register_pass(scene, renderlayer, "DIRECT_DIFFUSE_TRANSMIT", 3, "RGB", "COLOR")
-        if aovs.direct_glossy:
-            self.register_pass(scene, renderlayer, "DIRECT_GLOSSY", 3, "RGB", "COLOR")
-        if aovs.direct_glossy_reflect:
-            self.register_pass(scene, renderlayer, "DIRECT_GLOSSY_REFLECT", 3, "RGB", "COLOR")
-        if aovs.direct_glossy_transmit:
-            self.register_pass(scene, renderlayer, "DIRECT_GLOSSY_TRANSMIT", 3, "RGB", "COLOR")
-        if aovs.indirect_diffuse:
-            self.register_pass(scene, renderlayer, "INDIRECT_DIFFUSE", 3, "RGB", "COLOR")
-        if aovs.indirect_diffuse_reflect:
-            self.register_pass(scene, renderlayer, "INDIRECT_DIFFUSE_REFLECT", 3, "RGB", "COLOR")
-        if aovs.indirect_diffuse_transmit:
-            self.register_pass(scene, renderlayer, "INDIRECT_DIFFUSE_TRANSMIT", 3, "RGB", "COLOR")
-        if aovs.indirect_glossy:
-            self.register_pass(scene, renderlayer, "INDIRECT_GLOSSY", 3, "RGB", "COLOR")
-        if aovs.indirect_glossy_reflect:
-            self.register_pass(scene, renderlayer, "INDIRECT_GLOSSY_REFLECT", 3, "RGB", "COLOR")
-        if aovs.indirect_glossy_transmit:
-            self.register_pass(scene, renderlayer, "INDIRECT_GLOSSY_TRANSMIT", 3, "RGB", "COLOR")
-        if aovs.indirect_specular:
-            self.register_pass(scene, renderlayer, "INDIRECT_SPECULAR", 3, "RGB", "COLOR")
-        if aovs.indirect_specular_reflect:
-            self.register_pass(scene, renderlayer, "INDIRECT_SPECULAR_REFLECT", 3, "RGB", "COLOR")
-        if aovs.indirect_specular_transmit:
-            self.register_pass(scene, renderlayer, "INDIRECT_SPECULAR_TRANSMIT", 3, "RGB", "COLOR")
-        if aovs.position:
-            self.register_pass(scene, renderlayer, "POSITION", 3, "XYZ", "VECTOR")
-        if aovs.shading_normal:
-            self.register_pass(scene, renderlayer, "SHADING_NORMAL", 3, "XYZ", "VECTOR")
-        if aovs.avg_shading_normal:
-            self.register_pass(scene, renderlayer, "AVG_SHADING_NORMAL", 3, "XYZ", "VECTOR")
-        if aovs.geometry_normal:
-            self.register_pass(scene, renderlayer, "GEOMETRY_NORMAL", 3, "XYZ", "VECTOR")
-        if aovs.uv:
-            # We need to pad the UV pass to 3 elements (Blender can't handle 2 elements)
-            self.register_pass(scene, renderlayer, "UV", 3, "UVA", "VECTOR")
-        if aovs.direct_shadow_mask:
-            self.register_pass(scene, renderlayer, "DIRECT_SHADOW_MASK", 1, "X", "VALUE")
-        if aovs.indirect_shadow_mask:
-            self.register_pass(scene, renderlayer, "INDIRECT_SHADOW_MASK", 1, "X", "VALUE")
-        if aovs.raycount:
-            self.register_pass(scene, renderlayer, "RAYCOUNT", 1, "X", "VALUE")
-        if aovs.samplecount:
-            self.register_pass(scene, renderlayer, "SAMPLECOUNT", 1, "X", "VALUE")
-        if aovs.convergence:
-            self.register_pass(scene, renderlayer, "CONVERGENCE", 1, "X", "VALUE")
-        if aovs.noise:
-            self.register_pass(scene, renderlayer, "NOISE", 1, "X", "VALUE")
-        if aovs.irradiance:
-            self.register_pass(scene, renderlayer, "IRRADIANCE", 3, "RGB", "COLOR")
+        # Note: the last argument must be in ("COLOR", "VECTOR", "VALUE") and controls the socket color.
+        for aov in AOVS:
+            if getattr(aovs, aov.prop):
+                self.register_pass(scene, renderlayer, aov.pass_name, aov.pass_depth, aov.channels, aov.pass_type)
 
         # Light groups
         lightgroups = scene.luxcore.lightgroups

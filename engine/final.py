@@ -11,6 +11,7 @@ from ..utils.errorlog import LuxCoreErrorLog
 from ..utils import view_layer as utils_view_layer
 from ..properties.denoiser import LuxCoreDenoiser
 from ..properties.display import LuxCoreDisplaySettings
+from ..properties.aovs import AOVS
 
 if _needs_reload:
     import importlib
@@ -261,83 +262,14 @@ def _add_passes(engine, layer, scene):
         else:
             engine.add_pass("DENOISED", 3, "RGB", layer=layer.name)
 
-    if aovs.rgb:
-        engine.add_pass("RGB", 3, "RGB", layer=layer.name)
-    if aovs.rgba:
-        engine.add_pass("RGBA", 4, "RGBA", layer=layer.name)
-    if aovs.alpha:
-        engine.add_pass("ALPHA", 1, "A", layer=layer.name)
-    # Note: If the Depth pass is already added by Blender and we add it again, it won't be
-    # displayed correctly in the "Depth" view mode of the "Combined" pass in the image editor.
-    if aovs.depth and not layer.use_pass_z:
-        engine.add_pass("Depth", 1, "Z", layer=layer.name)
-    if aovs.albedo:
-        engine.add_pass("ALBEDO", 3, "RGB", layer=layer.name)
-    if aovs.material_id:
-        engine.add_pass("MATERIAL_ID", 1, "X", layer=layer.name)
-    if aovs.material_id_color:
-        engine.add_pass("MATERIAL_ID_COLOR", 3, "RGB", layer=layer.name)
-    if aovs.object_id:
-        engine.add_pass("OBJECT_ID", 1, "X", layer=layer.name)
-    if aovs.emission:
-        engine.add_pass("EMISSION", 3, "RGB", layer=layer.name)
-    if aovs.caustic:
-        engine.add_pass("CAUSTIC", 3, "RGB", layer=layer.name)
-    if aovs.direct_diffuse:
-        engine.add_pass("DIRECT_DIFFUSE", 3, "RGB", layer=layer.name)
-    if aovs.direct_diffuse_reflect:
-        engine.add_pass("DIRECT_DIFFUSE_REFLECT", 3, "RGB", layer=layer.name)
-    if aovs.direct_diffuse_transmit:
-        engine.add_pass("DIRECT_DIFFUSE_TRANSMIT", 3, "RGB", layer=layer.name)
-    if aovs.direct_glossy:
-        engine.add_pass("DIRECT_GLOSSY", 3, "RGB", layer=layer.name)
-    if aovs.direct_glossy_reflect:
-        engine.add_pass("DIRECT_GLOSSY_REFLECT", 3, "RGB", layer=layer.name)
-    if aovs.direct_glossy_transmit:
-        engine.add_pass("DIRECT_GLOSSY_TRANSMIT", 3, "RGB", layer=layer.name)
-    if aovs.indirect_diffuse:
-        engine.add_pass("INDIRECT_DIFFUSE", 3, "RGB", layer=layer.name)
-    if aovs.indirect_diffuse_reflect:
-        engine.add_pass("INDIRECT_DIFFUSE_REFLECT", 3, "RGB", layer=layer.name)
-    if aovs.indirect_diffuse_transmit:
-        engine.add_pass("INDIRECT_DIFFUSE_TRANSMIT", 3, "RGB", layer=layer.name)
-    if aovs.indirect_glossy:
-        engine.add_pass("INDIRECT_GLOSSY", 3, "RGB", layer=layer.name)
-    if aovs.indirect_glossy_reflect:
-        engine.add_pass("INDIRECT_GLOSSY_REFLECT", 3, "RGB", layer=layer.name)
-    if aovs.indirect_glossy_transmit:
-        engine.add_pass("INDIRECT_GLOSSY_TRANSMIT", 3, "RGB", layer=layer.name)
-    if aovs.indirect_specular:
-        engine.add_pass("INDIRECT_SPECULAR", 3, "RGB", layer=layer.name)
-    if aovs.indirect_specular_reflect:
-        engine.add_pass("INDIRECT_SPECULAR_REFLECT", 3, "RGB", layer=layer.name)
-    if aovs.indirect_specular_transmit:
-        engine.add_pass("INDIRECT_SPECULAR_TRANSMIT", 3, "RGB", layer=layer.name)
-    if aovs.position:
-        engine.add_pass("POSITION", 3, "XYZ", layer=layer.name)
-    if aovs.shading_normal:
-        engine.add_pass("SHADING_NORMAL", 3, "XYZ", layer=layer.name)
-    if aovs.avg_shading_normal:
-        engine.add_pass("AVG_SHADING_NORMAL", 3, "XYZ", layer=layer.name)
-    if aovs.geometry_normal:
-        engine.add_pass("GEOMETRY_NORMAL", 3, "XYZ", layer=layer.name)
-    if aovs.uv:
-        # We need to pad the UV pass to 3 elements (Blender can't handle 2 elements)
-        engine.add_pass("UV", 3, "UVA", layer=layer.name)
-    if aovs.direct_shadow_mask:
-        engine.add_pass("DIRECT_SHADOW_MASK", 1, "X", layer=layer.name)
-    if aovs.indirect_shadow_mask:
-        engine.add_pass("INDIRECT_SHADOW_MASK", 1, "X", layer=layer.name)
-    if aovs.raycount:
-        engine.add_pass("RAYCOUNT", 1, "X", layer=layer.name)
-    if aovs.samplecount:
-        engine.add_pass("SAMPLECOUNT", 1, "X", layer=layer.name)
-    if aovs.convergence:
-        engine.add_pass("CONVERGENCE", 1, "X", layer=layer.name)
-    if aovs.noise:
-        engine.add_pass("NOISE", 1, "X", layer=layer.name)
-    if aovs.irradiance:
-        engine.add_pass("IRRADIANCE", 3, "RGB", layer=layer.name)
+    for aov in AOVS:
+        if not getattr(aovs, aov.prop):
+            continue
+        # Note: If the Depth pass is already added by Blender and we add it again, it won't be
+        # displayed correctly in the "Depth" view mode of the "Combined" pass in the image editor.
+        if aov.prop == "depth" and layer.use_pass_z:
+            continue
+        engine.add_pass(aov.pass_name, aov.pass_depth, aov.channels, layer=layer.name)
 
     # Light groups
     lightgroups = scene.luxcore.lightgroups

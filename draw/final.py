@@ -7,28 +7,25 @@ from .. import utils
 from ..export.aovs import get_denoiser_imgpipeline_props
 from ..properties.denoiser import LuxCoreDenoiser
 from ..properties.display import LuxCoreDisplaySettings
+from ..properties.aovs import AOVS as AOV_TABLE
 from ..utils import view_layer as utils_view_layer
 from .utils import ConvertFilmChannelOutput
 
 
 # Note: RGB_IMAGEPIPELINE and RGBA_IMAGEPIPELINE are missing here because they
 # are not imported along with the other AOVs (they have a special code path)
-# Note: AOVs with the default settings are not included in the aovs dictionary.
+# Note: outputs that are not in the AOV table (e.g. RADIANCE_GROUP) use the
+# default settings below.
 
 AOVS = {
-    "RGB": ConvertFilmChannelOutput(3, np.float32, 3),
-    "RGBA": ConvertFilmChannelOutput(4, np.float32, 4),
-    "ALPHA": ConvertFilmChannelOutput(1, np.float32, 1),
-    "DEPTH": ConvertFilmChannelOutput(1, np.float32, 1, normalize=True),
-    "DIRECT_SHADOW_MASK": ConvertFilmChannelOutput(1, np.float32, 1),
-    "INDIRECT_SHADOW_MASK": ConvertFilmChannelOutput(1, np.float32, 1),
-    "UV": ConvertFilmChannelOutput(2, np.float32, 3),
-    "RAYCOUNT": ConvertFilmChannelOutput(1, np.float32, 1, normalize=True),
-    "MATERIAL_ID": ConvertFilmChannelOutput(1, np.uint32, 1, is_id=True, normalize=False),
-    "OBJECT_ID": ConvertFilmChannelOutput(1, np.uint32, 1, is_id=True, normalize=False),
-    "SAMPLECOUNT": ConvertFilmChannelOutput(1, np.uint32, 1, normalize=True),
-    "CONVERGENCE": ConvertFilmChannelOutput(1, np.float32, 1),
-    "NOISE": ConvertFilmChannelOutput(1, np.float32, 1),
+    aov.output: ConvertFilmChannelOutput(
+        aov.film_depth or aov.pass_depth,
+        np.dtype(aov.film_dtype),
+        aov.pass_depth,
+        normalize=aov.normalize,
+        is_id=aov.is_id,
+    )
+    for aov in AOV_TABLE
 }
 
 AOVS_WITH_ID = {
