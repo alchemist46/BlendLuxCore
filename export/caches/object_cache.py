@@ -455,9 +455,6 @@ class ObjectCache2:
                 )
 
                 # TODO: support steps and times (motion blur)
-                # steps = 0 # TODO
-                # times = array("f", [])
-                # luxcore_scene.DuplicateObject(src_name, dst_name, count, steps, times, transformations)
 
         if stats:
             stats.export_time_instancing.value = time() - start_time

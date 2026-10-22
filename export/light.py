@@ -454,27 +454,6 @@ def _convert_cycles_world(exporter, scene, world, is_viewport_render):
                         if mapping_node:
                             # TODO fix transformation
                             raise NotImplementedError("Mapping node not supported yet")
-
-                            # tex_loc = Matrix.Translation(mapping_node.inputs["Location"].default_value)
-                            #
-                            # tex_sca = Matrix()
-                            # scale = mapping_node.inputs["Scale"].default_value
-                            # tex_sca[0][0] = scale.x
-                            # tex_sca[1][1] = scale.y
-                            # tex_sca[2][2] = scale.z
-                            #
-                            # # Prevent "singular matrix in matrixinvert" error (happens if a scale axis equals 0)
-                            # for i in range(3):
-                            #     if tex_sca[i][i] == 0:
-                            #         tex_sca[i][i] = 0.0000000001
-                            #
-                            # rotation = mapping_node.inputs["Rotation"].default_value
-                            # tex_rot0 = Matrix.Rotation(rotation.x, 4, "X")
-                            # tex_rot1 = Matrix.Rotation(rotation.y, 4, "Y")
-                            # tex_rot2 = Matrix.Rotation(rotation.z, 4, "Z")
-                            # tex_rot = tex_rot0 @ tex_rot1 @ tex_rot2
-                            #
-                            # transformation = tex_loc @ tex_rot @ tex_sca
                         else:
                             infinite_fix = Matrix.Scale(1.0, 4)
                             infinite_fix[0][0] = -1.0  # mirror the hdri map to match Cycles and old LuxBlend

@@ -567,16 +567,6 @@ def get_search_props(context):
         if not 'assets' in scene.luxcoreOL.material:
             return
         props = scene.luxcoreOL.material['assets']
-
-    # if ui_props.asset_type == 'TEXTURE':
-    #     if not hasattr(scene.luxcoreOL.texture, 'assets'):
-    #         return
-    #     props = scene.luxcoreOL.texture['assets']
-
-    # if ui_props.asset_type == 'BRUSH':
-    #     if not hasattr(scene.luxcoreOL, 'brush'):
-    #         return
-    #     props = scene.luxcoreOL.brush['assets']
     return props
 
 

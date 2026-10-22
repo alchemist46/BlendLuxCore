@@ -91,10 +91,6 @@ def _append_object_matrices(depsgraph, exported_objects, matrices, step):
                 for part in exported_thing.parts:
                     prefix = "scene.objects." + part.lux_obj + "."
                     _append_matrix(matrices, prefix, matrix, step)
-            # else:
-            #     assert isinstance(exported_thing, ExportedLight)
-            #     prefix = "scene.lights." + exported_thing.lux_light_name + "."
-            #     _append_matrix(matrices, prefix, matrix, step)
         except KeyError:
             # This is not a problem, objects are skipped during export for various reasons
             # E.g. if the object is not visible, or if it's a camera

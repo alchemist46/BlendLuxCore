@@ -74,24 +74,6 @@ class LUXCORE_DATA_PT_curve_hair(DataButtonsPanel, Panel):
         if settings.export_color == "vertex_color":
             col = box.column(align=True)
             col.prop(settings, "use_active_vertex_color_layer")
-        #
-        #     if settings.use_active_vertex_color_layer:
-        #         if obj.data.vertex_colors:
-        #             active_vcol_layer = utils.find_active_vertex_color_layer(obj.data.vertex_colors)
-        #             if active_vcol_layer:
-        #                 row = col.row(align=True)
-        #                 row.label(text="Vertex Colors")
-        #                 row.label(text=active_vcol_layer.name, icon="GROUP_VCOL")
-        #     else:
-        #         col.prop_search(settings, "vertex_color_layer_name",
-        #                         obj.data, "vertex_colors",
-        #                         icon="GROUP_VCOL", text="Vertex Colors")
-        #
-        #     if not obj.data.vertex_colors:
-        #         row = col.row()
-        #         row.label(text="No Vertex Colors", icon=icons.WARNING)
-        #         row.operator("mesh.vertex_color_add", icon=icons.ADD)
-        #
         elif settings.export_color == "uv_texture_map":
             box.template_ID(settings, "image", open="image.open")
             if settings.image:

@@ -1163,7 +1163,6 @@ class LOLAssetBarOperator(Operator):
                 context, mx, my
             ):
                 # TODO: Implement context menu
-                # bpy.ops.wm.call_menu(name='OBJECT_MT_LOL_asset_menu')
                 return {"RUNNING_MODAL"}
 
         if event.type == "LEFTMOUSE":
@@ -1366,18 +1365,6 @@ class LOLAssetBarOperator(Operator):
                             matrix,
                         ) = ui_bgl.mouse_raycast(context, mx, my)
 
-                        #     if not ui_props.has_hit:
-                        #         # this is last attempt to get object under mouse - for curves and other objects than mesh.
-                        #         ui_props.dragging = False
-                        #         sel = utils.selection_get()
-                        #         bpy.ops.view3d.select(location=(event.mouse_region_x, event.mouse_region_y))
-                        #         sel1 = utils.selection_get()
-                        #         if sel[0] != sel1[0] and sel1[0].type != 'MESH':
-                        #             object = sel1[0]
-                        #             target_slot = sel1[0].active_material_index
-                        #             ui_props.has_hit = True
-                        #         utils.selection_set(sel)
-                        #
                         if not ui_props.has_hit:
                             return {"RUNNING_MODAL"}
 

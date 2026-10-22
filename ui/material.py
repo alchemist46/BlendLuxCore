@@ -162,34 +162,6 @@ class LUXCORE_PT_material_settings(MaterialButtonsPanel, Panel):
         layout.prop(context.material, "pass_index")
 
 
-# Since we can't disable the original MATERIAL_PT_viewport panel, it makes no sense to add our own
-# (see register function below)
-
-#class LUXCORE_PT_settings(MaterialButtonsPanel, Panel):
-#    bl_label = "Settings"
-#    bl_context = "material"
-#    bl_options = {'DEFAULT_CLOSED'}
-#
-#    @classmethod
-#    def poll(cls, context):
-#        engine = context.scene.render.engine
-#        return context.material and engine == "LUXCORE"
-#
-#    def draw(self, context):
-#        layout = self.layout
-#        mat = context.material
-#
-#        if mat.luxcore.auto_vp_color:
-#            split = layout.split(factor=0.8)
-#            split.prop(mat.luxcore, "auto_vp_color")
-#            row = split.row()
-#            row.enabled = not mat.luxcore.auto_vp_color
-#            row.prop(mat, "diffuse_color", text="")
-#        else:
-#            layout.prop(mat.luxcore, "auto_vp_color")
-#            layout.prop(mat, "diffuse_color", text="Viewport Color")
-
-
 # The poll method of MATERIAL_PT_viewport does not check the renderengine, so we have to patch
 # the draw method if we want to display stuff differently than other engines
 def lux_viewport_draw(self, context):

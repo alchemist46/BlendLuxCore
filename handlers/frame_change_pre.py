@@ -39,19 +39,6 @@ def handler(scene):
 
     # TODO we are not handling area lights with image sequence textures right now
     #  because I can't think of a check with good performance in large scenes.
-
-
-    # This is what I would like to do, but it does not work if the node tree is not selected in any node editor.
-    # Also, users of edited node trees are not flagged as updated (e.g. materials, area lights, camera) which
-    # is a Blender bug/limitation.
-    #
-    # from ..nodes import TREE_TYPES
-    # for node_tree in bpy.data.node_groups:
-    #     if node_tree.bl_idname not in TREE_TYPES:
-    #         continue
-    #
-    #     for node in utils_node.find_nodes(node_tree, "LuxCoreNodeTexImagemap"):
-    #         if node.image and node.image.source == "SEQUENCE":
-    #             # Force a viewport update
-    #             node.image = node.image
-    #             # node_tree.update_tag()  # Does not work
+    #  Forcing an update on the node trees does not work if the node tree is not
+    #  selected in any node editor, and the users of edited node trees (materials,
+    #  area lights, camera) are not flagged as updated (Blender limitation).

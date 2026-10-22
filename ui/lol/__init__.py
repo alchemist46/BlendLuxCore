@@ -1,8 +1,7 @@
 from ... import utils
-from . import assetmenu, panel
+from . import panel
 
 classes = (
-    assetmenu.OBJECT_MT_LOL_asset_menu,
     panel.VIEW3D_PT_LUXCORE_ONLINE_LIBRARY,
     panel.VIEW3D_PT_LUXCORE_ONLINE_LIBRARY_DOWNLOADS,
     panel.VIEW3D_PT_LUXCORE_ONLINE_LIBRARY_LOCAL,

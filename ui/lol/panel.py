@@ -201,11 +201,6 @@ class VIEW3D_PT_LUXCORE_ONLINE_LIBRARY(Panel):
             draw_panel_scene_search(self, context)
         elif ui_props.asset_type == 'MATERIAL':
             draw_panel_material_search(self, context)
-        #elif ui_props.asset_type == 'BRUSH':
-            #if context.sculpt_object or context.image_paint_object:
-                #draw_panel_brush_search(self, context)
-            #else:
-                #label_multiline(layout, text='switch to paint or sculpt mode.', width=context.region.width)
 
 
 class VIEW3D_PT_LUXCORE_ONLINE_LIBRARY_DOWNLOADS(Panel):
@@ -235,12 +230,6 @@ class VIEW3D_PT_LUXCORE_ONLINE_LIBRARY_DOWNLOADS(Panel):
            row.operator('scene.luxcore_ol_download_kill', text='', icon='CANCEL').thread_index = idx
 
            # TODO: Implement retry download
-           # if tcom.passargs.get('retry_counter', 0) > 0:
-           #     row = layout.row()
-           #     row.label(text='failed. retrying ... ', icon='ERROR')
-           #     row.label(text=str(tcom.passargs["retry_counter"]))
-           #
-           #     layout.separator()
 
 
 class VIEW3D_PT_LUXCORE_ONLINE_LIBRARY_LOCAL(Panel):
