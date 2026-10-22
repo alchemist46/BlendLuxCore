@@ -32,8 +32,8 @@ class ImageExporter:
             orig_filepath = packed.filepath
 
             # Compute key
-            # Note: We can't use utils.make_key(image) here because the memory
-            # address might be re-used on undo, causing a key collision
+            # Note: keyed by file path rather than utils.make_key(image), so
+            # images that pack the same file share one temp file
             key = orig_filepath or f"{image.name}-{packed.tile_number}"
 
             # Check whether packed image has already been exported

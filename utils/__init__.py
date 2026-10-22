@@ -57,13 +57,12 @@ def sanitize_luxcore_name(string):
 
 
 def make_key(datablock):
-    # We use the memory address as key, e.g. to track materials or objects even
-    # when they are renamed during viewport render.
-    # Note that the memory address changes on undo/redo, but in this case the
-    # viewport render is stopped and re-started anyway, so it should not be a
-    # problem.
+    # We use the session UID as key, e.g. to track materials or objects even
+    # when they are renamed during viewport render. Unlike the memory address,
+    # it is never re-used for another datablock after undo or deletion.
+    # The evaluated copy shares it with the original.
     assert isinstance(datablock, bpy.types.ID)
-    return str(datablock.original.as_pointer())
+    return str(datablock.original.session_uid)
 
 
 def make_key_from_bpy_struct(bpy_struct):
