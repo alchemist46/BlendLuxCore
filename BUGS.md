@@ -29,13 +29,6 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: Blender 5.2.2 on Windows, empty library folder; Update ToC from server, then open the Asset Bar. Happened in every run.
 - Notes: in `bg_download_thumbnails()` (utils/lol/utils.py), `bpy.data.images.load()` and `img.scale()` run inside the `with open(tpath, "wb")` block, so the file is still open and maybe not flushed. The thread also calls the bpy API outside the main thread, which is not thread-safe; a suspect for the GUI hang below.
 
-### Update ToC fails until the library folder exists
-- Found: 2026-10-22
-- Area: online library
-- Problem: "Update ToC from server" raises FileNotFoundError writing `assets_model_blendermarket.json` when the library folder (addon preferences, global_dir) does not exist yet.
-- Reproduce: change the library folder in the addon preferences to a new path, then click Update ToC from server without loading a file.
-- Notes: the folders are only created in `_init_LuxCoreOnlineLibrary()` (handlers/load_post.py), which runs on file load.
-
 ### Blender hung with the online library asset bar open (suspected)
 - Found: 2026-10-22
 - Area: online library

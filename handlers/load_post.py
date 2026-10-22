@@ -8,6 +8,7 @@ from bpy.app.handlers import persistent
 import pyluxcore
 from .. import utils, operators
 from ..utils import compatibility
+from ..utils.lol import utils as utils_lol
 from . import frame_change_pre
 from ..utils.errorlog import LuxCoreErrorLog
 from ..operators.manual_compatibility import LUXCORE_OT_convert_to_v23
@@ -47,26 +48,7 @@ def _init_LuxCoreOnlineLibrary():
     bpy.context.scene.luxcoreOL.scene.thumbnails_loaded = False
     bpy.context.scene.luxcoreOL.material.thumbnails_loaded = False
 
-    if not os.path.exists(user_preferences.global_dir):
-        os.makedirs(user_preferences.global_dir)
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'model')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'model'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'model', 'preview')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'model', 'preview'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'model', 'preview', 'full')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'model', 'preview', 'full'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'material')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'material'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'material', 'preview')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'material', 'preview'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'material', 'preview', 'full')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'material', 'preview', 'full'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'scene')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'scene'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'scene', 'preview', 'full')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'scene', 'preview', 'full'))
-    if not os.path.exists(os.path.join(user_preferences.global_dir, 'scene', 'preview')):
-        os.makedirs(os.path.join(user_preferences.global_dir, 'scene', 'preview'))
+    utils_lol.ensure_library_dirs(user_preferences.global_dir)
 
 
 @persistent

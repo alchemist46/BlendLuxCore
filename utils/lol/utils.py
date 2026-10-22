@@ -125,11 +125,18 @@ def load_patreon_assets(context):
     return assets
 
 
+def ensure_library_dirs(global_dir):
+    """Create the library folder and its subfolders if they are missing"""
+    for asset_type in ("model", "material", "scene"):
+        os.makedirs(join(global_dir, asset_type, "preview", "full"), exist_ok=True)
+
+
 def download_table_of_contents(context):
     global bg_threads
     scene = context.scene
     ui_props = context.scene.luxcoreOL.ui
     user_preferences = get_addon_preferences(context)
+    ensure_library_dirs(user_preferences.global_dir)
     LOL_HOST_URL = user_preferences.lol_host
     LOL_VERSION = user_preferences.lol_version
     LOL_HTTP_HOST = user_preferences.lol_http_host

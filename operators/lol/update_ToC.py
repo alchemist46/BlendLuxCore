@@ -45,6 +45,7 @@ class LOLUpdateTOC(Operator):
         ui_props = scene.luxcoreOL.ui
 
         user_preferences = get_addon_preferences(context)
+        utils.ensure_library_dirs(user_preferences.global_dir)
         LOL_HOST_URL = user_preferences.lol_host
         LOL_VERSION = user_preferences.lol_version
         LOL_HTTP_HOST = user_preferences.lol_http_host
