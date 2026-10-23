@@ -41,6 +41,14 @@ def convert_light(exporter, obj, obj_key, depsgraph, luxcore_scene, transform, i
         return pyluxcore.Properties(), None
 
 
+def _set_cycles_temperature_normalization(definitions, prefix):
+    # Cycles scales the blackbody color to luminance 1 ("luminance", pyluxcore 3.0 builds from
+    # 2026-10-23 on). The older builds ignore ".normalization" and use ".normalize" (the color
+    # divided by the largest blackbody RGB value, about 27% darker at 6500 K).
+    definitions[prefix + ".normalize"] = True
+    definitions[prefix + ".normalization"] = "luminance"
+
+
 def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is_viewport_render,
                           luxcore_name, scene, prefix):
     definitions = {}
@@ -87,6 +95,15 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
 
                 gain *= node_gain
                 color = [a * b for a, b in zip(color, node_color)]
+
+    # The light's Temperature (Blender 5.0+): its blackbody color at luminance 1 multiplies the color
+    if getattr(light, "use_temperature", False):
+        if temperature is None:
+            temperature = light.temperature
+        else:
+            # A Blackbody node already uses the LuxCore temperature: Blender's color of the
+            # light's temperature (in the working space) goes into the color
+            color = [a * b for a, b in zip(color, light.temperature_color)]
 
     if light.type == "POINT":
         definitions["type"] = "point" if light.shadow_soft_size == 0 else "sphere"
@@ -160,7 +177,7 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
         }
         if temperature is not None:
             mat_definitions["emission.temperature"] = temperature
-            mat_definitions["emission.temperature.normalize"] = True
+            _set_cycles_temperature_normalization(mat_definitions, "emission.temperature")
 
         mat_props = utils.luxutils.create_props(mat_prefix, mat_definitions)
         props.Set(mat_props)
@@ -184,7 +201,7 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
     definitions["importance"] = light.luxcore.importance
     if temperature is not None:
         definitions["temperature"] = temperature
-        definitions["temperature.normalize"] = True
+        _set_cycles_temperature_normalization(definitions, "temperature")
 
     if not light.use_shadow:
         LuxCoreErrorLog.add_warning("Cast Shadow is disabled, but unsupported by LuxCore", obj.name)

@@ -29,13 +29,6 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: not reliable. Blender 5.2.2 on Windows with simulated input (`--enable-event-simulate`): Update ToC (after a first try that failed on the missing library folder), Asset Bar, hover and right-click a thumbnail. Six scripted replays of the same steps, on the code before and after the cleanup commits, did not hang.
 - Notes: py-spy showed the main thread in native Blender code with no Python frame, and Thread-4 (`bg_download_thumbnails`) in an SSL read. Main suspect: that thread loaded and scaled the images with the bpy API. Since the thumbnail fix of 2026-10-22 it only downloads the files, and the images are loaded in the main thread; three replays since then did not hang. Remove this entry if it does not happen again.
 
-### Cycles light temperature: ignored, and the Blackbody node 27% too dark
-- Found: 2026-10-23
-- Area: export
-- Problem: with "Use Cycles settings", a light's Temperature (`Light.use_temperature`, `Light.temperature`) is not exported: the light is plain white. Exporting it as `temperature` with `temperature.normalize` (as the Blackbody node path does since `99f0a383`) fixes the tint but makes the light 27% too dark at 6500 K: Cycles normalizes the blackbody color to luminance 1, LuxCore's `temperature.normalize` divides by the largest RGB value of any blackbody from 0 to 13000 K (`TemperatureToWhitePoint()`, color.cpp), so its scale depends on the temperature. The Blackbody node path has the same intensity error.
-- Reproduce: Blender 5.2, the user's Cornell box (`Cornell Box Cycles.blend`, area light 100 W, temperature 6500 K, Rec.2020 file) prepared with LuxCore's `tests/benchmark/g0_prepare.py`, direct light only (`g0_render.py --bounces 0`), PATHOCL against Cycles: LuxCore/Cycles on every wall (0.978, 1.012, 0.970), which is (1, 1, 1) against the 6500 K blackbody in Rec.2020; with the temperature exported, (0.720, 0.726, 0.730).
-- Notes: the fix needs the luminance-normalized blackbody: either the addon computes it (gain / Y of LuxCore's normalized blackbody, or the color itself in the working space), or the core gets a luminance normalization mode for `temperature`. Found by LuxCore ROADMAP D1.
-
 ### Diffuse BSDF roughness is ignored
 - Found: 2026-10-23
 - Area: export
@@ -49,3 +42,17 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Problem: with "Use Cycles settings", an area light's power is always divided by its area (`_convert_cycles_light`), while Cycles divides only when `Light.normalize` is on (the default). Not tested.
 - Reproduce: Blender 5.2, an area light of size 2 with Normalize off, Cycles against LuxCore: LuxCore should be 4x too dark.
 - Notes: read from the code during LuxCore ROADMAP D1.
+
+### Converted Blackbody nodes and the LuxCore Temperature are 27% dark against Cycles
+- Found: 2026-10-23
+- Area: nodes, export
+- Problem: the Cycles-to-LuxCore node converter (`operators/cycles_converter.py`) turns a Cycles Blackbody node into the LuxCore Blackbody node, which exports `normalize` (the blackbody divided by the largest RGB value of any blackbody up to 13000 K): the converted material is 27% darker than Cycles at 6500 K, 57% at 3000 K. The LuxCore Temperature color mode of the lights and the world has the same normalization.
+- Reproduce: Blender 5.2, an Emission material with a Blackbody node at 6500 K, convert it with the LuxCore converter, compare with Cycles.
+- Notes: the core has `normalization = "luminance"` (Cycles' normalization) since LuxCore ROADMAP F9; the "Use Cycles settings" lights and the Cycles node reader use it. Changing the LuxCore node and color modes is a look change of existing files: needs a decision (a Normalization option in their UI, luminance only for new nodes, or both).
+
+### Blender's Camera ray visibility is ignored for meshes
+- Found: 2026-10-23
+- Area: export
+- Problem: a mesh with Object > Visibility > Ray Visibility > Camera off (`Object.visible_camera`, what Cycles uses) is still seen by the camera in LuxCore: the addon reads only its own `obj.luxcore.visible_to_camera` (`utils.visible_to_camera()`). An emitter plane hidden from the camera in Cycles shows as a bright rectangle in LuxCore.
+- Reproduce: Blender 5.2, the D1 Cornell box with its area light replaced by an emitting plane with Camera visibility off (LuxCore `lc-work/f9/mesh3000.blend` of ROADMAP F9), PATHOCL against Cycles.
+- Notes: probably wanted (the LuxCore property predates Blender's), but a file made for Cycles renders differently; a fix could combine both flags.

@@ -820,7 +820,10 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
         definitions = {
             "type": "blackbody",
             "temperature": temperature_socket.default_value,
+            # Luminance 1 as Cycles; the pyluxcore builds before 2026-10-23 ignore "normalization"
+            # and use "normalize" (about 27% darker at 6500 K)
             "normalize": True,
+            "normalization": "luminance",
         }
     elif node.bl_idname == "ShaderNodeMapRange":
         if node.interpolation_type != "LINEAR":
