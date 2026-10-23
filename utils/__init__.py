@@ -705,10 +705,10 @@ def get_persistent_cache_file_path(
             # an absolute path, just strip the leading "//"
             return file_path[2:]
         else:
-            if os.path.isfile(file_path) and save_or_overwrite:
+            if os.path.isfile(file_path_abs) and save_or_overwrite:
                 # To overwrite the file, we first have to delete it, otherwise
                 # LuxCore loads the cache from this file
-                os.remove(file_path)
+                os.remove(file_path_abs)
             return file_path_abs
 
 
