@@ -47,7 +47,8 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
     light = obj.data
 
     color = list(light.color)
-    gain = light.energy
+    # The light's Exposure scales its power by 2^exposure, as in Cycles
+    gain = light.energy * pow(2, getattr(light, "exposure", 0.0))
     temperature = None
 
     if utils_node.uses_nodes(light):
