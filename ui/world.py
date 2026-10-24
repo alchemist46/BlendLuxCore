@@ -63,6 +63,7 @@ class LUXCORE_PT_context_world(WorldButtonsPanel, Panel):
                 col.prop(world.luxcore, "rgb_gain", text=rgb_gain_label)
             elif world.luxcore.color_mode == "temperature":
                 col.prop(world.luxcore, "temperature", slider=True)
+                col.prop(world.luxcore, "temperature_normalization")
             else:
                 raise Exception("Unknown color mode")
 

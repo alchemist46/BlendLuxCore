@@ -6,6 +6,7 @@ import math
 from .ies import LuxCoreIESProps
 from .image_user import LuxCoreImageUser
 from .config import ENVLIGHT_CACHE_DESC
+from ..utils.temperature import NORMALIZATION_ITEMS
 from ..utils.light_descriptions import (
     RGB_GAIN_DESC, IMPORTANCE_DESCRIPTION, POWER_DESCRIPTION, NORMALIZEBYCOLOR_DESCRIPTION,
     EXPOSURE_DESCRIPTION, EFFICACY_DESCRIPTION, LUMEN_DESCRIPTION, CANDELA_DESCRIPTION,
@@ -60,6 +61,9 @@ class LuxCoreLightProps(bpy.types.PropertyGroup):
         ("temperature", "Temperature", "", 1),
     ]
     color_mode: EnumProperty(name="Color Mode", items=color_modes, default="rgb")
+    # Max on the lights of files saved by older addon versions (utils/temperature.py)
+    temperature_normalization: EnumProperty(name="Normalize", items=NORMALIZATION_ITEMS, default="luminance",
+                                            description="How the blackbody color of the temperature is normalized")
 
     volume: PointerProperty(type=bpy.types.NodeTree)
 

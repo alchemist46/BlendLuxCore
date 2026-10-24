@@ -112,6 +112,7 @@ class LUXCORE_LIGHT_PT_context_light(DataButtonsPanel, Panel):
                     col.prop(light.luxcore, "temperature", slider=True, text="Temperature Tint")
                 else:
                     col.prop(light.luxcore, "temperature", slider=True)
+                col.prop(light.luxcore, "temperature_normalization")
             else:
                 raise Exception("Unknown color mode")
 

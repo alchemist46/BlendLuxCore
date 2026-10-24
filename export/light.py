@@ -7,6 +7,7 @@ from .caches.exported_data import ExportedObject, ExportedLight
 from .image import ImageExporter
 from ..utils.errorlog import LuxCoreErrorLog
 from ..utils import node as utils_node
+from ..utils import temperature as utils_temperature
 from ..utils.node import get_active_output
 
 WORLD_BACKGROUND_LIGHT_NAME = "__WORLD_BACKGROUND_LIGHT__"
@@ -42,11 +43,13 @@ def convert_light(exporter, obj, obj_key, depsgraph, luxcore_scene, transform, i
 
 
 def _set_cycles_temperature_normalization(definitions, prefix):
-    # Cycles scales the blackbody color to luminance 1 ("luminance", pyluxcore 3.0 builds from
-    # 2026-10-23 on). The older builds ignore ".normalization" and use ".normalize" (the color
-    # divided by the largest blackbody RGB value, about 27% darker at 6500 K).
-    definitions[prefix + ".normalize"] = True
-    definitions[prefix + ".normalization"] = "luminance"
+    # Cycles scales the blackbody color to luminance 1
+    utils_temperature.export(definitions, prefix, "luminance")
+
+
+def _set_luxcore_temperature_normalization(definitions, prefix, light_or_world):
+    normalization = utils_temperature.get(light_or_world.luxcore, utils_temperature.LIGHT_PROP)
+    utils_temperature.export(definitions, prefix, normalization)
 
 
 def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is_viewport_render,
@@ -528,7 +531,7 @@ def _convert_luxcore_world(exporter, scene, world, is_viewport_render):
     elif world.luxcore.color_mode == "temperature":
         tint_color = [1, 1, 1]
         definitions["temperature"] = world.luxcore.temperature
-        definitions["temperature.normalize"] = True
+        _set_luxcore_temperature_normalization(definitions, "temperature", world)
     else:
         raise Exception("Unkown color mode")
 
@@ -767,7 +770,7 @@ def _convert_area_light(obj, scene, is_viewport_render, exporter, depsgraph, lux
     elif light.luxcore.color_mode == "temperature":
         mat_definitions["emission"] = [1, 1, 1]
         mat_definitions["emission.temperature"] = light.luxcore.temperature
-        mat_definitions["emission.temperature.normalize"] = True
+        _set_luxcore_temperature_normalization(mat_definitions, "emission.temperature", light)
     else:
         raise Exception("Unkown color mode")
 
@@ -835,7 +838,7 @@ def _convert_area_light(obj, scene, is_viewport_render, exporter, depsgraph, lux
 
     # LuxCore object
     use_instancing = utils.use_instancing(obj, scene, is_viewport_render)
-    visible_to_camera = obj.luxcore.visible_to_camera and light.luxcore.visible
+    visible_to_camera = obj.luxcore.visible_to_camera and obj.visible_camera and light.luxcore.visible
     obj_props, exported_obj = _create_luxcore_meshlight(obj, transform, use_instancing, luxcore_name,
                                                         luxcore_scene, mat_name, visible_to_camera)
     props.Set(obj_props)
@@ -932,7 +935,7 @@ def _define_brightness_and_color(light, definitions):
     elif light.luxcore.color_mode == "temperature":
         definitions["color"] = [1, 1, 1]
         definitions["temperature"] = light.luxcore.temperature
-        definitions["temperature.normalize"] = True
+        _set_luxcore_temperature_normalization(definitions, "temperature", light)
     else:
         raise Exception("Unkown color mode")
 

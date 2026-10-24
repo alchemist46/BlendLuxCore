@@ -11,6 +11,7 @@ from .light import (
     VIS_INDIRECT_GLOSSY_DESC, VIS_INDIRECT_SPECULAR_DESC,
     SUN_SKY_GAIN_DESC,
 )
+from ..utils.temperature import NORMALIZATION_ITEMS
 from .image_user import LuxCoreImageUser
 from .config import ENVLIGHT_CACHE_DESC
 
@@ -66,6 +67,9 @@ class LuxCoreWorldProps(bpy.types.PropertyGroup):
         ("temperature", "Temperature", "", 1),
     ]
     color_mode: EnumProperty(name="Color Mode", items=color_modes, default="rgb")
+    # Max on the worlds of files saved by older addon versions (utils/temperature.py)
+    temperature_normalization: EnumProperty(name="Normalize", items=NORMALIZATION_ITEMS, default="luminance",
+                                            description="How the blackbody color of the temperature is normalized")
 
     # sky2 settings
     def poll_sun(self, obj):

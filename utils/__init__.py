@@ -423,6 +423,12 @@ def visible_to_camera(dg_obj_instance, is_viewport_render, view_layer=None):
     )
     if not obj.luxcore.visible_to_camera:
         return False
+    # Blender's Camera ray visibility (Object > Visibility > Ray Visibility, used by Cycles).
+    # Cycles hides an instance when the instanced object or its instancer has it off.
+    if not obj.visible_camera:
+        return False
+    if dg_obj_instance.is_instance and not dg_obj_instance.object.visible_camera:
+        return False
     if is_viewport_render:
         obj = obj.original
     return not obj.indirect_only_get(view_layer=view_layer)

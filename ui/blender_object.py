@@ -33,6 +33,10 @@ class LUXCORE_OBJECT_PT_object(ObjectButtonsPanel, Panel):
 
         col.prop(obj.luxcore, "id")
         col.prop(obj.luxcore, "visible_to_camera")
+        if not obj.visible_camera:
+            # Blender's Ray Visibility panel is shown only with Cycles and EEVEE
+            col.label(text="Hidden from the camera by Blender's Ray Visibility", icon=icons.INFO)
+            col.prop(obj, "visible_camera", text="Ray Visibility Camera")
         col.prop(obj.luxcore, "exclude_from_render")
 
         # Motion blur settings

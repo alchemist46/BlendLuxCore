@@ -5,19 +5,21 @@ import bpy
 from bpy.types import SpaceView3D, SpaceImageEditor
 
 from . import (
-    depsgraph_update_post, draw_imageeditor,
-    exit, frame_change_pre, load_post,
+    blend_import_post, depsgraph_update_post, draw_imageeditor,
+    exit, frame_change_pre, load_post, save_pre,
 )
 from ..utils import eevee_sync
 
 if _needs_reload:
     import importlib
     modules = (
+        blend_import_post,
         depsgraph_update_post,
         draw_imageeditor,
         exit,
         frame_change_pre,
         load_post,
+        save_pre,
     )
     for module in modules:
         importlib.reload(module)
@@ -32,6 +34,8 @@ def register():
     bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_post.handler)
     bpy.app.handlers.frame_change_pre.append(frame_change_pre.handler)
     bpy.app.handlers.load_post.append(load_post.handler)
+    bpy.app.handlers.save_pre.append(save_pre.handler)
+    bpy.app.handlers.blend_import_post.append(blend_import_post.handler)
 
     args = ()
     draw_imageeditor.handle = SpaceImageEditor.draw_handler_add(draw_imageeditor.handler,
@@ -42,6 +46,8 @@ def unregister():
     bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post.handler)
     bpy.app.handlers.frame_change_pre.remove(frame_change_pre.handler)
     bpy.app.handlers.load_post.remove(load_post.handler)
+    bpy.app.handlers.save_pre.remove(save_pre.handler)
+    bpy.app.handlers.blend_import_post.remove(blend_import_post.handler)
     SpaceImageEditor.draw_handler_remove(draw_imageeditor.handle, 'WINDOW')
     # Do not leave a timer that points to this version of the module (Reload Scripts)
     eevee_sync.reset()

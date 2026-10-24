@@ -1196,6 +1196,8 @@ class _Converter:
         lux = self.new_node("LuxCoreNodeTexBlackbody", node)
         lux.temperature = temperature.default_value
         lux.normalize = True
+        # Cycles scales the blackbody color to luminance 1
+        lux.normalization = "luminance"
         return Linked(lux, "Color")
 
     def map_range(self, node, out_socket):
