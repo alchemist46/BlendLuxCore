@@ -51,8 +51,11 @@ SAMPLES = 64
 #   OpenPBR takes the IOR relative to the coat (with Coat IOR = IOR it
 #   vanishes);
 # - subsurface: LuxCore is 2-4% brighter without the specular layer (the
-#   Subsurface node too), up to 10% in the short-radius channels with it
-#   (Cycles' walk exits through the rough dielectric, LuxCore's diffusely);
+#   Subsurface node too), up to 12% in the short-radius channels with it:
+#   LuxCore's walk is reflected back at the boundary (the Fresnel of the
+#   specular IOR) and its color stays the albedo of the medium with that
+#   boundary (the OpenPBR definition); Cycles' walk enters by refraction and
+#   leaves at its first hit of the surface;
 # - anisotropic: 3% brighter;
 # - thin film: another interference model, not compared.
 CASES = (
