@@ -108,12 +108,6 @@ POWER_DESC = (
 
 UNIFORM_DESC = "Sample all lights equally, not according to their brightness"
 
-DLSC_DESC = (
-    "Use the DLSC in scenes with many light sources if each of them only "
-    "lights up a small part of the scene (example: a city at night). \n"
-    "Only used during final render"
-)
-
 LIGHT_TREE_DESC = (
     "(Default) Pick the light to sample by its importance at the shaded point (distance, "
     "orientation, brightness), and learn from the shadow rays which lights really "
@@ -293,38 +287,6 @@ class LuxCoreConfigTile(PropertyGroup):
     multipass_convtest_warmup: IntProperty(name="Convergence Warmup", default=32, min=0,
                                             soft_min=8, soft_max=128,
                                             description=THRESH_WARMUP_DESC)
-
-
-class LuxCoreConfigDLSCache(PropertyGroup):
-    # Overrides other light strategies when enabled
-    enabled: BoolProperty(name="", default=False, description=DLSC_DESC)
-
-    entry_radius_auto: BoolProperty(name="Automatic Entry Radius", default=True,
-                                     description="Automatically choose a good entry radius")
-    entry_radius: FloatProperty(name="Entry Radius", default=0.15, min=0, subtype="DISTANCE",
-                                 description="Choose this value according to the size of your scene. "
-                                             "The default (15 cm) is suited for a room-sized scene")
-    entry_normalangle: FloatProperty(name="Normal Angle",
-                                      default=radians(10), min=0, max=radians(90), subtype="ANGLE")
-    entry_maxpasses: IntProperty(name="Max. Passes", default=1024, min=0)
-    entry_convergencethreshold: FloatProperty(name="Convergence Threshold",
-                                               default=1, min=0, max=100, subtype="PERCENTAGE")
-    entry_warmupsamples: IntProperty(name="Warmup Samples", default=12, min=0,
-                                      description="Increase this value if splotchy artifacts appear in the image")
-    entry_volumes_enable: BoolProperty(name="Place Entries in Volumes", default=False,
-                                        description="Enable/disable placement of entries in volumes (in mid-air)")
-
-    lightthreshold: FloatProperty(name="Light Threshold", default=1, min=0, max=100, subtype="PERCENTAGE")
-    targetcachehitratio: FloatProperty(name="Target Cache Hit Ratio",
-                                        default=99.5, min=0, max=100, subtype="PERCENTAGE")
-    maxdepth: IntProperty(name="Max. Depth", default=4, min=0)
-    maxsamplescount: IntProperty(name="Max. Samples", default=10000000, min=0)
-
-    file_path: StringProperty(name="File Path", subtype="FILE_PATH",
-                              description="File path to the DLS cache file")
-    save_or_overwrite: BoolProperty(name="", default=False,
-                                    description="Save the cache to a file or overwrite the existing cache file. "
-                                                "If you want to use the saved cache, disable this option")
 
 
 class LuxCoreConfigPhotonGI(PropertyGroup):
@@ -597,8 +559,6 @@ class LuxCoreConfig(PropertyGroup):
                                     description="Sample the mesh lights (area lights included) by solid angle "
                                                 "instead of by area: less noise near the lights. Path engine only")
 
-    # Special properties of the direct light sampling cache
-    dls_cache: PointerProperty(type=LuxCoreConfigDLSCache)
     # Special properties of the photon GI cache
     photongi: PointerProperty(type=LuxCoreConfigPhotonGI)
     # Special properties of the env. light cache (aka automatic portals)

@@ -62,14 +62,7 @@ def convert(exporter, scene, context=None, engine=None):
         else:
             filter_type = config.filter
 
-        if config.dls_cache.enabled:
-            if is_viewport_render:
-                # Avoid building DLS cache when rendering in viewport, fall back to log power
-                light_strategy = "LOG_POWER"
-            else:
-                light_strategy = "DLS_CACHE"
-        else:
-            light_strategy = config.light_strategy
+        light_strategy = config.light_strategy
 
         # Common properties that should be set regardless of engine configuration.
         definitions.update(
@@ -97,11 +90,6 @@ def convert(exporter, scene, context=None, engine=None):
             definitions["film.opencl.device"] = int(preferences.film_device)
         else:
             definitions["film.opencl.enable"] = False
-
-        if light_strategy == "DLS_CACHE":
-            _convert_dlscache_settings(
-                scene, definitions, config, is_viewport_render
-            )
 
         # Exported only when enabled, so older pyluxcore builds keep working
         if config.light_solid_angle and config.engine == "PATH":
@@ -533,37 +521,6 @@ def _convert_metropolis_settings(definitions, config):
     )
     definitions["sampler.metropolis.imagemutationrate"] = (
         config.metropolis_imagemutationrate / 100
-    )
-
-
-def _convert_dlscache_settings(scene, definitions, config, is_viewport_render):
-    dls_cache = config.dls_cache
-    file_path = utils.get_persistent_cache_file_path(
-        dls_cache.file_path,
-        dls_cache.save_or_overwrite,
-        is_viewport_render,
-        scene,
-    )
-    definitions.update(
-        {
-            "lightstrategy.entry.radius": (
-                0 if dls_cache.entry_radius_auto else dls_cache.entry_radius
-            ),
-            "lightstrategy.entry.normalangle": degrees(
-                dls_cache.entry_normalangle
-            ),
-            "lightstrategy.entry.maxpasses": dls_cache.entry_maxpasses,
-            "lightstrategy.entry.convergencethreshold": dls_cache.entry_convergencethreshold
-            / 100,
-            "lightstrategy.entry.warmupsamples": dls_cache.entry_warmupsamples,
-            "lightstrategy.entry.volumes.enable": dls_cache.entry_volumes_enable,
-            "lightstrategy.lightthreshold": dls_cache.lightthreshold / 100,
-            "lightstrategy.targetcachehitratio": dls_cache.targetcachehitratio
-            / 100,
-            "lightstrategy.maxdepth": dls_cache.maxdepth,
-            "lightstrategy.maxsamplescount": dls_cache.maxsamplescount,
-            "lightstrategy.persistent.file": file_path,
-        }
     )
 
 

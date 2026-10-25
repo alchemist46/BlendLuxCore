@@ -35,14 +35,15 @@ def run():
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
-        # Reworked after v2.2beta4, DLSC is no longer part of the light strategy enum, but a separate checkbox.
-        # Commit: 87ef293cdac2011da28365941414f88ff2658903
-        if config.light_strategy == "":
-            # It was probably DLS_CACHE. We have no way to find out,
-            # but that is the only entry that was ever removed.
-            # Restore the default here and enable the new DLSC BoolProperty
-            config.light_strategy = "LOG_POWER"
-            config.dls_cache.enabled = True
+        # The direct light sampling cache was removed in LuxCore 3.0 (the core maps DLS_CACHE to
+        # the light tree, which does the same per region). Its checkbox (a separate setting since
+        # v2.2beta4, before that the DLS_CACHE entry of the light strategy enum, which reads as "")
+        # is still in old files as an unregistered group: switch those scenes to the light tree.
+        dls_cache = config.get("dls_cache")
+        if config.light_strategy == "" or (dls_cache is not None and dls_cache.get("enabled", False)):
+            config.light_strategy = "LIGHT_TREE"
+        if dls_cache is not None:
+            del config["dls_cache"]
 
     # Since commit 28a45283c249085ec1ae8ff38665f6d3655bb998 we use the Cycles DOF properties instead
     # of our own. Apply the old properties if an old scene uses them.

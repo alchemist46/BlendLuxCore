@@ -84,7 +84,6 @@ classes = (
     camera.LuxCoreCameraProps,
     config.LuxCoreConfigPath,
     config.LuxCoreConfigTile,
-    config.LuxCoreConfigDLSCache,
     config.LuxCoreConfigPhotonGI,
     config.LuxCoreConfigEnvLightCache,
     config.LuxCoreConfigNoiseEstimation,

@@ -348,22 +348,16 @@ class Exporter(object):
                     "path.photongi.caustic.enabled", [False]
                 ).GetBool()
                 cache_envlight = scene.luxcore.config.envlight_cache.enabled
-                cache_dls = (
-                    config_props.Get("lightstrategy.type", [""]).GetString()
-                    == "DLS_CACHE"
-                )
 
                 if stats:
                     stats.cache_indirect.value = cache_indirect
                     stats.cache_caustics.value = cache_caustics
                     stats.cache_envlight.value = cache_envlight
-                    stats.cache_dls.value = cache_dls
 
                 cache_state = {
                     "Indirect Light": cache_indirect,
                     "Caustics": cache_caustics,
                     "Env. Light": cache_envlight,
-                    "DLSC": cache_dls,
                 }
                 enabled_caches = [
                     key for key, value in cache_state.items() if value

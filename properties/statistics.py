@@ -61,7 +61,6 @@ class LuxCoreRenderStats:
         self.cache_indirect = Stat("Indirect Light Cache", categories[-1], False, string_func=bool_to_string)
         self.cache_caustics = Stat("Caustics Cache", categories[-1], False, string_func=bool_to_string)
         self.cache_envlight = Stat("Env. Light Cache", categories[-1], False, string_func=bool_to_string)
-        self.cache_dls = Stat("DLS Cache", categories[-1], False, string_func=bool_to_string)
 
         self.members = [getattr(self, attr) for attr in dir(self)
                         if not callable(getattr(self, attr)) and not attr.startswith("__")]

@@ -1,4 +1,3 @@
-from time import sleep
 _needs_reload = "bpy" in locals()
 
 import bpy
@@ -87,12 +86,6 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
         except ReferenceError:
             logger.debug("[Engine] del: RenderEngine struct was already deleted")
 
-    def log_listener(self, msg):
-        if "Direct light sampling cache entries" in msg:
-            self.update_stats("", msg)
-            # We have to sleep for a bit, otherwise Blender does not update the UI
-            sleep(0.01)
-
     def render(self, depsgraph):
         display_luxcore_logs = get_addon_preferences(bpy.context).display_luxcore_logs
         set_verbose(display_luxcore_logs)
@@ -111,7 +104,6 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
             LuxCoreDisplaySettings.paused = False
             LuxCoreDisplaySettings.stop_requested = False
             TileStats.reset()
-            LuxCoreLog.add_listener(self.log_listener)
             final.render(self, depsgraph)
         except Exception as error:
             error_str = str(error)
@@ -132,7 +124,6 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
             utils_view_layer.State.reset()
             LuxCoreRenderEngine.final_running = False
             TileStats.reset()
-            LuxCoreLog.remove_listener(self.log_listener)
 
     def render_preview(self, depsgraph):
         try:

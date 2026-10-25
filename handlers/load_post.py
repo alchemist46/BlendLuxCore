@@ -74,7 +74,6 @@ def handler(_):
 
         _init_persistent_cache_file_path(scene.luxcore.config.photongi, "pgi")
         _init_persistent_cache_file_path(scene.luxcore.config.envlight_cache, "env")
-        _init_persistent_cache_file_path(scene.luxcore.config.dls_cache, "dlsc")
 
         _init_LuxCoreOnlineLibrary()
 

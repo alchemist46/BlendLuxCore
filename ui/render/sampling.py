@@ -236,12 +236,6 @@ class LUXCORE_RENDER_PT_sampling_advanced(RenderButtonsPanel, Panel):
         row.prop(config, "use_animated_seed", text="", icon="TIME", toggle=True)
         
         # Light strategy
-        col = layout.column()
-        if config.dls_cache.enabled:
-            col.label(text="Using direct light sampling cache", icon=icons.INFO)
-            col = layout.column()
-            col.active = False
-        
-        col.prop(config, "light_strategy")
+        layout.prop(config, "light_strategy")
         if config.engine == "PATH":
             layout.prop(config, "light_solid_angle")

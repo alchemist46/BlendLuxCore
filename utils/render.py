@@ -39,7 +39,6 @@ LIGHT_STRATEGY_TO_STR = {
     "LOG_POWER": "Log Power",
     "POWER": "Power",
     "UNIFORM": "Uniform",
-    "DLS_CACHE": "Direct Light Cache",
     "LIGHT_TREE": "Light Tree",
 }
 
