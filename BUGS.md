@@ -70,3 +70,10 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Problem: `bpy.ops.render.render(write_still=True)` with `config.use_filesaver` on writes the scene files, then Blender crashes in `BKE_image_render_write_exr` (null read at 0x48: no render result). An animation render with the file saver probably crashes the same way (not tried).
 - Reproduce: Blender 5.2 background, any scene, PATHOCL, `scene.luxcore.config.use_filesaver = True`, a file saver path, `render(write_still=True)`; same with the addon of 5569b5df.
 - Notes: the engine leaves no render result in file saver mode; giving Blender an empty result would avoid it.
+
+### Area lights get the PhotonGI cache on their black emitter material
+- Found: 2026-10-25
+- Area: export (lights)
+- Problem: an area light is exported as a mesh with a generated black matte (`<name>_AREA_LIGHT_MAT`, `export/light.py`) that never sets `photongi.enable`, so it takes the core's default of 1, and the UI has no switch for it. In `scenes/cornell/Cornell Box Luxcore.blend` (light 8.4 mm above the ceiling's hole) this makes the indirect cache 6-7% too bright (core `BUGS.md`, "PhotonGI indirect cache too bright around an emitter in a ceiling hole").
+- Reproduce: export the blend with the file saver; `photongi.enable = 1` on `75_AREA_LIGHT_MAT` in `scene.scn`.
+- Notes: the material has nothing to reflect, so `photongi.enable = 0` loses nothing; the property exists in every pyluxcore the addon supports. Workaround until then: put the light below the ceiling plane.
