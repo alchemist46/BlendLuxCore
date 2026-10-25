@@ -391,8 +391,10 @@ def _convert_final_engine(scene, definitions, config):
         if not config.sobol_bluenoise:
             definitions[f"sampler.{sampler_type}.bluenoise.enable"] = False
         else:
-            if config.sobol_bluenoise_first:
-                definitions[f"sampler.{sampler_type}.bluenoise.first"] = True
+            # First sample is on by default in the engine since 2026-10-25;
+            # older builds ignore the property and default to off
+            if not config.sobol_bluenoise_first:
+                definitions[f"sampler.{sampler_type}.bluenoise.first"] = False
             if config.sobol_bluenoise_spp != 64:
                 definitions[f"sampler.{sampler_type}.bluenoise.spp"] = config.sobol_bluenoise_spp
     elif sampler == "METROPOLIS":

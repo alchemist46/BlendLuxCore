@@ -451,7 +451,7 @@ class LuxCoreConfig(PropertyGroup):
     # SOBOL blue-noise pixel ordering (sampler.sobol.bluenoise.*)
     sobol_bluenoise: BoolProperty(name="Blue Noise", default=True,
                                   description=SOBOL_BLUENOISE_DESC)
-    sobol_bluenoise_first: BoolProperty(name="First Sample", default=False,
+    sobol_bluenoise_first: BoolProperty(name="First Sample", default=True,
                                         description=SOBOL_BLUENOISE_FIRST_DESC)
     sobol_bluenoise_spp: IntProperty(name="Pattern Samples", default=64, min=2, soft_max=1024,
                                      description=SOBOL_BLUENOISE_SPP_DESC)

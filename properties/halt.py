@@ -88,7 +88,7 @@ class LuxCoreHaltConditions(bpy.types.PropertyGroup):
                                       description=NOISE_THRESH_WARMUP_DESC)
     noise_thresh_step: IntProperty(name="Test Step Samples", default=64, min=1, soft_min=16,
                                     description=NOISE_THRESH_STEP_DESC)
-    noise_thresh_mode: EnumProperty(name="Test", items=NOISE_THRESH_MODE_ITEMS, default="CLASSIC",
+    noise_thresh_mode: EnumProperty(name="Test", items=NOISE_THRESH_MODE_ITEMS, default="PER_PIXEL",
                                      description=NOISE_THRESH_MODE_DESC)
     noise_thresh_perpixel: FloatProperty(name="Noise Level", default=1, min=0.01, soft_min=0.5,
                                           max=100, soft_max=10, precision=2, step=10,
