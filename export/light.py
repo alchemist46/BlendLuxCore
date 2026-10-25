@@ -177,6 +177,8 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
             "emission.normalizebycolor": False,
             "emission.importance": light.luxcore.importance,
             "transparency.shadow": [1, 1, 1],
+            # Nothing to cache on the black mesh (see _convert_area_light)
+            "photongi.enable": False,
         }
         if temperature is not None:
             mat_definitions["emission.temperature"] = temperature
@@ -763,6 +765,11 @@ def _convert_area_light(obj, scene, is_viewport_render, exporter, depsgraph, lux
         "visibility.indirect.diffuse.enable": light.luxcore.visibility_indirect_diffuse,
         "visibility.indirect.glossy.enable": light.luxcore.visibility_indirect_glossy,
         "visibility.indirect.specular.enable": light.luxcore.visibility_indirect_specular,
+        # The black mesh reflects nothing, so the PhotonGI cache has nothing to
+        # hold there. With it on, photons landing on the mesh went to the cache
+        # entries of the surfaces nearby: a light just above a hole in a ceiling
+        # made the ceiling around it 3.4x too bright in the cache
+        "photongi.enable": False,
     }
 
     if light.luxcore.color_mode == "rgb":
