@@ -30,7 +30,7 @@ class LuxCoreViewportSettings(bpy.types.PropertyGroup):
          "Smooth like Linear, with sharp edges (the edge-adaptive upscale of "
          "AMD FidelityFX Super Resolution 1)", 2),
     ]
-    mag_filter: EnumProperty(name="Filter", items=mag_filters, default="NEAREST",
+    mag_filter: EnumProperty(name="Filter", items=mag_filters, default="EASU",
                               description="Upscaling filter used when pixel size is larger than 1")
 
     reduce_resolution_on_edit: BoolProperty(name="Reduce first sample resolution", default=True,

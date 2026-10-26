@@ -59,7 +59,7 @@ Cycles node reader:
 
 Added since the review:
 
-- Viewport: a third Filter for Pixel Size > 1, Edge-Adaptive (sharp), the EASU pass of AMD FidelityFX Super Resolution 1 as a GPU shader (`draw/upscale.py`; LuxCore ROADMAP E4b). Nearest stays the default for now.
+- Viewport: a third Filter for Pixel Size > 1, Edge-Adaptive (sharp), the EASU pass of AMD FidelityFX Super Resolution 1 as a GPU shader (`draw/upscale.py`; LuxCore ROADMAP E4b). The default since 2026-10-26 (the user's decision); files that never set the Filter change from Nearest to it.
 
 Found in the core (not changed here):
 
