@@ -9,12 +9,14 @@ from time import sleep
 import numpy as np
 import pyluxcore
 from .. import utils
+from . import upscale
 
 if _needs_reload:
     import importlib
 
     importlib.reload(pyluxcore)
     importlib.reload(utils)
+    importlib.reload(upscale)
 
 
 def denoiser_imagepipeline_props(pipeline_props):
@@ -43,7 +45,7 @@ class FrameBuffer:
         )
         self._pixel_size = int(scene.luxcore.viewport.pixel_size)
         # The upscaling filter (pixel size > 1), set again by view_draw()
-        self.use_filter = scene.luxcore.viewport.mag_filter == "LINEAR"
+        self.mag_filter = scene.luxcore.viewport.mag_filter
 
         self._transparent = self._initialize_transparency(scene, context)
         bufferdepth = 4 if self._transparent else 3
@@ -89,15 +91,14 @@ class FrameBuffer:
             (x + width, y + height),
         ]
 
+        self._batch_content = {
+            "pos": position,
+            "texCoord": [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 1)],
+        }
         self.shader = gpu.shader.from_builtin("IMAGE")
-        self.batch = batch_for_shader(
-            self.shader,
-            "TRIS",
-            {
-                "pos": position,
-                "texCoord": [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 1)],
-            },
-        )
+        self.batch = batch_for_shader(self.shader, "TRIS", self._batch_content)
+        # The edge-adaptive upscale, built on its first draw
+        self._easu_batch = None
 
     def __del__(self):
         self._texture = None
@@ -261,9 +262,22 @@ class FrameBuffer:
                 format=format,
                 data=self.buffer,
             )
+        shader, batch = self.shader, self.batch
+        use_linear = self.mag_filter == "LINEAR"
+        if self.mag_filter == "EASU" and self._pixel_size > 1:
+            easu_shader = upscale.easu_shader()
+            if easu_shader is None:
+                use_linear = True
+            else:
+                if self._easu_batch is None:
+                    self._easu_batch = batch_for_shader(
+                        easu_shader, "TRIS", self._batch_content
+                    )
+                shader, batch = easu_shader, self._easu_batch
         # GPUTexture.filter_mode() is missing from older Blender versions:
-        # they keep the default sampler
+        # they keep the default sampler. The edge-adaptive shader reads
+        # texels, the filter does not matter there
         if hasattr(self._texture, "filter_mode"):
-            self._texture.filter_mode(self.use_filter)
-        self.shader.uniform_sampler("image", self._texture)
-        self.batch.draw(self.shader)
+            self._texture.filter_mode(use_linear)
+        shader.uniform_sampler("image", self._texture)
+        batch.draw(shader)

@@ -57,6 +57,10 @@ Cycles node reader:
 - The Mapping node in front of image textures was ignored; it is now used (`c4b6b031`).
 - The light exporter no longer reads the `use_nodes` flag that Blender 5 ignores (`7c47965d`).
 
+Added since the review:
+
+- Viewport: a third Filter for Pixel Size > 1, Edge-Adaptive (sharp), the EASU pass of AMD FidelityFX Super Resolution 1 as a GPU shader (`draw/upscale.py`; LuxCore ROADMAP E4b). Nearest stays the default for now.
+
 Found in the core (not changed here):
 
 - LuxCore's image is one pixel row off Cycles'. The cameras flip the continuous film coordinate with `filmHeight - filmY - 1`, the integer formula. The path engines put pixel `j`'s center at `filmY = j + 0.5`, so the continuous flip is `filmHeight - filmY`. On the OpenCL side, the environment camera uses `filmHeight - filmY` while the CPU one uses `filmHeight - filmY - 1`.

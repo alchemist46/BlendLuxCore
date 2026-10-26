@@ -26,6 +26,9 @@ class LuxCoreViewportSettings(bpy.types.PropertyGroup):
     mag_filters = [
         ("NEAREST", "Nearest (blocky)", "", 0),
         ("LINEAR", "Linear (smooth)", "", 1),
+        ("EASU", "Edge-Adaptive (sharp)",
+         "Smooth like Linear, with sharp edges (the edge-adaptive upscale of "
+         "AMD FidelityFX Super Resolution 1)", 2),
     ]
     mag_filter: EnumProperty(name="Filter", items=mag_filters, default="NEAREST",
                               description="Upscaling filter used when pixel size is larger than 1")

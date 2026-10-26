@@ -265,7 +265,7 @@ def view_draw(engine, context, depsgraph):
     framebuffer = engine.framebuffer
     # A display setting: from the scene itself, the evaluated copy of the
     # depsgraph is not updated for it
-    framebuffer.use_filter = context.scene.luxcore.viewport.mag_filter == "LINEAR"
+    framebuffer.mag_filter = context.scene.luxcore.viewport.mag_filter
 
     # Check for changes because some actions in Blender (e.g. moving the viewport
     # camera) do not trigger a view_update() call, but only a view_draw() call.

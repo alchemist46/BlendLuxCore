@@ -15,6 +15,13 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 
 ## Open
 
+### A Pixel Size change does not reach a running viewport (suspected)
+- Found: 2026-10-26
+- Area: viewport
+- Problem: setting `scene.luxcore.viewport.pixel_size` while the viewport renders leaves the viewport at the old pixel size: `view_draw()` reads it from `depsgraph.scene_eval`, and the evaluated scene keeps the old value until some other scene property changes.
+- Reproduce: Blender 5.2.2, `scenes/cornell/Cornell Box Luxcore.blend` (LuxCore repo), viewport in Rendered mode; set the Pixel Size from Python (`scene.luxcore.viewport.pixel_size = "2"`) or with `wm.context_set_enum`: `bpy.context.evaluated_depsgraph_get().scene_eval.luxcore.viewport.pixel_size` stays "1", the viewport neither restarts nor changes its film size, even after 20 s of redraws. Setting an RNA property of the scene afterwards (`render.resolution_percentage`) brings the new value over, as does `scene.update_tag()`. The same holds for `halt_time`.
+- Notes: a click on the Pixel Size field in the panel was not simulated, so it is not known whether the UI path has the same problem (both go through `RNA_property_update()`). The Filter setting has it too and is read from `context.scene` for that reason (`72bf7ada`). Fix: read the display settings (pixel size, halt time) from `context.scene` in `view_draw()`, `FrameBuffer` and `utils.calc_filmsize()`, or tag the scene from an update callback of these properties. Found during LuxCore ROADMAP E4b.
+
 ### A view change waits for the viewport denoiser
 - Found: 2026-10-17
 - Area: viewport
