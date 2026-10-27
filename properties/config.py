@@ -149,8 +149,9 @@ PHOTONGI_HALTTHRESH_DESC = (
 )
 
 PHOTONGI_GLOSSINESSTHRESH_DESC = (
-    "If a material's roughness is higher than this threshold, indirect cache entries can be stored on it. "
-    "If the roughness is below the threshold, it will be considered in the caustic cache computation"
+    "A glossy bounce with a roughness below this threshold counts as mirror-like: the indirect cache is not "
+    "used right after it (its blur would show in the reflection), and the light it reflects goes to the "
+    "caustic cache. The indirect cache stands for the diffuse part of any material"
 )
 
 PHOTONGI_INDIRECT_USAGETHRESHOLDSCALE_DESC = (

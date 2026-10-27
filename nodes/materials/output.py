@@ -56,8 +56,9 @@ class LuxCoreNodeMatOutput(LuxCoreNodeOutput, bpy.types.Node):
     id: IntProperty(update=utils_node.force_viewport_update, name="Material ID", default=-1, min=-1, soft_max=32767,
                      description=MATERIAL_ID_DESC)
     use_photongi: BoolProperty(name="Use PhotonGI Cache", default=True,
-                                description="Disable for mirror-like surfaces like "
-                                            "metal or glossy with low roughness")
+                                description="The indirect cache stands for the diffuse part of the "
+                                            "material (the glossy, metal and glass parts are path traced); "
+                                            "disable to path trace the whole material")
     shadow_color: FloatVectorProperty(name="Shadow Color", subtype="COLOR", default=(0, 0, 0), min=0, max=1,
                                       update=utils_node.update_opengl_materials,
                                       description=SHADOW_COLOR_DESC)
