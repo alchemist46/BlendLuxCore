@@ -400,6 +400,19 @@ class FetchWheelStatus(IntEnum):
     CACHE = 2
 
 
+def _has_bundled_wheels():
+    """Whether the zip shipped pyluxcore (see scripts/package_bundle.py).
+
+    Blender installs the wheels of the manifest by itself when the extension
+    is installed. The wheels this loader installs at runtime are fake (empty)
+    files, so a pyluxcore wheel with content can only come from the zip.
+    """
+    return any(
+        wheel.stat().st_size > 1_000_000
+        for wheel in WHEEL_DL_FOLDER.glob("pyluxcore-*.whl")
+    )
+
+
 ENSURE_ERROR_MSG = """\
 Download of pyluxcore not successful... Falling back to wheels
 already in cache."""
@@ -545,6 +558,13 @@ def ensure_pyluxcore():
     """
 
     logger.info("Ensuring pyluxcore")
+
+    # A bundled pyluxcore needs no download. The settings file is the developer
+    # override (a local or PyPI wheel): it takes over the bundled one.
+    if _has_bundled_wheels() and not SETTINGS_FILEPATH.exists():
+        logger.info("Using the pyluxcore bundled in the extension")
+        _unstage_stale_wheels()
+        return
 
     # Fetch wheels (download or copy from local source, depending on settings)
     # and install them

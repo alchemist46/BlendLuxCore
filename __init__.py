@@ -43,7 +43,14 @@ luxloader.ensure_pyluxcore()
 try:
     import pyluxcore
 except ImportError as error:
-    msg = f"\n\nCould not import pyluxcore. \n\nImportError: {error}"
+    msg = (
+        f"\n\nCould not import pyluxcore.\n\nImportError: {error}\n\n"
+        "Install the BlendLuxCore zip made for your platform "
+        "(BlendLuxCore-<version>-windows-x64 / linux-x64 / macos-arm64 / macos-x64), "
+        "which contains pyluxcore. With the zip without a platform in its name, "
+        "pyluxcore is downloaded at the first start: Blender needs "
+        "Preferences > System > Network > Allow Online Access."
+    )
     # Raise from None to suppress the unhelpful
     # "during handling of the above exception, ..."
     raise RuntimeError(msg) from error

@@ -33,7 +33,7 @@ Supported platforms are Windows, Linux, MacOS Intel
 
 - Find the latest suitable release of BlendLuxCrore on the release page:  
 https://github.com/LuxCoreRender/BlendLuxCore/releases
-- From the release assets, download extension `BlendLuxCore-*.zip`
+- From the release assets, download the extension zip of your platform: `BlendLuxCore-<version>-windows-x64.zip`, `-linux-x64.zip`, `-macos-arm64.zip` or `-macos-x64.zip`. It contains pyluxcore, so nothing is downloaded and no network is needed.
 - Open Blender and follow "Install from disk" procedure (https://docs.blender.org/manual/en/latest/editors/preferences/extensions.html)
 
 Beforehand, you must uninstall any previous version of BlendLuxCore: look in the "Get Extensions" panel.
@@ -54,6 +54,8 @@ Build extension:
 To create a `Latest` release, use the option `-DCMAKE_BUILD_TYPE=Latest` in the step `configure`.
 
 The build script then places the collected zip-file in the `blc-build/out` subfolder.
+
+This zip has no pyluxcore: it is downloaded from PyPI at the first start (Blender needs Preferences > System > Network > Allow Online Access). To make a zip with pyluxcore inside, for one platform, run `python scripts/package_bundle.py --wheels <folder with pyluxcore wheels>` (see the script's header).
 
 Open Blender and follow "Install from disk" procedure (https://docs.blender.org/manual/en/latest/editors/preferences/extensions.html)
 
