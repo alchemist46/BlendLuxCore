@@ -226,6 +226,11 @@ from `blc_settings.json`, which is what locally built pyluxcore wheels (HIP
 work included) need, but store its state under
 `bpy.utils.extension_path_user()` rather than in the extension folder.
 
+Planned as K6 in the LuxCore ROADMAP (2026-10-27): the platform zip becomes
+the only install path and the loader's download, manifest rewrite and fake
+wheels are deleted; the `blc_settings.json` override goes with them, replaced
+by a developer command that bundles a locally built wheel.
+
 ### 2.3 Legacy node add menu
 
 `nodes/materials/__init__.py:88` (and the texture and volume trees) register
