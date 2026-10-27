@@ -8,20 +8,18 @@ BlendLuxCore is a Blender extension/addon that integrates the LuxCoreRender engi
 
 ## Build & Packaging
 
-Building produces an installable `.zip` extension via Blender's own extension build command, driven by CMake.
+The extension zips are built by `scripts/package_bundle.py`, which runs Blender's own `extension build` command on a clean copy of the committed files (`git archive HEAD`, so commit first; `--worktree` packages the working tree, to test). It needs `blender` in the PATH, `--blender <path>`, or `BLENDER_ROOT` (the folder of the executable). Nothing in the repository is modified by a build.
 
 ```bash
-# Configure (requires `cmake` and `blender` in PATH, or set BLENDER_ROOT)
-cmake -S . -B blc-build -DCMAKE_BUILD_TYPE=Release
-# Build -> output zip lands in blc-build/out/BlendLuxCore-<version>.zip
-cmake --build blc-build
-# Optional: install into Blender's extension repo
-cmake --install blc-build
+# The platform zips, with pyluxcore inside (what the users install)
+python scripts/package_bundle.py --wheels <folder with pyluxcore wheels> --platform windows-x64 --out dist
+# The slim zip, without pyluxcore (downloaded at the first start)
+python scripts/package_bundle.py --slim --out dist
 ```
 
-Use `-DCMAKE_BUILD_TYPE=Latest` to build a nightly-style "Latest" package (version string becomes "Latest" instead of reading `blender_manifest.toml`).
+`--tag Latest` names the zip `BlendLuxCore-Latest.zip` (the nightly builds). A zip is installed with `blender --command extension install-file -r user_default --enable <zip>`.
 
-There is no separate lint/test command (no Python test suite). CI (`.github/workflows/build_bundle.yml`) just runs the CMake build above on Linux with a downloaded Blender.
+CI (`.github/workflows/build_bundle.yml`) builds the slim zip on Linux with a downloaded Blender; the platform zips are built by the LuxCore repository's `addon-bundle.yml` from its wheels. The headless tests are in `tests/` (see its README).
 
 ### Local development loop
 

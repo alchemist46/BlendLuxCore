@@ -1,25 +1,41 @@
-"""Build self-contained BlendLuxCore zips: one per platform, with pyluxcore inside.
+"""Build the BlendLuxCore extension zips.
 
-Blender installs the wheels listed in the `wheels` entry of the extension
-manifest by itself, offline, when the extension is installed. So the user only
-has to pick the zip of their platform in "Install from Disk": no download and no
-settings file at the first start.
+Both kinds of zip are made by Blender's own `extension build`, from a clean
+copy of the committed files (`git archive HEAD`: commit first; `--worktree`
+packages the working tree instead, to test uncommitted changes):
+
+- The platform zips (`BlendLuxCore-<version>-<platform>.zip`), one per
+  platform, with pyluxcore inside. Blender installs the wheels listed in the
+  `wheels` entry of the extension manifest by itself, offline, when the
+  extension is installed, so the user only has to pick the zip of their
+  platform in "Install from Disk": no download and no settings file at the
+  first start.
 
     python scripts/package_bundle.py --wheels <folder with pyluxcore wheels> \\
         --platform windows-x64 --out dist
 
-The wheel folder is what the LuxCore wheel build produces (`cibw-wheels-*`
-artifacts, or the wheel release): any number of pyluxcore wheels. For each
-platform, the wheels of the wanted Python versions are picked (default: 3.11 of
-Blender 4.5 and 3.13 of Blender 5.x), together with the wheels pyluxcore
-requires (the CUDA NVRTC wheel), taken from the folder or downloaded with pip.
+  The wheel folder is what the LuxCore wheel build produces (`cibw-wheels-*`
+  artifacts, the wheel release, or `make wheel`): any number of pyluxcore
+  wheels. For each platform, the wheels of the wanted Python versions are
+  picked (default: 3.11 of Blender 4.5 and 3.13 of Blender 5.x), together with
+  the wheels pyluxcore requires (the CUDA NVRTC wheel), taken from the folder
+  or downloaded with pip.
 
-Needs `blender` in the PATH (or `--blender`) for `extension build`, and `git`
-when the source is a git checkout (the zip is made from `git archive HEAD`, so
-uncommitted changes and untracked files are left out).
+- The slim zip (`BlendLuxCore-<version>.zip`, `--slim`): no pyluxcore, for
+  every platform; the addon downloads it at the first start (see
+  luxloader/__init__.py) or takes the wheel of its settings file.
+
+    python scripts/package_bundle.py --slim --out dist
+
+`--tag Latest` names the zips after the tag instead of the manifest version
+(the nightly builds). Needs `blender`: in the PATH, with `--blender <path>`,
+or through BLENDER_ROOT (the folder of the executable); and `git` when the
+source is a git checkout.
 """
 
 import argparse
+import os
+import platform as platform_module
 import re
 import shutil
 import subprocess
@@ -153,19 +169,55 @@ def stage_source(repo, dest, worktree=False):
 
 
 def set_manifest(dest, platform, wheels):
-    """Point the manifest at the platform and its bundled wheels."""
+    """Point the manifest at the bundled wheels (none for the slim zip) and,
+    for a platform zip, at its platform. Return the manifest version."""
     manifest = dest / "blender_manifest.toml"
     text = manifest.read_text(encoding="utf-8")
     wheel_list = ", ".join(f'"./wheels/{w.name}"' for w in wheels)
-    text, n1 = re.subn(r"(?m)^platforms\s*=\s*\[.*\]", f'platforms = ["{platform}"]', text)
-    text, n2 = re.subn(r"(?m)^wheels\s*=\s*\[.*\]", f"wheels = [{wheel_list}]", text)
-    if (n1, n2) != (1, 1):
-        raise SystemExit("blender_manifest.toml: expected one `platforms` and one `wheels` line")
+    text, n_wheels = re.subn(r"(?m)^wheels\s*=\s*\[.*\]", f"wheels = [{wheel_list}]", text)
+    if n_wheels != 1:
+        raise SystemExit("blender_manifest.toml: expected one `wheels` line")
+    if platform:
+        text, n_platforms = re.subn(
+            r"(?m)^platforms\s*=\s*\[.*\]", f'platforms = ["{platform}"]', text
+        )
+        if n_platforms != 1:
+            raise SystemExit("blender_manifest.toml: expected one `platforms` line")
     manifest.write_text(text, encoding="utf-8")
     return re.search(r'(?m)^version\s*=\s*"([^"]+)"', text).group(1)
 
 
-def build(platform, args, cache):
+def find_blender(args):
+    """The Blender executable: --blender, the PATH, or BLENDER_ROOT."""
+    if args.blender != "blender" or shutil.which("blender"):
+        return args.blender
+    if root := os.environ.get("BLENDER_ROOT"):
+        exe = "blender.exe" if platform_module.system() == "Windows" else "blender"
+        candidate = Path(root) / exe
+        if candidate.is_file():
+            return str(candidate)
+    raise SystemExit(
+        "blender not found: put it in the PATH, pass --blender, or set BLENDER_ROOT"
+    )
+
+
+def build_zip(src, args, name):
+    """Run Blender's `extension build` on the staged source."""
+    args.out.mkdir(parents=True, exist_ok=True)
+    zip_path = args.out.resolve() / name
+    subprocess.run(
+        [
+            args.blender, "--factory-startup", "--command", "extension", "build",
+            "--source-dir", str(src), "--output-filepath", str(zip_path),
+        ],
+        check=True,
+    )
+    print(f"  -> {zip_path} ({zip_path.stat().st_size / 1e6:.0f} MB)")
+    return zip_path
+
+
+def build_platform(platform, args, cache):
+    """A platform zip, with pyluxcore inside."""
     print(f"== {platform}")
     wheels = collect(args.wheels, platform, args.python, cache)
     if wheels is None:
@@ -181,39 +233,49 @@ def build(platform, args, cache):
             shutil.copy2(wheel, src / "wheels" / wheel.name)
             print(f"  {wheel.name} ({wheel.stat().st_size / 1e6:.0f} MB)")
         version = set_manifest(src, platform, wheels)
+        return build_zip(src, args, f"BlendLuxCore-{args.tag or version}-{platform}.zip")
 
-        args.out.mkdir(parents=True, exist_ok=True)
-        zip_path = args.out.resolve() / f"BlendLuxCore-{version}-{platform}.zip"
-        subprocess.run(
-            [
-                args.blender, "--factory-startup", "--command", "extension", "build",
-                "--source-dir", str(src), "--output-filepath", str(zip_path),
-            ],
-            check=True,
-        )
-    print(f"  -> {zip_path} ({zip_path.stat().st_size / 1e6:.0f} MB)")
-    return zip_path
+
+def build_slim(args):
+    """The slim zip: every platform, no pyluxcore."""
+    print("== slim (no pyluxcore)")
+    with tempfile.TemporaryDirectory(prefix="blc-bundle-") as tmp:
+        src = Path(tmp) / "src"
+        src.mkdir()
+        stage_source(REPO, src, args.worktree)
+        version = set_manifest(src, None, [])
+        return build_zip(src, args, f"BlendLuxCore-{args.tag or version}.zip")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--wheels", type=Path, required=True, help="folder with the pyluxcore wheels")
+    parser.add_argument("--wheels", type=Path, help="folder with the pyluxcore wheels")
+    parser.add_argument("--slim", action="store_true",
+                        help="build the zip without pyluxcore (for every platform)")
     parser.add_argument(
         "--platform", nargs="+", default=["all"], choices=[*PLATFORMS, "all"],
         help="Blender platform(s) to build (default: all the platforms that have a wheel)",
     )
     parser.add_argument("--python", nargs="+", type=int, default=[11, 13], metavar="MINOR",
                         help="Python 3.x minors to bundle (default: 11 13)")
+    parser.add_argument("--tag", help="name the zip after this tag instead of the version")
     parser.add_argument("--out", type=Path, default=REPO / "dist")
     parser.add_argument("--blender", default="blender")
     parser.add_argument("--worktree", action="store_true",
                         help="package the working tree instead of `git archive HEAD` (to test)")
     args = parser.parse_args()
+    if not args.slim and args.wheels is None:
+        parser.error("--wheels <folder> (the platform zips) or --slim is required")
+    args.blender = find_blender(args)
+
+    if args.slim:
+        build_slim(args)
+        return
 
     platforms = list(PLATFORMS) if "all" in args.platform else args.platform
     cache = Path(tempfile.mkdtemp(prefix="blc-deps-"))
     try:
-        built = [z for p in platforms if (z := build(p, args, cache))]
+        built = [z for p in platforms if (z := build_platform(p, args, cache))]
     finally:
         shutil.rmtree(cache, ignore_errors=True)
     if not built:

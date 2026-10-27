@@ -270,8 +270,6 @@ is never reused.
 
 ### 2.7 Version drift and dead code
 
-- `blender_manifest.toml` requires 4.5, `__init__.py:25` and `CMakeLists.txt:25`
-  check for 4.2, and `CLAUDE.md` says 4.2/4.3. Pick one.
 - Checks for Blender 2.8x are dead: `export/smoke.py:46`,
   `nodes/volumes/heterogeneous.py:101`, `draw/lol/viewport.py:365`,
   `utils/lol/utils.py:604,666,692`.

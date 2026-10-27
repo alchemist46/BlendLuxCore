@@ -44,18 +44,17 @@ See also https://wiki.luxcorerender.org/BlendLuxCore_Installation for a more det
 
 **Note: It is recommended to build the extension using GitHub Actions in a local fork!**
 
-Prerequisites: you need `cmake` and `blender` installed and in your `PATH`
+Prerequisites: you need `python` (3.11 or newer) and `blender` installed, with `blender` in your `PATH` (or set `BLENDER_ROOT` to its folder).
 
 Build extension:
 - clone this repository: `git clone https://github.com/LuxCoreRender/BlendLuxCore.git`
-- configure: `cmake -S BlendLuxCore -B blc-build -DCMAKE_BUILD_TYPE=Release`
-- build: `cmake --build blc-build`
+- build: `python scripts/package_bundle.py --slim --out dist` (in the clone; the zip is made from the committed files, so commit your changes first, or add `--worktree`)
 
-To create a `Latest` release, use the option `-DCMAKE_BUILD_TYPE=Latest` in the step `configure`.
+To create a `Latest` release, add `--tag Latest`.
 
-The build script then places the collected zip-file in the `blc-build/out` subfolder.
+The script places the zip-file in the `dist` subfolder.
 
-This zip has no pyluxcore: it is downloaded from PyPI at the first start (Blender needs Preferences > System > Network > Allow Online Access). To make a zip with pyluxcore inside, for one platform, run `python scripts/package_bundle.py --wheels <folder with pyluxcore wheels>` (see the script's header).
+This zip has no pyluxcore: it is downloaded from PyPI at the first start (Blender needs Preferences > System > Network > Allow Online Access). To make a zip with pyluxcore inside, for one platform, run `python scripts/package_bundle.py --wheels <folder with pyluxcore wheels>` instead (see the script's header).
 
 Open Blender and follow "Install from disk" procedure (https://docs.blender.org/manual/en/latest/editors/preferences/extensions.html)
 

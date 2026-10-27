@@ -74,8 +74,9 @@ jobs:
         #with:
           #blender-version: '5.1.1'
 
-      - name: Set up cmake
-        uses: lukka/get-cmake@latest
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
 
       - name: Download Blender
         shell: bash
@@ -108,19 +109,14 @@ jobs:
       - name: Package bundle
         shell: bash
         run: |
-          apt update -y && apt install xorg -y
-          build_dir="${{ github.workspace }}/build"
-          mkdir ${build_dir}
-          echo "Configure"
-          cmake \
-            -B ${build_dir} \
-            -S . \
-            -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
-            -DBLENDER_ROOT=${BLENDER_ROOT} \
-            -Dblender_ROOT=${BLENDER_ROOT}
+          # The libraries Blender needs to start (headless)
+          sudo apt-get update -y
+          sudo apt-get install -y libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libgl1 libsm6 libxrender1
 
-          echo "Build"
-          cmake --build ${build_dir}
+          # The slim zip (no pyluxcore); the nightly builds are named "Latest"
+          tag=""
+          if [ "${{ inputs.build_type }}" = "Latest" ]; then tag="--tag Latest"; fi
+          python scripts/package_bundle.py --slim --out "${{ github.workspace }}/build/out" $tag
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

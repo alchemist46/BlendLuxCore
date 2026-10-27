@@ -72,16 +72,9 @@ files = "File exchanges between renderer and denoiser"
 [build]
 paths_exclude_pattern = [
   "__pycache__/",
-  "CMakeFiles/",
   ".*",
   "/out/*",
-  "CMakeCache.txt",
-  "cmake_install.cmake",
-  "install_manifest.txt",
   "**/*.zip",
-  "/blc-build/",
-  "/CMakeLists.txt",
-  "/cmake/",
   "/debug-helpers/",
   "/CLAUDE.md",
   "/doc/",
