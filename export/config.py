@@ -85,7 +85,15 @@ def convert(exporter, scene, context=None, engine=None):
         if light_strategy != "LIGHT_TREE":
             definitions["lightstrategy.type"] = light_strategy
 
-        if preferences.film_device not in {"", "none"}:
+        # The viewport keeps its film on the CPU unless the OptiX denoiser needs
+        # the film device: with the film on the render GPU, a draw waits for
+        # the frame in flight (111 ms against 14 ms at 1920x1080, LuxCore
+        # ROADMAP E6)
+        film_on_device = preferences.film_device not in {"", "none"} and (
+            not is_viewport_render
+            or scene.luxcore.viewport.get_denoiser(context) == "OPTIX"
+        )
+        if film_on_device:
             definitions["film.opencl.enable"] = True
             definitions["film.opencl.device"] = int(preferences.film_device)
         else:

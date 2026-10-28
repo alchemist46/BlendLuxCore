@@ -31,6 +31,7 @@ window (PATH CPU).
 | 1.9 One vertex per loop | Done, `3508f3cb`: loops with equal data share a vertex, and each submesh gets only its own vertices. 3.7x fewer vertices on a smooth subdivided mesh; export plus session start take the same time |
 | 1.10 `split_faces()` normals | Done, `3508f3cb`: `Mesh.corner_normals`. Hair: `obj` is already the evaluated object there, and `Mesh.vertex_colors` is still what `mcol_on_emitter()` indexes, so no change |
 | 1.11 Cycles node reader per object and slot | Done, `afcbf901`: read once per material and export, dropped when the material changes; `test_cycles_reader_cache` (20 objects, one read). Also fixed: Math nodes with an unlinked constant input read the constant as 0 (`_convert_to_float()`) |
+| 1.12 Viewport responsiveness | Started 2026-10-28: step 0 done (the viewport film on the CPU) |
 | 2.1 `bpy.app.online_access` | Done, `8b2e2d04` (PyPI download and every online library request) |
 | 2.2 Loader internals | Open |
 | 2.3 Legacy node add menu | Open |
@@ -196,6 +197,77 @@ it (`export/caches/object_cache.py:212`), with its helper textures and image
 path checks. The reader result is now cached per material in the exporter
 (`Exporter.cycles_material_cache`) and dropped when the material changes
 (`MaterialCache.update()`).
+
+### 1.12 Viewport responsiveness
+
+Added 2026-10-28, from an exploration of the addon and the core (the core
+side is LuxCore ROADMAP E6; the user's viewport runs on the GPU). The viewport
+feels sluggish next to Cycles and next to the final render. The addon's part:
+
+- `scene.luxcore.viewport.device` defaults to `CPU` (`properties/viewport.py:15`):
+  RTPATHCPU on every hardware thread, which starves Blender's main thread, while
+  a final render set to GPU uses PATHOCL.
+- While rendering, `view_draw()` calls `tag_redraw()` every time and each draw
+  costs ~38 ms on the main thread (1.3), even when no new frame arrived:
+  `WaitNewFrame()` is a no-op for RTPATHOCL and `stats.renderengine.pass` moves
+  once per 4 frames with `rtpath.resolutionreduction = 2`. `get_pretty_stats()`
+  (`utils/render.py:152, 213`) calls `config.GetProperties()` twice per draw.
+- Every view-state change runs the whole config export plus the camera export
+  (`export/__init__.py:382-400`); `CameraCache.diff()` always re-exports.
+- `Exporter.update()` (`export/__init__.py:457-484`) edits a paused session and
+  resumes after, so the core's fast camera path runs on a parked thread (up to
+  100 ms of polling plus one stale frame until E6 (a)).
+- Any OBJECT update re-exports every light: `obj.type != "LIGHT"` in
+  `ObjectCache2.update()` (`export/caches/object_cache.py:872`) sends every light
+  through `convert_light()`, which deletes and redefines it (`export/light.py:24-27`).
+- A resize or any setting change restarts the session and drops the `Exporter`,
+  so every mesh and material is exported again (1.5, issue #577).
+
+Measured 2026-10-28 (LuxCore ROADMAP E6 has the numbers): with a GPU
+backend the addon exports `film.opencl.enable = 1` for the viewport too
+(`export/config.py:88-92`), and a draw's `GetOutputFloat()` then waits for
+the frame in flight: 43 ms of DanishMood's 53 ms `view_draw()` at 1600x1000,
+111 ms against 14 ms with the CPU pipeline at 1920x1080.
+
+Plan, in order:
+
+0. *Done 2026-10-28.* The viewport film on the CPU: `film.opencl.enable = 0` in the viewport
+   config only (the final render keeps the film device), until the core's
+   GPU-resident viewport film (E6 Tier 3).
+1. Device `AUTO` (new enum item, index 2, the default): GPU when
+   `utils.luxutils.is_gpu_build()` and `devices_to_selection_string()` enables a
+   GPU, else CPU, resolved in `convert_viewport_engine()` (`export/config.py:208`);
+   the UI shows the resolved device. Exported only when it differs from the
+   default, so older `pyluxcore` builds keep working.
+2. Draw only on a new frame: after `UpdateStats()` compare
+   `stats.renderengine.total.samplecount` (then `stats.renderengine.film.generation`
+   when E6 (c) lands) and call `FrameBuffer.update()` only when it changed, at
+   most every ~30 ms; reuse `FrameBuffer._data` and its `gpu.types.Buffer`
+   (`draw/viewport.py:239-253`); cache the engine and sampler strings of the
+   stats once per session.
+3. Camera-only change check: on a view-state change with the same region and
+   pixel size run `camera_cache.diff()` alone; the config export only on a size
+   change, a Scene depsgraph update or the 0.5 s periodic check;
+   `CameraCache.diff()` compares the view-state tuple before `camera.convert()`.
+4. `session.Resume()` before `BeginSceneEdit()` when paused.
+5. Lights like meshes in `ObjectCache2.update()`: keep the exported transform
+   and re-export a light only when its object is in `depsgraph.updates`.
+6. Keep the `Exporter` and its `luxcore_scene` across a CONFIG restart: a new
+   `RenderConfig(props, luxcore_scene)` and `RenderSession` only
+   (`_update_config()` re-enabled), once E6 (f) shows the memory stays flat.
+7. With E6 (c) and (d): drive redraws from a thread on `WaitNewFrame(50)` +
+   `tag_redraw()`, so Blender draws exactly once per frame; the log handler must
+   be thread-safe.
+
+Measured before and after each step with `tests/benchmark/viewport_timing.py`
+in the LuxCore repo (GUI Blender, from `lc-work/e4b/guitest.py`): per-draw
+time, draws/s, time to the first frame, camera-move and resize latency, CPU and
+GPU device, pixel size 1 and 2, Cycles on the Cornell pair for the A/B.
+
+Related, LuxCore ROADMAP E7 (a DLSS-like viewport on AMD): FSR 1's RCAS pass
+after the EASU upscale (`draw/upscale.py`), a camera-only temporal reprojection
+of the denoised frame in a Blender compute shader (depth plus the previous and
+current view matrices), and the per-frame GPU OIDN when the core has it (O1).
 
 ## 2. Blender integration
 
@@ -370,6 +442,7 @@ additions:
 | 1.3 Non-blocking viewport draw | A non-blocking way to ask whether a new frame is ready (or a short timeout on `WaitNewFrame`). |
 | 1.9 Indexed mesh export | Nothing new; `DefineMeshExt` already takes indexed triangles. Worth confirming it accepts shared vertices with per-loop UVs split only where needed. |
 | 1.4 Async OIDN in the viewport | Nothing new; `AsyncExecuteImagePipeline` already exists. |
+| 1.12 Viewport responsiveness | LuxCore E6: `stats.renderengine.film.generation` and `WaitNewFrame(timeoutMs)` (c), the GIL released in pyluxcore and the render-thread logs delivered (d), the #577 fix (f); E7: GPU OIDN (O1) and later a motion-vector AOV. |
 | 2.2 Bundled wheels | Per-platform pyluxcore wheels on PyPI for every supported Blender Python version (currently 3.11). |
 
 ## 5. Suggested order of work
