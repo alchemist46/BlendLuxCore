@@ -27,11 +27,12 @@ class LUXCORE_RENDER_PT_viewport_settings(RenderButtonsPanel, Panel):
         if not (luxcore_engine == "BIDIR" and viewport.use_bidir):
             col = layout.column(align=True)
             col.prop(viewport, "device", text="Device", expand=False)
+            if viewport.device == "AUTO":
+                gpu = (viewport.get_device(context.scene) == "OCL"
+                       and utils.luxutils.is_gpu_build())
+                col.label(text="Using the GPU" if gpu else "Using the CPU")
 
-            if viewport.device == "OCL" and not (
-                utils.luxutils.is_opencl_build()
-                or utils.luxutils.is_cuda_build()
-            ):
+            if viewport.device == "OCL" and not utils.luxutils.is_gpu_build():
                 layout.label(
                     text="No GPU support in this BlendLuxCore version",
                     icon=icons.ERROR,

@@ -9,10 +9,12 @@ class LuxCoreViewportSettings(bpy.types.PropertyGroup):
                                         "When this time is reached, the render is paused")
 
     devices = [
-        ("CPU", "CPU", "Low latency, but slower rendering than on GPU", 0),
-        ("OCL", "GPU", "High latency, but faster rendering than on CPU", 1),
+        ("AUTO", "Auto", "The device of the final render: the GPU when the final render uses it, "
+                         "else the CPU", 2),
+        ("CPU", "CPU", "Render on the CPU threads", 0),
+        ("OCL", "GPU", "Render on the GPUs enabled in the Devices panel", 1),
     ]
-    device: EnumProperty(name="Device", items=devices, default="CPU")
+    device: EnumProperty(name="Device", items=devices, default="AUTO")
 
     pixel_sizes = [
         ("1", "1x", "Use the native resolution of the monitor (1 rendered pixel = 1 displayed pixel)", 0),
@@ -77,6 +79,15 @@ class LuxCoreViewportSettings(bpy.types.PropertyGroup):
                 optix_available = True
 
         return optix_available
+
+    def get_device(self, scene):
+        """The viewport device, "CPU" or "OCL" (AUTO resolved)"""
+        if self.device != "AUTO":
+            return self.device
+        # The final render's device: a GPU backend that works for the user.
+        # Not just any GPU in the device list: the default OpenCL backend
+        # compiles its kernels for a long time, and crashes on some drivers
+        return scene.luxcore.config.device
 
     def get_denoiser(self, context):
         if not self.use_denoiser:

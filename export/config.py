@@ -227,10 +227,11 @@ def convert_viewport_engine(context, scene, definitions, config):
     viewport = scene.luxcore.viewport
     using_hybridbackforward = utils.using_hybridbackforward_in_viewport(scene)
 
-    device = viewport.device
+    device = viewport.get_device(scene)
     if device == "OCL" and not utils.luxutils.is_gpu_build():
-        msg = "Config: LuxCore was built without GPU support, can't use GPU engine in viewport"
-        LuxCoreErrorLog.add_warning(msg)
+        if viewport.device == "OCL":
+            msg = "Config: LuxCore was built without GPU support, can't use GPU engine in viewport"
+            LuxCoreErrorLog.add_warning(msg)
         device = "CPU"
 
     _convert_path(

@@ -31,7 +31,7 @@ window (PATH CPU).
 | 1.9 One vertex per loop | Done, `3508f3cb`: loops with equal data share a vertex, and each submesh gets only its own vertices. 3.7x fewer vertices on a smooth subdivided mesh; export plus session start take the same time |
 | 1.10 `split_faces()` normals | Done, `3508f3cb`: `Mesh.corner_normals`. Hair: `obj` is already the evaluated object there, and `Mesh.vertex_colors` is still what `mcol_on_emitter()` indexes, so no change |
 | 1.11 Cycles node reader per object and slot | Done, `afcbf901`: read once per material and export, dropped when the material changes; `test_cycles_reader_cache` (20 objects, one read). Also fixed: Math nodes with an unlinked constant input read the constant as 0 (`_convert_to_float()`) |
-| 1.12 Viewport responsiveness | Started 2026-10-28: step 0 done (the viewport film on the CPU) |
+| 1.12 Viewport responsiveness | Started 2026-10-28: steps 0 (the viewport film on the CPU) and 1 (Device Auto) done |
 | 2.1 `bpy.app.online_access` | Done, `8b2e2d04` (PyPI download and every online library request) |
 | 2.2 Loader internals | Open |
 | 2.3 Legacy node add menu | Open |
@@ -234,11 +234,14 @@ Plan, in order:
 0. *Done 2026-10-28.* The viewport film on the CPU: `film.opencl.enable = 0` in the viewport
    config only (the final render keeps the film device), until the core's
    GPU-resident viewport film (E6 Tier 3).
-1. Device `AUTO` (new enum item, index 2, the default): GPU when
-   `utils.luxutils.is_gpu_build()` and `devices_to_selection_string()` enables a
-   GPU, else CPU, resolved in `convert_viewport_engine()` (`export/config.py:208`);
-   the UI shows the resolved device. Exported only when it differs from the
-   default, so older `pyluxcore` builds keep working.
+1. *Done 2026-10-28.* Device `AUTO` (new enum item, index 2, the default),
+   resolved in `convert_viewport_engine()` by `LuxCoreViewportSettings.get_device()`;
+   the UI shows the resolved device. Changed from the plan: Auto follows the
+   final render's device (`config.device`) instead of any GPU in the device
+   list, since the default OpenCL backend compiles its kernels for 15-30
+   minutes and crashes in AMD's compiler on Windows (LuxCore BUGS.md): a user
+   whose final render runs on the GPU has a working backend. Older files keep
+   their stored CPU (0) or GPU (1); `tests/test_viewport_device.py`.
 2. Draw only on a new frame: after `UpdateStats()` compare
    `stats.renderengine.total.samplecount` (then `stats.renderengine.film.generation`
    when E6 (c) lands) and call `FrameBuffer.update()` only when it changed, at
