@@ -164,6 +164,8 @@ def view_update(engine, context, depsgraph, changes=None):
             depsgraph, context, engine.session, changes
         )
         engine.viewport_start_time = time()
+        # An edit can change the image without new samples (image pipeline)
+        engine.viewport_film_key = None
         delta_t = (time() - s) * 1000
         logger.debug(f"view_update(): applying changes took {delta_t:.1f} ms")
 
@@ -173,6 +175,19 @@ def view_update(engine, context, depsgraph, changes=None):
 
 # Seconds between two change checks in view_draw() while the view does not change
 VIEW_CHANGE_CHECK_INTERVAL = 0.5
+
+
+def update_film(engine, framebuffer, force=False):
+    """Read the film into the framebuffer if it has new samples: most draws
+    come before the next frame, and a read costs more than the draw, so the
+    draws in between show the last one. Not throttled further: a delay on a
+    read after a film reset (a camera move) shows on screen"""
+    stats = engine.session.GetStats()
+    key = (id(engine.session), stats.Get("stats.renderengine.total.samplecount").GetFloat())
+    if key == engine.viewport_film_key and not force:
+        return
+    framebuffer.update(engine.session)
+    engine.viewport_film_key = key
 
 
 def _view_state(context):
@@ -261,6 +276,8 @@ def view_draw(engine, context, depsgraph):
     ):
         wait_denoiser(engine)
         engine.framebuffer = FrameBuffer(engine, context, scene)
+        # A new framebuffer starts black
+        engine.viewport_film_key = None
 
     framebuffer = engine.framebuffer
     # A display setting: from the scene itself, the evaluated copy of the
@@ -296,6 +313,7 @@ def view_draw(engine, context, depsgraph):
             depsgraph, context, engine.session, changes
         )
         engine.viewport_start_time = time()
+        engine.viewport_film_key = None
 
     if utils.in_material_shading_mode(context):
         if not engine.session.IsInPause():
@@ -326,6 +344,9 @@ def view_draw(engine, context, depsgraph):
         if not engine.session.IsInPause():
             logger.info("[Engine/Viewport] Pausing session")
             engine.session.Pause()
+            # The samples since the last read
+            engine.session.UpdateStats()
+            update_film(engine, framebuffer, force=True)
         status_message = "(Paused)"
 
         # ...and denoise
@@ -354,7 +375,7 @@ def view_draw(engine, context, depsgraph):
             engine.session.UpdateStats()
         except RuntimeError as error:
             logger.warning(f"[Engine/Viewport] Error during UpdateStats(): {error}")
-        framebuffer.update(engine.session)
+        update_film(engine, framebuffer)
         engine.tag_redraw()
 
     framebuffer.draw()

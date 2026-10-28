@@ -70,6 +70,8 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
         self.last_viewport_size = (0, 0)
         self.viewport_last_view_state = None
         self.viewport_last_change_check = 0
+        # The film last read by view_draw(): (session, sample count)
+        self.viewport_film_key = None
 
     def __del__(self):
         # Note: this method is also called when unregister() is called (for some reason I don't understand)

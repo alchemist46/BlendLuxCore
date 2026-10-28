@@ -31,7 +31,7 @@ window (PATH CPU).
 | 1.9 One vertex per loop | Done, `3508f3cb`: loops with equal data share a vertex, and each submesh gets only its own vertices. 3.7x fewer vertices on a smooth subdivided mesh; export plus session start take the same time |
 | 1.10 `split_faces()` normals | Done, `3508f3cb`: `Mesh.corner_normals`. Hair: `obj` is already the evaluated object there, and `Mesh.vertex_colors` is still what `mcol_on_emitter()` indexes, so no change |
 | 1.11 Cycles node reader per object and slot | Done, `afcbf901`: read once per material and export, dropped when the material changes; `test_cycles_reader_cache` (20 objects, one read). Also fixed: Math nodes with an unlinked constant input read the constant as 0 (`_convert_to_float()`) |
-| 1.12 Viewport responsiveness | Started 2026-10-28: steps 0 (the viewport film on the CPU) and 1 (Device Auto) done |
+| 1.12 Viewport responsiveness | Started 2026-10-28: steps 0 (the viewport film on the CPU), 1 (Device Auto) and 2 (draw only on a new frame) done |
 | 2.1 `bpy.app.online_access` | Done, `8b2e2d04` (PyPI download and every online library request) |
 | 2.2 Loader internals | Open |
 | 2.3 Legacy node add menu | Open |
@@ -242,12 +242,18 @@ Plan, in order:
    minutes and crashes in AMD's compiler on Windows (LuxCore BUGS.md): a user
    whose final render runs on the GPU has a working backend. Older files keep
    their stored CPU (0) or GPU (1); `tests/test_viewport_device.py`.
-2. Draw only on a new frame: after `UpdateStats()` compare
-   `stats.renderengine.total.samplecount` (then `stats.renderengine.film.generation`
-   when E6 (c) lands) and call `FrameBuffer.update()` only when it changed, at
-   most every ~30 ms; reuse `FrameBuffer._data` and its `gpu.types.Buffer`
-   (`draw/viewport.py:239-253`); cache the engine and sampler strings of the
-   stats once per session.
+2. *Done 2026-10-28.* Draw only on a new frame: `view_draw()` reads the film
+   (`FrameBuffer.update()`) only when `stats.renderengine.total.samplecount`
+   or the session changed, after an edit (which can change the image without
+   new samples) and once when the render pauses; the draws in between show the
+   last texture. Not throttled: a 30 ms limit delayed the first frame after a
+   camera move by ~12 ms. DanishMood on the GPU at pixel size 1: 16.2 to 3.8 ms
+   per `view_draw()` on average; pixel size 2: 4.8 to 3.1 ms, a camera move
+   after the halt 125 to 74 ms (median of 8), while rendering unchanged (39
+   against 41 ms, 24 moves each). Left for later: a `gpu.types.Buffer` that
+   wraps `FrameBuffer._data` instead of a copy per read (1-5 ms), the stats
+   strings cached per session (`stats.renderengine.film.generation` when E6 (c)
+   lands).
 3. Camera-only change check: on a view-state change with the same region and
    pixel size run `camera_cache.diff()` alone; the config export only on a size
    change, a Scene depsgraph update or the 0.5 s periodic check;
