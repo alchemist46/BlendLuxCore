@@ -137,6 +137,21 @@ tracked in BlendLuxCore issue #577; `Exporter._update_config()`
 This is the single largest viewport responsiveness win and lives mostly on the
 core side (see section 4).
 
+Checked on 2026-10-29 (LuxCore 1f2c9a946, Windows, HIP, standalone pyluxcore
+on LynxSpider): 20 cycles of `renderconfig.Parse()` with a new film size, a new
+`RenderSession` and `Start()` leave the process RAM flat (1195 MB private),
+also with the old `_update_config()` order (the config from
+`session.GetRenderConfig()`, the new session made before the old one is
+dropped). Each session starts in 0.4 s, against about 3 s for the addon's
+re-export (2.1 s) and start. The VRAM grows about 16 MB per session, but the
+same with a new `RenderConfig` each time, so the current workaround does not
+avoid it (LuxCore `BUGS.md`, "GPU memory grows about 16 MB with each
+RenderSession on LynxSpider"). Not checked on Linux or inside Blender. What
+re-enabling `_update_config()` needs: a full restart still for a new working
+colour space (it is a `Change.CONFIG` today), `Start()` in the session start
+thread as for a new session, and the resize debounce of `view_update()` in
+`view_draw()` too.
+
 ### 1.6 O(scene) work per viewport update
 
 `ObjectCache2.update()` (`export/caches/object_cache.py:797`) and
