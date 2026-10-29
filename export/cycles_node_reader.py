@@ -231,12 +231,20 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
         }
     elif node.bl_idname == "ShaderNodeBsdfDiffuse":
         prefix = "scene.materials."
-        # TODO roughmatte and roughness -> sigma conversion (if possible)
         definitions = {
             "type": "matte",
             "kd": _socket(node.inputs["Color"], props, material, obj_name, group_node_stack),
             "bumptex": _socket(node.inputs["Normal"], props, material, obj_name, group_node_stack),
         }
+        # Cycles renders a rough Diffuse BSDF with the energy-preserving Oren-Nayar
+        # model (EON), as LuxCore's roughmatte does (pyluxcore 3.0); both take the
+        # roughness in [0, 1] as it is. Cycles' multiple scattering term has one more
+        # factor of the color than the EON paper's (LuxCore up to 5% brighter at
+        # roughness 1, the same at albedo 1, tests/test_diffuse_roughness.py)
+        roughness_socket = node.inputs["Roughness"]
+        if roughness_socket.is_linked or roughness_socket.default_value > 0:
+            definitions["type"] = "roughmatte"
+            definitions["sigma"] = _socket(roughness_socket, props, material, obj_name, group_node_stack)
     elif node.bl_idname == "ShaderNodeBsdfSheen":
         # LuxCore's velvet is the microfiber sheen of Cycles' Sheen BSDF
         # (pyluxcore 3.0); the Ashikhmin distribution is mapped to it too

@@ -7,7 +7,9 @@ from ...utils import node as utils_node
 SIGMA_DESCRIPTION = "Surface roughness, 0 for pure Lambertian reflection"
 
 class LuxCoreSocketSigma(bpy.types.NodeSocket, LuxCoreSocketFloat):
-    default_value: FloatProperty(min=0, max=45, description=SIGMA_DESCRIPTION,
+    # The roughness of the energy-preserving Oren-Nayar model, as Cycles' Diffuse BSDF
+    # (pyluxcore 3.0 clamps it to 1; the range was 0-45 before, read as is by the core)
+    default_value: FloatProperty(min=0, max=1, description=SIGMA_DESCRIPTION,
                                  update=utils_node.force_viewport_update)
     slider = True
 

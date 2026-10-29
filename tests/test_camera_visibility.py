@@ -4,7 +4,9 @@ A mesh with it off is hidden from the camera like with the LuxCore "Visible to
 Camera" option off, and still lights the scene: an emitting plane between the
 camera and a diffuse ground, rendered by Cycles and LuxCore (direct light).
 Instances follow Cycles: hidden when the instanced object or its instancer has
-Camera off.
+Camera off. An area light with "Use Cycles settings" is seen like in Cycles:
+its emission from the front with Camera on, nothing with it off, and what is
+behind it from the back.
 
 blender -b --factory-startup --python tests/test_camera_visibility.py -- <site-packages>
 """
@@ -129,5 +131,38 @@ for flag in (True, False):
                                           lamp.matrix_world.copy(), False)
     hidden = [props.Get(k).GetBool() for k in props.GetAllNames() if k.endswith(".camerainvisible")]
     checks.check(hidden == [not flag], f"LuxCore area light, Camera {flag}: camerainvisible {hidden}")
+bpy.data.objects.remove(lamp)
+
+# An area light with "Use Cycles settings", emitting downwards between the camera and the
+# ground, against Cycles: from below the camera sees its emission with Camera on and
+# nothing with it off; from above (its back) the camera sees the lit ground through it
+for obj in (emitter, instancer):
+    bpy.data.objects.remove(obj)
+data = bpy.data.lights.new("cycles_area", "AREA")
+data.luxcore.use_cycles_settings = True
+data.size = 1
+data.energy = 20
+lamp = bpy.data.objects.new("cycles_area", data)
+scene.collection.objects.link(lamp)
+lamp.location = (0, 0, 2)
+
+views = (
+    ("front", (0, 0, 1), (3.14159, 0, 0), (True, False)),
+    ("back", (0, 0, 8), (0, 0, 0), (True,)),
+)
+for view, location, rotation, flags in views:
+    camera.location = location
+    camera.rotation_euler = rotation
+    for flag in flags:
+        lamp.visible_camera = flag
+        name = f"cycles_area_{view}_{flag}"
+        cycles = center(harness.render(scene, "CYCLES", os.path.join(OUT, name + "_cycles.exr"), 64))
+        luxcore = center(harness.render(scene, "LUXCORE", os.path.join(OUT, name + "_luxcore.exr"), 64))
+        if cycles > 0.05:
+            ok = abs(luxcore / cycles - 1) < 0.03
+        else:
+            ok = luxcore < 0.05
+        checks.check(ok, f"Cycles area light seen from the {view}, Camera {flag}: "
+                         f"LuxCore {luxcore:.3f}, Cycles {cycles:.3f}")
 
 checks.finish()

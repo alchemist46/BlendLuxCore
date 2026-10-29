@@ -8,7 +8,7 @@ from . import (
     blend_import_post, depsgraph_update_post, draw_imageeditor,
     exit, frame_change_pre, load_post, save_pre,
 )
-from ..utils import eevee_sync
+from ..utils import eevee_sync, temperature
 
 if _needs_reload:
     import importlib
@@ -36,6 +36,16 @@ def register():
     bpy.app.handlers.load_post.append(load_post.handler)
     bpy.app.handlers.save_pre.append(save_pre.handler)
     bpy.app.handlers.blend_import_post.append(blend_import_post.handler)
+
+    # A file already open when the addon is enabled: load_post did not run for it. Lights
+    # and worlds created since it was saved have their values stored (depsgraph_update_post).
+    # While Blender starts, bpy.data cannot be read, and load_post runs for the file later.
+    try:
+        filepath = bpy.data.filepath
+    except AttributeError:
+        filepath = ""
+    if filepath:
+        temperature.set_legacy()
 
     args = ()
     draw_imageeditor.handle = SpaceImageEditor.draw_handler_add(draw_imageeditor.handler,

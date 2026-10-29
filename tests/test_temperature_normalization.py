@@ -4,9 +4,12 @@ New nodes, lights and worlds use Luminance (Cycles' normalization) and export
 ".normalization = luminance" next to ".normalize" (older pyluxcore builds
 ignore the first one and fall back to Max). Max (Legacy) exports what the
 older addon versions exported. Files saved by an older addon version (no
-value stored) get Max on load and on append, and linked data from them
-exports Max; files saved now keep their values. The converted Cycles Blackbody
-node renders like Cycles, and a Temperature light like Blender's light color.
+value stored) get Max on load, on append and when the addon is enabled with
+the file open, and linked data from them exports Max; files saved now keep
+their values, and a new light or world has its value stored by the first
+depsgraph update, so an autosave (no save_pre) keeps Luminance. The converted
+Cycles Blackbody node renders like Cycles, its EEVEE nodes in Max like LuxCore,
+and a Temperature light like Blender's light color.
 
 blender -b --factory-startup --python tests/test_temperature_normalization.py -- <site-packages>
 """
@@ -25,14 +28,17 @@ import bpy
 import numpy as np
 import pyluxcore
 from blendluxcore.export import light as light_export
-from blendluxcore.handlers import load_post, save_pre
+from blendluxcore import handlers as blendluxcore_handlers
+from blendluxcore.handlers import depsgraph_update_post, load_post, save_pre
 from blendluxcore.operators.cycles_convert import assign_converted_tree
 from blendluxcore.operators.cycles_converter import convert_material
+from blendluxcore.utils import eevee_nodes
 
 checks = harness.Checks("test_temperature_normalization")
 OUT = tempfile.mkdtemp(prefix="blc-temperature-")
 OLD = os.path.join(OUT, "old.blend")
 NEW = os.path.join(OUT, "new.blend")
+AUTOSAVE = os.path.join(OUT, "autosave.blend")
 
 
 def blackbody_props(node):
@@ -114,7 +120,9 @@ exported_as(light_export.convert_world(EXPORTER, world, scene, False), "world Lu
 world.luxcore.temperature_normalization = "max"
 exported_as(light_export.convert_world(EXPORTER, world, scene, False), "world Max", False)
 
-# A file of an older addon version: nothing stored
+# A file of an older addon version: nothing stored. The depsgraph handler would store
+# the values of the lights and the world before the save
+bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post.handler)
 tree, node = blackbody_tree("old material")
 material = bpy.data.materials.new("old material")
 material.use_fake_user = True
@@ -128,6 +136,7 @@ for data in (old_light.data, old_rgb_light.data, world):
 bpy.app.handlers.save_pre.remove(save_pre.handler)
 bpy.ops.wm.save_as_mainfile(filepath=OLD)
 bpy.app.handlers.save_pre.append(save_pre.handler)
+bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_post.handler)
 
 
 def loaded_values():
@@ -152,6 +161,29 @@ checks.check(loaded_values() == ("max",) * 4
              and bpy.data.lights["added light"].luxcore.temperature_normalization == "luminance",
              f"new file loaded: old data Max {loaded_values()}, added light "
              f"{bpy.data.lights['added light'].luxcore.temperature_normalization}")
+
+# A light and a world added since the last save, in an autosave (which runs no save_pre):
+# stored by the first depsgraph update they are in
+autosaved = new_light("autosaved light", "SPOT")
+# A world is in the depsgraph when a scene uses it (Blender's New button assigns it)
+autosaved_world = bpy.data.worlds.new("autosaved world")
+autosaved_world.use_fake_user = True
+old_world = bpy.context.scene.world
+bpy.context.scene.world = autosaved_world
+bpy.context.view_layer.update()
+bpy.context.scene.world = old_world
+stored = [autosaved.data.luxcore.is_property_set("temperature_normalization"),
+          autosaved_world.luxcore.is_property_set("temperature_normalization")]
+checks.check(stored == [True, True], f"added light and world: stored by the depsgraph update {stored}")
+bpy.app.handlers.save_pre.remove(save_pre.handler)
+bpy.ops.wm.save_as_mainfile(filepath=AUTOSAVE, copy=True)
+bpy.app.handlers.save_pre.append(save_pre.handler)
+bpy.ops.wm.open_mainfile(filepath=AUTOSAVE)
+recovered = (bpy.data.lights["autosaved light"].luxcore.temperature_normalization,
+             bpy.data.worlds["autosaved world"].luxcore.temperature_normalization)
+checks.check(loaded_values() == ("max",) * 4 and recovered == ("luminance",) * 2,
+             f"autosave loaded: old data Max {loaded_values()}, added light and world {recovered}")
+bpy.ops.wm.open_mainfile(filepath=NEW)
 
 # Appended from the old file (with the operator and with libraries.load), and linked
 bpy.ops.wm.append(directory=OLD + "/Light/", filename="old light")
@@ -241,6 +273,27 @@ checks.check(lux_node.normalization == "luminance", "converted Blackbody node: L
 luminance = center(harness.render(scene, "LUXCORE", os.path.join(OUT, "bb_luminance.exr"), 128))
 lux_node.normalization = "max"
 legacy = center(harness.render(scene, "LUXCORE", os.path.join(OUT, "bb_max.exr"), 128))
+
+# The EEVEE nodes of the Max node, rendered by Cycles, are as bright as LuxCore renders it
+# (Cycles' Blackbody node has luminance 1, the Luminance normalization)
+eevee_nodes.generate(emission, force=True)
+eevee = center(harness.render(scene, "CYCLES", os.path.join(OUT, "bb_max_eevee.exr"), 128))
+r = eevee / legacy
+checks.check(np.all(abs(r - 1) < 0.03), f"EEVEE nodes of the 6500 K Max node: Cycles / LuxCore = {ratio_text(r)}")
+lux_node.normalize = False
+eevee_nodes.generate(emission, force=True)
+scale = [n for n in emission.node_tree.nodes if n.bl_idname == "ShaderNodeMix" and n.blend_type == "MULTIPLY"]
+factor = (next(i for i in scale[0].inputs if i.identifier == "B_Color").default_value[0]
+          if len(scale) == 1 else None)
+checks.check(factor is not None and abs(factor / (0.7245 * 89159.6) - 1) < 0.001,
+             f"EEVEE nodes of the 6500 K node without Normalize: the color times {factor}")
+lux_node.normalize = True
+lux_node.normalization = "luminance"
+eevee_nodes.generate(emission, force=True)
+scale = [n for n in emission.node_tree.nodes if n.bl_idname == "ShaderNodeMix" and n.blend_type == "MULTIPLY"]
+checks.check(not scale, "EEVEE nodes of the Luminance node: the Blackbody color as is")
+lux_node.normalization = "max"
+
 if np.allclose(luminance, legacy, rtol=0.005):
     print(f"SKIP renders: pyluxcore {pyluxcore.Version()} has no .normalization (before 2026-10-23)")
 else:
@@ -269,5 +322,15 @@ else:
         r = colored / white / expected
         checks.check(np.all(abs(r - 1) < 0.01),
                      f"{t} K Temperature light / white light / Blender's color = {ratio_text(r)}")
+
+# The old file opened with the addon disabled (no load_post), then the addon enabled: Max.
+# The handlers' own unregister and register: addon_utils.disable() would sync the extension
+# wheels to the (no) enabled extensions of --factory-startup, deleting pyluxcore
+blendluxcore_handlers.unregister()
+bpy.ops.wm.open_mainfile(filepath=OLD)
+before = loaded_values()
+blendluxcore_handlers.register()
+checks.check(loaded_values() == ("max",) * 4,
+             f"old file open when the addon is enabled: Max {loaded_values()} (before {before})")
 
 checks.finish()

@@ -1,6 +1,7 @@
 import bpy
 from bpy.app.handlers import persistent
 from .. import utils
+from ..utils import temperature
 
 @persistent
 def handler(scene, depsgraph=None):
@@ -16,6 +17,14 @@ def handler(scene, depsgraph=None):
 
         if node_tree and node_tree.name != mat.name and mat.name not in bpy.data.node_groups:
             node_tree.name = mat.name
+
+    # A new light or world: store its temperature normalization now, so an autosave (no
+    # save_pre) or the conversion when the addon is enabled doesn't take it for an old one
+    if depsgraph is not None and (depsgraph.id_type_updated("LIGHT") or depsgraph.id_type_updated("WORLD")):
+        ids = [getattr(update.id, "original", update.id) for update in depsgraph.updates
+               if isinstance(update.id, (bpy.types.Light, bpy.types.World))]
+        if ids:
+            temperature.store_all(ids)
 
     # Safety net for the EEVEE node sync: LuxCore node tree changes that the
     # node and socket update callbacks did not report. Material updates are

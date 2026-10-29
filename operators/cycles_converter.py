@@ -39,7 +39,7 @@ from ..export.cycles_node_reader import PRINCIPLED_OPENPBR_UNSUPPORTED, MISSING_
 
 PLACEHOLDER_LABEL = "Unsupported: "
 PLACEHOLDER_COLOR = (0.55, 0.1, 0.1)
-# Rec. 709 luminance, also used by Cycles (reader :678)
+# Rec. 709 luminance, also used by Cycles (reader :686)
 LUMA = (0.2126729, 0.7151522, 0.0721750)
 
 HELPER_OFFSET_X = -220
@@ -64,7 +64,7 @@ MATH_MODES = {
     "MODULO": "modulo",
     "SQRT": "sqrt",
 }
-# In Cycles these operations take the average of a colour input (reader :466)
+# In Cycles these operations take the average of a colour input (reader :474)
 MATH_TO_FLOAT = {"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "ABSOLUTE"}
 # Operations with one input
 MATH_UNARY = {"ABSOLUTE", "ROUND", "SQRT"}
@@ -301,7 +301,7 @@ class _Converter:
         return term
 
     def group_output(self, group_node, out_socket):
-        # reader :511
+        # reader :519
         if group_node.node_tree is None:
             self.warn(f'Group node "{group_node.name}" has no node group')
             return None
@@ -322,7 +322,7 @@ class _Converter:
             self.group_stack.pop()
 
     def group_input(self, out_socket):
-        # reader :534
+        # reader :542
         if not self.group_stack:
             return None
         group_node = self.group_stack.pop()
@@ -374,7 +374,7 @@ class _Converter:
         lux_input.default_value = clamped if isinstance(value, list) else clamped[0]
 
     def to_float(self, term):
-        """A Math node that turns a colour texture into its float value (reader :1066)"""
+        """A Math node that turns a colour texture into its float value (reader :1074)"""
         key = (term.node.name, term.output)
         node = self.float_cache.get(key)
         if node is None:
@@ -409,7 +409,7 @@ class _Converter:
         return node
 
     def scaled(self, cycles_socket, factor, near, label):
-        """The term of a Cycles input times a factor (reader :968)"""
+        """The term of a Cycles input times a factor (reader :976)"""
         term = self.resolve(cycles_socket)
         if term is None:
             return None
@@ -421,7 +421,7 @@ class _Converter:
         return Linked(node, "Value")
 
     def squared_roughness(self, cycles_socket, near):
-        """Cycles roughness to LuxCore's linear roughness (reader :1045)"""
+        """Cycles roughness to LuxCore's linear roughness (reader :1053)"""
         term = self.resolve(cycles_socket)
         if _is_linked(term):
             node = self.math_node("power", near, "Roughness²")
@@ -433,7 +433,7 @@ class _Converter:
         return _as_float(term) ** 2
 
     def unsupported(self, node, out_socket):
-        """Pass through like a muted node if possible (reader :848), else a placeholder"""
+        """Pass through like a muted node if possible (reader :856), else a placeholder"""
         self.warn(f'Unsupported node "{node.name}" ({node.bl_idname})')
         for internal_link in node.internal_links:
             if internal_link.to_socket == out_socket and utils_node.get_link(internal_link.from_socket):
@@ -476,7 +476,7 @@ class _Converter:
 
         root = self.material_input(cycles_output.inputs["Surface"], output, "Material")
         if root.node.name in self.holdout_nodes:
-            # reader :390
+            # reader :398
             output.is_holdout = True
         elif self.holdout_nodes:
             self.warn("A Holdout node that is not directly connected to the output renders black")
@@ -491,7 +491,7 @@ class _Converter:
             self.connect(node.inputs["Normal"], lux, "Bump")
 
     def emission_node(self, color_socket, strength_socket, near):
-        """A LuxCore Emission node: Color times Strength (reader :543)"""
+        """A LuxCore Emission node: Color times Strength (reader :551)"""
         emission = self.new_node("LuxCoreNodeMatEmission", near, helper=True)
         emission.emission_unit = "artistic"
         emission.exposure = 0
@@ -533,7 +533,7 @@ class _Converter:
         return _is_linked(term) or (term is not None and _as_float(term) > 0)
 
     def principled_openpbr(self, node):
-        # reader :942
+        # reader :950
         lux = self.new_node("LuxCoreNodeMatOpenPBR", node)
         inputs = node.inputs
 
@@ -546,7 +546,7 @@ class _Converter:
             connect("Diffuse Roughness", "Diffuse Roughness")
         connect("Roughness", "Specular Roughness")
         connect("IOR", "Specular IOR")
-        # Specular IOR Level 0.5 keeps the F0 of the IOR (reader :987)
+        # Specular IOR Level 0.5 keeps the F0 of the IOR (reader :995)
         self.apply(self.scaled(inputs["Specular IOR Level"], 2, node, "Specular ×2"),
                    _input(lux, "Specular Weight"))
         connect("Specular Tint", "Specular Color")
@@ -673,14 +673,15 @@ class _Converter:
         return Linked(lux, "Material")
 
     def diffuse(self, node, out_socket):
-        # reader :232 (Roughness is not converted, as in the reader)
+        # reader :232 (Roughness is the Sigma, the node exports roughmatte when it isn't 0)
         lux = self.new_node("LuxCoreNodeMatMatte", node)
         self.connect(node.inputs["Color"], lux, "Diffuse Color")
+        self.connect(node.inputs["Roughness"], lux, "Sigma")
         self.common_inputs(node, lux)
         return Linked(lux, "Material")
 
     def sheen(self, node, out_socket):
-        # reader :240
+        # reader :248
         lux = self.new_node("LuxCoreNodeMatVelvet", node)
         self.connect(node.inputs["Color"], lux, "Diffuse Color")
         self.connect(node.inputs["Roughness"], lux, "Roughness")
@@ -688,7 +689,7 @@ class _Converter:
         return Linked(lux, "Material")
 
     def subsurface(self, node, out_socket):
-        # reader :250
+        # reader :258
         lux = self.new_node("LuxCoreNodeMatSubsurface", node)
         skin = getattr(node, "falloff", "") == "RANDOM_WALK_SKIN"
         self.connect(node.inputs["Color"], lux, "Color")
@@ -706,7 +707,7 @@ class _Converter:
         return Linked(lux, "Material")
 
     def glossy(self, node, out_socket):
-        # reader :267 (Blender 4.0 merged Glossy and Anisotropic)
+        # reader :275 (Blender 4.0 merged Glossy and Anisotropic)
         lux = self.new_node("LuxCoreNodeMatMetal", node)
         lux.input_type = "color"
         self.connect(node.inputs["Color"], lux, "Color")
@@ -721,7 +722,7 @@ class _Converter:
         return Linked(lux, "Material")
 
     def glass(self, node, out_socket):
-        # reader :316, :333
+        # reader :324, :341
         lux = self.new_node("LuxCoreNodeMatGlass", node)
         self.connect(node.inputs["Color"], lux, "Transmission Color")
         if node.bl_idname == "ShaderNodeBsdfRefraction":
@@ -734,7 +735,7 @@ class _Converter:
         return Linked(lux, "Material")
 
     def translucent(self, node, out_socket):
-        # reader :373
+        # reader :381
         lux = self.new_node("LuxCoreNodeMatMatteTranslucent", node)
         _input(lux, "Transmission Color").default_value = (1, 1, 1)
         self.connect(node.inputs["Color"], lux, "Reflection Color")
@@ -742,20 +743,20 @@ class _Converter:
         return Linked(lux, "Material")
 
     def transparent(self, node, out_socket):
-        # reader :382
+        # reader :390
         lux = self.new_node("LuxCoreNodeMatNull", node)
         self.connect(node.inputs["Color"], lux, "Transmission Color")
         return Linked(lux, "Material")
 
     def holdout(self, node, out_socket):
-        # reader :390
+        # reader :398
         lux = self.black_matte(None, "Holdout")
         lux.location = self.abs_location(node)
         self.holdout_nodes.add(lux.name)
         return Linked(lux, "Material")
 
     def emission(self, node, out_socket):
-        # reader :536
+        # reader :544
         lux = self.new_node("LuxCoreNodeMatMatte", node)
         lux.inputs["Diffuse Color"].default_value = (0, 0, 0)
         emission = self.emission_node(node.inputs["Color"], node.inputs["Strength"], node)
@@ -809,7 +810,7 @@ class _Converter:
         return 2.2
 
     def mapping_node(self, vector_socket):
-        """A 2D Mapping node for what feeds an Image Texture's Vector input (reader :880),
+        """A 2D Mapping node for what feeds an Image Texture's Vector input (reader :888),
         None when the default UV mapping does"""
         scale = [1, 1]
         rotation = 0
@@ -858,7 +859,7 @@ class _Converter:
         return lux
 
     def image(self, node, out_socket):
-        # reader :289
+        # reader :297
         lux = self.image_node(node, node, "")
         if lux is None:
             return list(MISSING_IMAGE_COLOR)
@@ -868,7 +869,7 @@ class _Converter:
         return Linked(lux, "Alpha" if out_socket.name == "Alpha" else "Color")
 
     def gamma(self, node, out_socket):
-        # reader :689
+        # reader :697
         link = utils_node.get_link(node.inputs["Color"])
         gamma_socket = node.inputs["Gamma"]
         if link and link.from_node.bl_idname == "ShaderNodeTexImage" and link.from_node.image:
@@ -892,7 +893,7 @@ class _Converter:
         return max(color, 0) ** gamma
 
     def normal_map(self, node, out_socket):
-        # reader :736
+        # reader :744
         if node.space != "TANGENT":
             self.warn(f"Unsupported normal map space: {node.space}")
             return None
@@ -914,7 +915,7 @@ class _Converter:
         self.connect(node.inputs["Color"], lux, "Color")
         strength = self.resolve(strength_socket)
         if _is_linked(strength):
-            # The normalmap scale can't be textured (reader :749)
+            # The normalmap scale can't be textured (reader :757)
             lux.scale = 1
             scale = self.math_node("scale", node, "× Strength")
             self.tree.links.new(lux.outputs["Bump"], scale.inputs[0])
@@ -924,7 +925,7 @@ class _Converter:
         return Linked(lux, "Bump")
 
     def bump(self, node, out_socket):
-        # reader :761
+        # reader :769
         if node.inputs["Distance"].is_linked:
             self.warn("Bump node Distance socket is not supported")
         if node.inputs["Normal"].is_linked:
@@ -943,7 +944,7 @@ class _Converter:
         return Linked(lux, "Bump")
 
     def mix_rgb(self, node, out_socket):
-        # reader :397
+        # reader :405
         if node.bl_idname == "ShaderNodeMixRGB":
             fac_socket = node.inputs["Fac"]
             a_socket = node.inputs["Color1"]
@@ -996,7 +997,7 @@ class _Converter:
         output = "Value" if lux.bl_idname == "LuxCoreNodeTexMath" else "Color"
         last = lux
         if blend_type != "MIX" and (_is_linked(fac) or 0 < fac < 1):
-            # Mix the result with the first colour by the factor (reader :442)
+            # Mix the result with the first colour by the factor (reader :450)
             mix = self.new_node("LuxCoreNodeTexColorMix", node, helper=True, label="Factor")
             mix.mode = "mix"
             self.apply(fac, mix.inputs[0])
@@ -1008,7 +1009,7 @@ class _Converter:
         return Linked(last, output)
 
     def math(self, node, out_socket):
-        # reader :452
+        # reader :460
         operation = node.operation
         mode = MATH_MODES.get(operation)
         if mode is None:
@@ -1028,7 +1029,7 @@ class _Converter:
         return Linked(lux, "Value")
 
     def hue_saturation(self, node, out_socket):
-        # reader :495
+        # reader :503
         fac = node.inputs["Fac"]
         if fac.is_linked or abs(fac.default_value - 1) > 1e-6:
             self.warn(f'Hue/Saturation/Value node "{node.name}": Fac is not supported and is ignored')
@@ -1038,7 +1039,7 @@ class _Converter:
         return Linked(lux, "Color")
 
     def value(self, node, out_socket):
-        # reader :560. One knob stays one knob when the value is used several times.
+        # reader :568. One knob stays one knob when the value is used several times.
         value = float(node.outputs[0].default_value)
         if len(node.outputs[0].links) > 1:
             lux, is_new = self.shared_node(node, "LuxCoreNodeTexConstfloat1")
@@ -1047,7 +1048,7 @@ class _Converter:
         return value
 
     def rgb(self, node, out_socket):
-        # reader :567
+        # reader :575
         color = list(node.outputs[0].default_value)[:3]
         if len(node.outputs[0].links) > 1:
             lux, is_new = self.shared_node(node, "LuxCoreNodeTexConstfloat3")
@@ -1056,7 +1057,7 @@ class _Converter:
         return color
 
     def color_ramp(self, node, out_socket):
-        # reader :574 (both outputs give the colour, as in the reader)
+        # reader :582 (both outputs give the colour, as in the reader)
         ramp = node.color_ramp
         if out_socket.name != "Color":
             self.warn(f'Color Ramp "{node.name}": the Alpha output is not supported, the colour is used')
@@ -1093,7 +1094,7 @@ class _Converter:
         return Linked(lux, "Color")
 
     def checker(self, node, out_socket):
-        # reader :597: object coordinates only, untextured scale
+        # reader :605: object coordinates only, untextured scale
         if node.inputs["Scale"].is_linked or node.inputs["Vector"].is_linked:
             self.warn(f'Checker Texture "{node.name}": only object coordinates and a constant scale '
                       'are supported')
@@ -1110,7 +1111,7 @@ class _Converter:
         return Linked(lux, "Color")
 
     def invert(self, node, out_socket):
-        # reader :612
+        # reader :620
         fac_socket = node.inputs["Fac"]
         fac = self.resolve(fac_socket)
         if fac is None and fac_socket.is_linked:
@@ -1131,7 +1132,7 @@ class _Converter:
         return Linked(lux, "Color")
 
     def separate(self, node, out_socket):
-        # reader :641
+        # reader :649
         channels, input_name = SEPARATE_CHANNELS[node.bl_idname]
         if node.bl_idname == "ShaderNodeSeparateColor" and node.mode != "RGB":
             self.warn(f'Separate Color "{node.name}": the {node.mode} mode is not supported, using RGB')
@@ -1143,7 +1144,7 @@ class _Converter:
         return Linked(lux, LUX_CHANNELS[channels.index(out_socket.name)])
 
     def combine(self, node, out_socket):
-        # reader :660
+        # reader :668
         if node.bl_idname == "ShaderNodeCombineColor" and node.mode != "RGB":
             self.warn(f'Combine Color "{node.name}": the {node.mode} mode is not supported, using RGB')
         lux = self.new_node("LuxCoreNodeTexMakeFloat3", node)
@@ -1152,14 +1153,14 @@ class _Converter:
         return Linked(lux, "Color")
 
     def rgb_to_bw(self, node, out_socket):
-        # reader :670
+        # reader :678
         lux = self.new_node("LuxCoreNodeTexDotProduct", node)
         self.connect(node.inputs["Color"], lux, "Vector 1")
         lux.inputs["Vector 2"].default_value = LUMA
         return Linked(lux, "Value")
 
     def bright_contrast(self, node, out_socket):
-        # reader :680
+        # reader :688
         lux = self.new_node("LuxCoreNodeTexBrightContrast", node)
         self.connect(node.inputs["Color"], lux, "Color")
         self.connect(node.inputs["Bright"], lux, "Brightness")
@@ -1167,7 +1168,7 @@ class _Converter:
         return Linked(lux, "Color")
 
     def geometry(self, node, out_socket):
-        # reader :783
+        # reader :791
         outputs = {"Position": "Position", "Normal": "Shading Normal"}
         if out_socket.name not in outputs:
             self.warn(f"Unsupported Geometry output socket: {out_socket.name}")
@@ -1176,7 +1177,7 @@ class _Converter:
         return Linked(lux, outputs[out_socket.name])
 
     def object_info(self, node, out_socket):
-        # reader :798
+        # reader :806
         modes = {"Object Index": "objectid", "Random": "objectidnormalized"}
         if out_socket.name == "Material Index":
             return float(self.material.pass_index)
@@ -1188,7 +1189,7 @@ class _Converter:
         return Linked(lux, "Value")
 
     def blackbody(self, node, out_socket):
-        # reader :812
+        # reader :820
         temperature = node.inputs["Temperature"]
         if temperature.is_linked:
             self.warn("LuxCore does not support textured blackbody temperature")
@@ -1201,7 +1202,7 @@ class _Converter:
         return Linked(lux, "Color")
 
     def map_range(self, node, out_socket):
-        # reader :825
+        # reader :833
         if node.interpolation_type != "LINEAR" or getattr(node, "data_type", "FLOAT") != "FLOAT":
             self.warn(f"In material {self.material.name}: unsupported map range "
                       f"{getattr(node, 'data_type', 'FLOAT')} {node.interpolation_type}")

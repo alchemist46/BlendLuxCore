@@ -179,6 +179,9 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
             "emission.normalizebycolor": False,
             "emission.importance": light.luxcore.importance,
             "transparency.shadow": [1, 1, 1],
+            # Cycles' lights are seen from the front only, and a ray goes on through them:
+            # the back side (away from the emission) lets everything through
+            "transparency.back": 0,
             # Nothing to cache on the black mesh (see _convert_area_light)
             "photongi.enable": False,
         }
@@ -191,7 +194,8 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
 
         # Object
         use_instancing = utils.use_instancing(obj, scene, is_viewport_render)
-        visible_to_camera = False
+        # Blender's Camera ray visibility, on by default, as in Cycles
+        visible_to_camera = obj.luxcore.visible_to_camera and obj.visible_camera
         obj_props, exported_obj = _create_luxcore_meshlight(obj, transform, use_instancing, luxcore_name,
                                                             luxcore_scene, mat_name, visible_to_camera)
         props.Set(obj_props)

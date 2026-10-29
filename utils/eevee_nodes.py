@@ -33,6 +33,7 @@ import math
 import bpy
 
 from . import colorspace
+from . import temperature as utils_temperature
 from .errorlog import LuxCoreErrorLog
 from .log import logger
 
@@ -977,11 +978,13 @@ def _mat_matte(p, node):
 
     spec = p.add(node, "", "ShaderNodeBsdfDiffuse")
     spec.inputs["Color"] = color
+    # LuxCore's sigma is the roughness of the energy-preserving Oren-Nayar model, as the
+    # Diffuse BSDF's (no angle)
     sigma = p.tex_in(node, "Sigma")
     if _is_ref(sigma):
-        spec.inputs["Roughness"] = p.math("MULTIPLY", sigma, math.pi / 180, node, "sigma")
+        spec.inputs["Roughness"] = sigma
     else:
-        spec.inputs["Roughness"] = min(math.radians(_as_float(sigma or 0.0)), 1.0)
+        spec.inputs["Roughness"] = min(_as_float(sigma or 0.0), 1.0)
     return _Shader(Ref(spec.name, "BSDF"), normals=[spec])
 
 
@@ -1457,7 +1460,15 @@ def _tex_checkerboard(p, node, output_socket):
 def _tex_blackbody(p, node, output_socket):
     spec = p.add(node, "", "ShaderNodeBlackbody")
     spec.inputs["Temperature"] = node.temperature
-    return Ref(spec.name, "Color")
+    color = Ref(spec.name, "Color")
+    # Cycles' color has luminance 1, as LuxCore's Luminance normalization: Max (Legacy)
+    # and Normalize off are scaled to LuxCore's brightness
+    normalization = (utils_temperature.get(node, utils_temperature.NODE_PROP)
+                     if node.normalize else None)
+    factor = utils_temperature.luminance_factor(node.temperature, normalization)
+    if factor != 1.0:
+        color = p.multiply_color(color, factor, node, "normalization")
+    return color
 
 
 def _tex_hitpointinfo(p, node, output_socket):

@@ -36,23 +36,16 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: not reliable. Blender 5.2.2 on Windows with simulated input (`--enable-event-simulate`): Update ToC (after a first try that failed on the missing library folder), Asset Bar, hover and right-click a thumbnail. Six scripted replays of the same steps, on the code before and after the cleanup commits, did not hang.
 - Notes: py-spy showed the main thread in native Blender code with no Python frame, and Thread-4 (`bg_download_thumbnails`) in an SSL read. Main suspect: that thread loaded and scaled the images with the bpy API. Since the thumbnail fix of 2026-10-22 it only downloads the files, and the images are loaded in the main thread; three replays since then did not hang. Remove this entry if it does not happen again.
 
-### Diffuse BSDF roughness is ignored
-- Found: 2026-10-23
-- Area: export
-- Problem: the Cycles node reader exports `ShaderNodeBsdfDiffuse` as `matte` whatever its Roughness (a TODO in `export/cycles_node_reader.py`), while Cycles renders roughness > 0 as Oren-Nayar. The user's Cornell box (walls at roughness 0.5) renders 4-13% brighter in LuxCore than in Cycles at depth 8 (LuxCore/Cycles RGB 1.108, 1.133, 1.040); with the walls set to roughness 0 in Cycles the ratio is 0.968, 0.998, 0.943 (the rest is the light temperature above and the other materials).
-- Reproduce: as above, full path depth (`g0_prepare.py --depth 8`), 540x540, 64 and 256 spp.
-- Notes: LuxCore has `roughmatte` (Oren-Nayar with sigma); Cycles' Diffuse BSDF roughness is the energy-conserving Oren-Nayar of Blender 4.x, so the mapping needs a check against Cycles (furnace or a flat-lit plane), not only a sigma conversion.
-
-### Blender's other ray visibility flags are ignored
+### Blender's Diffuse, Glossy, Transmission, Volume Scatter and Shadow ray visibility are ignored
 - Found: 2026-10-24
 - Area: export
-- Problem: of Blender's Object > Visibility > Ray Visibility (what Cycles uses), the addon reads only Camera on meshes (and drops an object with every flag off). Meshes: Diffuse, Glossy, Transmission, Volume Scatter and Shadow off still show the object to those rays. Lights: Diffuse, Glossy and Transmission are ignored, and Camera too except on an area light with LuxCore settings; an area light with "Use Cycles settings" is always hidden from the camera (`visible_to_camera = False` in `_convert_cycles_light()`), while Cycles shows it with Camera on (the default): a 4x4 area light seen from below reads 2.04 in Cycles with Camera on, 0.05 with it off (16x16, CPU).
-- Reproduce: Blender 5.2, any of these flags off, Cycles against LuxCore; for the area light, a camera looking at it.
-- Notes: LuxCore counterparts exist only in part. A light's `visibility.indirect.diffuse/glossy/specular.enable` could take the light's Diffuse, Glossy and Transmission flags. For meshes there is no per-object flag besides `camerainvisible`: the emission's `visibility.indirect.*` and `transparency.shadow` are per material (a material shared by objects with different flags needs copies), and they hide only the emitted light or the shadow, not the surface. Showing the Cycles area light to the camera changes the G0 and D1 Cornell comparisons (the light is in view there).
+- Problem: of Blender's Object > Visibility > Ray Visibility (what Cycles uses), the addon follows only Camera (meshes, and area lights with either settings). With Diffuse, Glossy, Transmission, Volume Scatter or Shadow off, Cycles leaves the object or light out of those rays; LuxCore still shows it to them. The Object panel says which flags are ignored.
+- Reproduce: Blender 5.2, any of these flags off on a mesh or a light, Cycles against LuxCore.
+- Notes: needs the core. A light's `visibility.indirect.diffuse/glossy/specular.enable` is not the counterpart: it drops only a path that hits the light after such a bounce, and direct light sampling still lights the surface (`PathTracer::CheckDirectHitVisibilityFlags()`), while Cycles' Diffuse off removes the light from diffuse lobes altogether. Point, spot and distant lights have no flags at all. For meshes there is no per-object flag besides `camerainvisible`; the material's `transparency.shadow` would give Shadow off, but per material (copies for objects with different flags). The Cycles area light's Camera flag was fixed on 2026-10-29.
 
-### Limits of the Max (Legacy) temperature normalization of old files
-- Found: 2026-10-24
+### Two cases where a new light or world gets Max (Legacy) temperature normalization
+- Found: 2026-10-29
 - Area: handlers
-- Problem: the lights, worlds and Blackbody nodes of a file from an older addon version get Max (Legacy) when the file is loaded or appended from; three cases are missed. (1) A file that was already open when the addon was enabled keeps Luminance (load_post did not run for it). (2) A light or world created after the last save and recovered from an autosave gets Max (the values are stored on save, and autosave runs no save_pre handler). (3) The EEVEE node sync (`utils/eevee_nodes.py`) makes a Cycles Blackbody node, always at luminance 1: a Max node shows 1.38x brighter in EEVEE than in LuxCore at 6500 K (a node with Normalize off already differed).
-- Reproduce: (1) open an old file with the addon disabled, enable it; (2) add a light, wait for an autosave, recover it (not tried).
-- Notes: `utils/temperature.py`. Case 1 could run the conversion on register, but Reload Scripts would then convert the lights created since the last save.
+- Problem: a light or world whose value is not stored is taken for one of an older addon version and set to Max on load. Two new ones are not stored: (1) a world that no scene uses, created after the last save and recovered from an autosave (a world is in the depsgraph only when a scene uses it, and the value is stored by the first depsgraph update or on save); (2) a light or world created while the addon was disabled, when the addon is enabled with the file open or the file is loaded again.
+- Reproduce: (1) add a world with a fake user and no scene, wait for an autosave, recover it (not tried).
+- Notes: `utils/temperature.py`, `handlers/depsgraph_update_post.py`. Both only change the brightness of a Temperature color (Max is 0.72x at 6500 K).
