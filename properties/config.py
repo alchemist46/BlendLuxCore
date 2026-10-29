@@ -523,11 +523,16 @@ class LuxCoreConfig(PropertyGroup):
     tile: PointerProperty(type=LuxCoreConfigTile)
     # BIDIR properties
     # light.maxdepth
-    # TODO description
-    bidir_light_maxdepth: IntProperty(name="Light Depth", default=10, min=1, soft_max=16)
+    bidir_light_maxdepth: IntProperty(name="Light Depth", default=10, min=1, soft_max=16,
+                                      description="Max. bounces of the light paths (at most the "
+                                                  "path depth - 1). Lower is faster per sample; "
+                                                  "the image stays the same, with more noise "
+                                                  "where light needs longer light paths")
     # path.maxdepth
-    # TODO description
-    bidir_path_maxdepth: IntProperty(name="Eye Depth", default=10, min=1, soft_max=16)
+    bidir_path_maxdepth: IntProperty(name="Path Depth", default=10, min=1, soft_max=16,
+                                     description="Max. length of a path, in segments, for every "
+                                                 "way of building it (as the Path engine's total "
+                                                 "depth). Light that needs longer paths is left out")
 
     # Pixel filter
     filter_enabled: BoolProperty(name="Enable Pixel Filtering", default=False, description=FILTER_DESC)
