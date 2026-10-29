@@ -53,7 +53,7 @@ def force_session_restart(engine, changes=export.Change.CONFIG):
     setting). view_update() makes the next one, once a resize is over: on the
     same scene when it can (Exporter.restart_session()), with the changes the
     caches have already seen kept for it, else with a full export"""
-    wait_denoiser(engine)
+    wait_framebuffer(engine)
     if engine.session is not None:
         engine.session.Stop()
         engine.session = None
@@ -85,10 +85,10 @@ def restart_session(engine, context, depsgraph):
         return None
 
 
-def wait_denoiser(engine):
-    """A running viewport denoiser must finish before the session changes"""
+def wait_framebuffer(engine):
+    """A film read or a denoiser in flight must finish before the session changes"""
     if engine.framebuffer:
-        engine.framebuffer.wait_denoiser()
+        engine.framebuffer.wait()
 
 
 def view_update(engine, context, depsgraph, changes=None):
@@ -204,13 +204,18 @@ def update_film(engine, framebuffer, force=False):
     """Read the film into the framebuffer if it has new samples: most draws
     come before the next frame, and a read costs more than the draw, so the
     draws in between show the last one. Not throttled further: a delay on a
-    read after a film reset (a camera move) shows on screen"""
+    read after a film reset (a camera move) shows on screen.
+    The read runs in a thread (the image pipeline can take tens of ms): a
+    draw shows the last finished one, and starts the next once it is done"""
     stats = engine.session.GetStats()
     key = (id(engine.session), stats.Get("stats.renderengine.total.samplecount").GetFloat())
     if key == engine.viewport_film_key and not force:
         return
-    framebuffer.update(engine.session)
-    engine.viewport_film_key = key
+    if force:
+        # The samples up to now, also with a read of older ones running
+        framebuffer.wait_read()
+    if framebuffer.start_read(engine.session):
+        engine.viewport_film_key = key
 
 
 def _view_state(context):
@@ -297,7 +302,7 @@ def view_draw(engine, context, depsgraph):
     if not engine.framebuffer or engine.framebuffer.needs_replacement(
         context, scene
     ):
-        wait_denoiser(engine)
+        wait_framebuffer(engine)
         engine.framebuffer = FrameBuffer(engine, context, scene)
         # A new framebuffer starts black
         engine.viewport_film_key = None
@@ -306,6 +311,8 @@ def view_draw(engine, context, depsgraph):
     # A display setting: from the scene itself, the evaluated copy of the
     # depsgraph is not updated for it
     framebuffer.mag_filter = context.scene.luxcore.viewport.mag_filter
+    # The image of a film read done since the last draw
+    framebuffer.poll_read()
 
     # Check for changes because some actions in Blender (e.g. moving the viewport
     # camera) do not trigger a view_update() call, but only a view_draw() call.
@@ -400,6 +407,9 @@ def view_draw(engine, context, depsgraph):
         update_film(engine, framebuffer)
         engine.tag_redraw()
 
+    if framebuffer.poll_read():
+        # Draw again to show the read once it is done (also when paused)
+        engine.tag_redraw()
     framebuffer.draw()
 
     # Show formatted statistics in Blender UI

@@ -5,10 +5,12 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 import math
+import threading
 from time import sleep
 import numpy as np
 import pyluxcore
 from .. import utils
+from ..utils.log import logger
 from . import upscale
 
 if _needs_reload:
@@ -62,6 +64,10 @@ class FrameBuffer:
         # Built from the buffer on the first draw after an update
         self._texture = None
         self._init_opengl()
+
+        # The film read in flight (start_read()): it writes self._data
+        self._reader = None
+        self._read_error = None
 
         # Denoiser: runs as an asynchronous image pipeline, so Blender does not block
         self.denoised = False  # Set to true after denoising
@@ -193,6 +199,7 @@ class FrameBuffer:
 
     def start_denoiser(self, session, pipeline_props):
         """Start OIDN on the paused session; pipeline_props is the image pipeline it uses"""
+        self.wait_read()
         session.Parse(denoiser_imagepipeline_props(pipeline_props))
         self._denoiser_session = session
         self._denoiser_restore_props = pipeline_props
@@ -233,10 +240,16 @@ class FrameBuffer:
         self._denoiser_restore_props = None
 
     def reset_denoiser(self):
-        self.wait_denoiser()
+        self.wait()
         self.denoised = False
 
-    def update(self, luxcore_session, execute_imagepipeline=True):
+    def wait(self):
+        """Wait for the film read and the denoiser in flight, before the
+        session is edited or stopped"""
+        self.wait_read()
+        self.wait_denoiser()
+
+    def _read(self, luxcore_session, execute_imagepipeline):
         # The gpu buffer uses 16-bit float. Values >= 65520 get cast to
         # infinty, leading to a black viewport.
         # Here, I need to get the data into a separate numpy array to handle
@@ -249,8 +262,58 @@ class FrameBuffer:
             execute_imagepipeline
         )
         np.minimum(data, 65519, out=data)
-        self.buffer = gpu.types.Buffer("FLOAT", data.size, data)
+
+    def _show_read(self):
+        """The texture of the next draw from the image just read"""
+        self.buffer = gpu.types.Buffer("FLOAT", self._data.size, self._data)
         self._texture = None
+
+    def update(self, luxcore_session, execute_imagepipeline=True):
+        """Read the film now, on this thread"""
+        self.wait_read()
+        self._read(luxcore_session, execute_imagepipeline)
+        self._show_read()
+
+    def start_read(self, luxcore_session):
+        """Read the film in a thread: the image pipeline costs up to tens of
+        ms per read, and pyluxcore releases the GIL meanwhile (LuxCore 3.0
+        builds from 2026-10-29; older ones hold it, as a read on this thread
+        did). poll_read() shows the image once it is done. False if a read is
+        still running"""
+        if self._reader is not None:
+            return False
+
+        def read():
+            try:
+                self._read(luxcore_session, True)
+            except Exception as error:
+                self._read_error = error
+
+        self._reader = threading.Thread(target=read, name="BLC film read", daemon=True)
+        self._reader.start()
+        return True
+
+    def poll_read(self):
+        """Show the image of a finished read; True while one is running"""
+        if self._reader is None:
+            return False
+        if self._reader.is_alive():
+            return True
+        self._end_read()
+        return False
+
+    def wait_read(self):
+        if self._reader is not None:
+            self._reader.join()
+            self._end_read()
+
+    def _end_read(self):
+        self._reader = None
+        error, self._read_error = self._read_error, None
+        if error is None:
+            self._show_read()
+        else:
+            logger.warning(f"[FrameBuffer] Film read failed: {error}")
 
     def draw(self):
         if self._texture is None:

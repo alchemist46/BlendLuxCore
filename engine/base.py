@@ -82,9 +82,9 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
             if getattr(self, "session", None):
                 if not self.is_preview:
                     logger.debug("[Engine] del: stopping session")
-                if hasattr(getattr(self, "framebuffer", None), "wait_denoiser"):
-                    # A running viewport denoiser must finish first
-                    self.framebuffer.wait_denoiser()
+                if hasattr(getattr(self, "framebuffer", None), "wait"):
+                    # A viewport film read or denoiser in flight must finish first
+                    self.framebuffer.wait()
                 if self.session.IsStarted():
                     self.session.Stop()
                 del self.session

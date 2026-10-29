@@ -22,6 +22,13 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: Blender 5.2.2, `scenes/cornell/Cornell Box Luxcore.blend` (LuxCore repo), viewport in Rendered mode; set the Pixel Size from Python (`scene.luxcore.viewport.pixel_size = "2"`) or with `wm.context_set_enum`: `bpy.context.evaluated_depsgraph_get().scene_eval.luxcore.viewport.pixel_size` stays "1", the viewport neither restarts nor changes its film size, even after 20 s of redraws. Setting an RNA property of the scene afterwards (`render.resolution_percentage`) brings the new value over, as does `scene.update_tag()`. The same holds for `halt_time`.
 - Notes: a click on the Pixel Size field in the panel was not simulated, so it is not known whether the UI path has the same problem (both go through `RNA_property_update()`). The Filter setting has it too and is read from `context.scene` for that reason (`72bf7ada`). Fix: read the display settings (pixel size, halt time) from `context.scene` in `view_draw()`, `FrameBuffer` and `utils.calc_filmsize()`, or tag the scene from an update callback of these properties. Found during LuxCore ROADMAP E4b.
 
+### The viewport main thread still stalls 30-45 ms once per frame while RTPATHOCL renders LynxSpider
+- Found: 2026-10-29
+- Area: viewport
+- Problem: with the film read in a thread (ROADMAP 1.12 step 8), the main thread of a LynxSpider viewport render still has a 30-45 ms gap about every 118 ms (the RT frame time): 9 gaps over 30 ms, 0.30 s in all, in 2.8 s of rendering (1.82 s before step 8). `view_draw()` itself stays under 15 ms (1.4 ms on average); the gaps fall between two short draws.
+- Reproduce: Blender 5.2.2, `scenes/LynxSpider/LynxSpider/LynxSpider.blend` (LuxCore repo), GPU (HIP) viewport, pixel size 1, 1600x1000 region: LuxCore `tests/benchmark/viewport_timing.py --device OCL --pixel-size 1 --halt 4` ("rendering" window, `main_thread`; the gaps come from `probes.npz` `ticks`).
+- Notes: not measured further. Suspects: Blender's own redraw waiting for the GPU (the texture upload or the buffer swap queued behind the RTPATHOCL frame on the same GPU), or the read thread holding the GIL (only between its pyluxcore and numpy calls, which release it). Cycles on the Cornell box stays under 9 ms.
+
 ### A view change waits for the viewport denoiser
 - Found: 2026-10-17
 - Area: viewport

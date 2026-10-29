@@ -31,7 +31,7 @@ window (PATH CPU).
 | 1.9 One vertex per loop | Done, `3508f3cb`: loops with equal data share a vertex, and each submesh gets only its own vertices. 3.7x fewer vertices on a smooth subdivided mesh; export plus session start take the same time |
 | 1.10 `split_faces()` normals | Done, `3508f3cb`: `Mesh.corner_normals`. Hair: `obj` is already the evaluated object there, and `Mesh.vertex_colors` is still what `mcol_on_emitter()` indexes, so no change |
 | 1.11 Cycles node reader per object and slot | Done, `afcbf901`: read once per material and export, dropped when the material changes; `test_cycles_reader_cache` (20 objects, one read). Also fixed: Math nodes with an unlinked constant input read the constant as 0 (`_convert_to_float()`) |
-| 1.12 Viewport responsiveness | Started 2026-10-28: steps 0 (the viewport film on the CPU), 1 (Device Auto) and 2 (draw only on a new frame) done |
+| 1.12 Viewport responsiveness | Started 2026-10-28: steps 0 (the viewport film on the CPU), 1 (Device Auto), 2 (draw only on a new frame), 6 (restart on the kept scene) and 8 (the film read in a thread) done |
 | 2.1 `bpy.app.online_access` | Done, `8b2e2d04` (PyPI download and every online library request) |
 | 2.2 Loader internals | Open |
 | 2.3 Legacy node add menu | Open |
@@ -293,6 +293,20 @@ Plan, in order:
 7. With E6 (c) and (d): drive redraws from a thread on `WaitNewFrame(50)` +
    `tag_redraw()`, so Blender draws exactly once per frame; the log handler must
    be thread-safe.
+8. *Done 2026-10-29* (with LuxCore E6 (d), which releases the GIL in
+   `GetOutputFloat()`). The film is read in a thread: `update_film()` starts
+   `FrameBuffer.start_read()` when the samples changed and no read is running,
+   and each draw shows a finished read (`poll_read()`, then `tag_redraw()`
+   while one runs, also when paused). Anything that edits, stops or re-parses
+   the session waits for the read in flight first (`FrameBuffer.wait()`, with
+   the denoiser). LynxSpider at 1600x1000 on the GPU while rendering:
+   `view_draw()` 13 to 1.4 ms on average (p90 65 to 5.3 ms), the main thread
+   blocked 1.82 to 0.30 s of every 2.8 s, 46 to 76 draws/s, every frame still
+   drawn (8.6 reads/s of 60 ms in the thread against 117 ms frames); camera
+   moves unchanged (271 and 436 ms while rendering and paused, against 268 and
+   432). With an older pyluxcore, which holds the GIL in the read, the thread
+   blocks Blender as the read on the main thread did. What is left of the
+   stalls is in BUGS.md (once per frame, outside `view_draw()`).
 
 Measured before and after each step with `tests/benchmark/viewport_timing.py`
 in the LuxCore repo (GUI Blender, from `lc-work/e4b/guitest.py`): per-draw
@@ -477,7 +491,7 @@ additions:
 | 1.3 Non-blocking viewport draw | A non-blocking way to ask whether a new frame is ready (or a short timeout on `WaitNewFrame`). |
 | 1.9 Indexed mesh export | Nothing new; `DefineMeshExt` already takes indexed triangles. Worth confirming it accepts shared vertices with per-loop UVs split only where needed. |
 | 1.4 Async OIDN in the viewport | Nothing new; `AsyncExecuteImagePipeline` already exists. |
-| 1.12 Viewport responsiveness | LuxCore E6: `stats.renderengine.film.generation` and `WaitNewFrame(timeoutMs)` (c), the GIL released in pyluxcore and the render-thread logs delivered (d), the #577 fix (f); E7: GPU OIDN (O1) and later a motion-vector AOV. |
+| 1.12 Viewport responsiveness | LuxCore E6: `stats.renderengine.film.generation` and `WaitNewFrame(timeoutMs)` (c), the GIL released in pyluxcore and the render-thread logs delivered (d, done 2026-10-29), the #577 fix (f, done 2026-10-29); E7: GPU OIDN (O1) and later a motion-vector AOV. |
 | 2.2 Bundled wheels | Per-platform pyluxcore wheels on PyPI for every supported Blender Python version (currently 3.11). |
 
 ## 5. Suggested order of work
