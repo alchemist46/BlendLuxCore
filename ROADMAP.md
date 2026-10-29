@@ -24,7 +24,7 @@ window (PATH CPU).
 | 1.2 GPU texture on every draw | Done, `5386391d`: the texture is built on the first draw after a film update |
 | 1.3 Blocking calls in `view_draw()` | Not needed: `WaitNewFrame()` only blocks on the first frame after a reset (RTPATHCPU) or just updates counters (RTPATHOCL). A draw during rendering costs about 38 ms, split between `GetOutputFloat()` (image pipeline, about 15 ms) and the 16-bit texture upload (about 9 ms; `RGBA32F` is faster to upload but the RGB to RGBA copy costs as much) |
 | 1.4 Viewport denoiser on the UI thread | Done, `5bd9f1dc`: OIDN runs as an asynchronous image pipeline. Blender stayed frozen for 957 ms before; now the longest draw is 70 ms. A view change while OIDN runs still waits for it (about 0.9 s), because the core cannot cancel it |
-| 1.5 Session restart on resize | Open (core issue #577) |
+| 1.5 Session restart on resize | Done 2026-10-29: a config change starts a new session on the kept scene (`Exporter.restart_session()`). LynxSpider resize 3.4 s to 0.85 s, the main thread no longer blocked |
 | 1.6 O(scene) object updates | Open |
 | 1.7 Compatibility converters per session | Not worth it for now: 31 ms per session start with 1000 node trees |
 | 1.8 Handlers scanning all materials | Not worth it for now: 0.9 ms per depsgraph update with 1000 materials. Filtering on `depsgraph.updates` would miss renames of unused materials, which produce no update entry |
@@ -128,29 +128,39 @@ Fix: use `film.AsyncExecuteImagePipeline()` and poll
 
 ### 1.5 Session restart on resize or any setting change
 
-`force_session_restart()` (`engine/viewport.py:50-62`) stops and recreates the
-session, triggering a full scene re-export, whenever `Change.CONFIG` is set.
-This includes every viewport resize. The reason is the LuxCore memory leak
-tracked in BlendLuxCore issue #577; `Exporter._update_config()`
-(`export/__init__.py:462-471`) is the incremental path and is disabled.
-
-This is the single largest viewport responsiveness win and lives mostly on the
-core side (see section 4).
+*Done 2026-10-29.* `force_session_restart()` (`engine/viewport.py`) used to
+stop the session and drop the `Exporter` whenever `Change.CONFIG` was set,
+every viewport resize included, so the whole scene was exported again. The
+reason was the memory leak of BlendLuxCore issue #577, and
+`Exporter._update_config()` was disabled.
 
 Checked on 2026-10-29 (LuxCore 1f2c9a946, Windows, HIP, standalone pyluxcore
 on LynxSpider): 20 cycles of `renderconfig.Parse()` with a new film size, a new
 `RenderSession` and `Start()` leave the process RAM flat (1195 MB private),
-also with the old `_update_config()` order (the config from
-`session.GetRenderConfig()`, the new session made before the old one is
-dropped). Each session starts in 0.4 s, against about 3 s for the addon's
-re-export (2.1 s) and start. The VRAM grows about 16 MB per session, but the
-same with a new `RenderConfig` each time, so the current workaround does not
-avoid it (LuxCore `BUGS.md`, "GPU memory grows about 16 MB with each
-RenderSession on LynxSpider"). Not checked on Linux or inside Blender. What
-re-enabling `_update_config()` needs: a full restart still for a new working
-colour space (it is a `Change.CONFIG` today), `Start()` in the session start
-thread as for a new session, and the resize debounce of `view_update()` in
-`view_draw()` too.
+also with the old `_update_config()` order. The VRAM grew 16 MB per session,
+with a new `RenderConfig` each time too: the vertex AOV buffer was never freed
+(fixed in LuxCore 1dfc3e011; 20 sessions now stay at 194 MB).
+
+Now the session still stops on a config change, but the `Exporter` and its
+`luxcore_scene` are kept with the changes already seen
+(`engine.viewport_restart_changes`). After the resize debounce,
+`view_update()` calls `Exporter.restart_session()`: the other changes since
+(the camera for the new size, objects) are parsed into the scene, which no
+session uses at that point, and a new `RenderConfig(props, luxcore_scene)` is
+made from the cached config, image pipeline and halt properties. A new config
+rather than `Parse()` into the old one, so a property no longer exported (back
+to its default) does not keep its old value. The session starts in the start
+thread as before. A full export is still made for a new working colour space
+(`Exporter.can_restart_session()`), when the new config needs kernels that are
+not compiled yet (the compile message comes from `create_session()`), and
+when the restart raises.
+
+LynxSpider at 1600x1000 (GPU, `viewport_timing.py`, two resizes): from the
+resize to the new film on screen 834 and 855 ms (3402 and 3412 ms before), of
+which 32 and 11 ms in `restart_session()` on the main thread (2.6 s of export
+before) and 0.43 s of `Start()` in its thread; the main thread blocked 0 ms
+(3050 ms for the second resize before). The image after the restarts matches
+the one before the resize.
 
 ### 1.6 O(scene) work per viewport update
 
@@ -236,7 +246,8 @@ feels sluggish next to Cycles and next to the final render. The addon's part:
   `ObjectCache2.update()` (`export/caches/object_cache.py:872`) sends every light
   through `convert_light()`, which deletes and redefines it (`export/light.py:24-27`).
 - A resize or any setting change restarts the session and drops the `Exporter`,
-  so every mesh and material is exported again (1.5, issue #577).
+  so every mesh and material is exported again (1.5, issue #577; fixed
+  2026-10-29, step 6).
 
 Measured 2026-10-28 (LuxCore ROADMAP E6 has the numbers): with a GPU
 backend the addon exports `film.opencl.enable = 1` for the viewport too
@@ -276,9 +287,9 @@ Plan, in order:
 4. `session.Resume()` before `BeginSceneEdit()` when paused.
 5. Lights like meshes in `ObjectCache2.update()`: keep the exported transform
    and re-export a light only when its object is in `depsgraph.updates`.
-6. Keep the `Exporter` and its `luxcore_scene` across a CONFIG restart: a new
-   `RenderConfig(props, luxcore_scene)` and `RenderSession` only
-   (`_update_config()` re-enabled), once E6 (f) shows the memory stays flat.
+6. *Done 2026-10-29* (1.5). Keep the `Exporter` and its `luxcore_scene` across
+   a CONFIG restart: a new `RenderConfig(props, luxcore_scene)` and
+   `RenderSession` only.
 7. With E6 (c) and (d): drive redraws from a thread on `WaitNewFrame(50)` +
    `tag_redraw()`, so Blender draws exactly once per frame; the log handler must
    be thread-safe.
@@ -462,7 +473,7 @@ additions:
 
 | Addon item | What the core needs to provide |
 | --- | --- |
-| 1.5 Incremental config updates in the viewport | Fix the leak when a `RenderConfig` is re-parsed and a new `RenderSession` is created on the same scene (issue #577), so the addon can call `renderconfig.Parse()` and restart the session without re-exporting the scene. |
+| 1.5 Incremental config updates in the viewport | Done: no RAM leak left (checked 2026-10-29), the VRAM one fixed in LuxCore 1dfc3e011. |
 | 1.3 Non-blocking viewport draw | A non-blocking way to ask whether a new frame is ready (or a short timeout on `WaitNewFrame`). |
 | 1.9 Indexed mesh export | Nothing new; `DefineMeshExt` already takes indexed triangles. Worth confirming it accepts shared vertices with per-loop UVs split only where needed. |
 | 1.4 Async OIDN in the viewport | Nothing new; `AsyncExecuteImagePipeline` already exists. |
@@ -474,7 +485,8 @@ additions:
 1. Viewport redraw cost: 1.1, 1.2 and 1.4. Small, isolated changes with
    immediately visible results.
 2. Extensions-platform compliance: 2.1 (online access), then 2.2 (loader).
-3. Core fix for issue #577, then re-enable `_update_config()` (1.5).
+3. *Done 2026-10-29.* Core fix for issue #577, then the incremental config
+   restart (1.5).
 4. Depsgraph-driven material and node tree detection, removing the property
    write hacks (2.5), together with the handler scans (1.8) and the
    compatibility stamping (1.7).

@@ -97,6 +97,8 @@ class Exporter(object):
         self.motion_blur_enabled = False
         # The working colour space of the session (it can't change in a scene)
         self.working_space = None
+        # The scene of the viewport session, for restart_session()
+        self.luxcore_scene = None
 
         # A dictionary with the following mapping:
         # {node_key: luxcore_name}
@@ -248,9 +250,9 @@ class Exporter(object):
             # export, we can't render
             raise Exception("Errors in config, check error log")
 
-        # Init config cache (convert to string here because config_props gets
-        # changed below)
-        self.config_cache.diff(str(config_props))
+        # Init config cache (a copy, because config_props gets changed below;
+        # restart_session() makes a config from it)
+        self.config_cache.diff(pyluxcore.Properties(config_props))
 
         # Imagepipeline
         imagepipeline_props = imagepipeline.convert(scene, context)
@@ -288,6 +290,8 @@ class Exporter(object):
                 + "-" * 50
             )
         renderconfig = pyluxcore.RenderConfig(config_props, luxcore_scene)
+        if is_viewport_render:
+            self.luxcore_scene = luxcore_scene
 
         # Regularly check if we should abort the export (important in heavy
         # scenes)
@@ -449,10 +453,7 @@ class Exporter(object):
         # Invalidate node cache
         self.node_cache.clear()
 
-        if changes & Change.CONFIG:
-            # We already converted the new config settings during
-            # get_changes(), re-use them
-            session = self._update_config(session, self.config_cache.props)
+        # Change.CONFIG needs a new session: see restart_session()
 
         if changes & Change.REQUIRES_SCENE_EDIT:
             luxcore_scene = session.GetRenderConfig().GetScene()
@@ -489,8 +490,6 @@ class Exporter(object):
         # Do not hold reference to temporary data
         self.scene = None
 
-        # We have to return and re-assign the session in the RenderEngine,
-        # because it might have been replaced in _update_config()
         return session
 
     def update_session(self, changes, session):
@@ -499,19 +498,46 @@ class Exporter(object):
         if changes & Change.HALT:
             session.Parse(self.halt_cache.props)
 
-    def _update_config(self, session, config_props):
-        # Note: Currently not used, see the comment on force_session_restart() in engine/viewport.py
-        raise NotImplementedError(
-            "_update_config() currently not supported due to memory leak "
-            "(see https://github.com/LuxCoreRender/BlendLuxCore/issues/577)"
-        )
-        # renderconfig = session.GetRenderConfig()
-        # session.Stop()
-        #
-        # renderconfig.Parse(config_props)
-        # session = pyluxcore.RenderSession(renderconfig)
-        # session.Start()
-        # return session
+    def can_restart_session(self):
+        """Whether restart_session() can make the next viewport session: not
+        with a new working colour space, which needs a new scene"""
+        return (self.luxcore_scene is not None
+                and utils.colorspace.get_working_space() == self.working_space)
+
+    def restart_session(self, depsgraph, context, changes):
+        """A new viewport session on the scene of the stopped one, after a
+        config change (a viewport resize, a render setting), with the other
+        changes since then: on LynxSpider it starts in 0.4 s, against about
+        3 s for a new export and session.
+
+        The config is made again from all its properties, not parsed into the
+        old one, so a property no longer exported (back to its default) does
+        not keep its old value. This used to leak memory (BlendLuxCore issue
+        #577); it no longer does (LuxCore 1f2c9a946, 2026-10-29).
+
+        Returns None when the new config needs kernels that are not compiled
+        yet: create_session() shows the compile message"""
+        self.scene = depsgraph.scene_eval
+        logger.info(f"[Exporter] Restart because of: {Change.to_string(changes)}")
+        self.node_cache.clear()
+
+        luxcore_scene = self.luxcore_scene
+        if changes & Change.REQUIRES_SCENE_EDIT:
+            # No session uses the scene, so no BeginSceneEdit()
+            luxcore_scene.Parse(self._update_scene(depsgraph, context, changes, luxcore_scene))
+
+        # The config props cached by get_viewport_changes() or create_session()
+        config_props = pyluxcore.Properties(self.config_cache.props)
+        config_props.Set(self.imagepipeline_cache.props)
+        config_props.Set(self.halt_cache.props)
+        renderconfig = pyluxcore.RenderConfig(config_props, luxcore_scene)
+
+        # Do not hold reference to temporary data
+        self.scene = None
+
+        if not renderconfig.HasCachedKernels():
+            return None
+        return pyluxcore.RenderSession(renderconfig)
 
     def _update_scene(self, depsgraph, context, changes, luxcore_scene):
         props = pyluxcore.Properties()

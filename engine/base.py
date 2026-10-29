@@ -70,6 +70,9 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
         self.last_viewport_size = (0, 0)
         self.viewport_last_view_state = None
         self.viewport_last_change_check = 0
+        # The changes seen when the session was stopped for a restart
+        # (engine/viewport.py, force_session_restart())
+        self.viewport_restart_changes = 0
         # The film last read by view_draw(): (session, sample count)
         self.viewport_film_key = None
 

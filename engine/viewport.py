@@ -48,20 +48,41 @@ def start_session(engine):
     engine.starting_session = False
 
 
-def force_session_restart(engine):
-    """
-    https://github.com/LuxCoreRender/BlendLuxCore/issues/577
-    For unknown reasons, the old way of handling changes to the renderconfig,
-    like a viewport resize or renderengine settings edit, now causes a memory
-    leak. I have not been able to track it down. (The original code is in
-    export/__init__.py in the method _update_config()) As a workaround, I stop
-    and delete the session to trigger a full re-export of the scene and a fresh
-    restart of the viewport render.
-    """
+def force_session_restart(engine, changes=export.Change.CONFIG):
+    """Stop the session after a config change (a viewport resize, a render
+    setting). view_update() makes the next one, once a resize is over: on the
+    same scene when it can (Exporter.restart_session()), with the changes the
+    caches have already seen kept for it, else with a full export"""
     wait_denoiser(engine)
     if engine.session is not None:
         engine.session.Stop()
         engine.session = None
+    engine.viewport_restart_changes |= changes
+
+
+def restart_session(engine, context, depsgraph):
+    """The new session on the scene of the stopped one, or None if a full
+    export is needed"""
+    exporter = engine.exporter
+    changes = engine.viewport_restart_changes
+    engine.viewport_restart_changes = export.Change.NONE
+    if not changes or exporter is None or not exporter.can_restart_session():
+        return None
+
+    try:
+        s = time()
+        changes = exporter.get_changes(
+            depsgraph, context, changes | exporter.get_viewport_changes(depsgraph, context)
+        )
+        session = exporter.restart_session(depsgraph, context, changes)
+        logger.debug(f"Session restart took {(time() - s) * 1000:.1f} ms")
+        return session
+    except Exception as error:
+        logger.warning(f"[Engine/Viewport] Session restart failed, exporting again: {error}")
+        import traceback
+
+        traceback.print_exc()
+        return None
 
 
 def wait_denoiser(engine):
@@ -110,12 +131,14 @@ def view_update(engine, context, depsgraph, changes=None):
                 pyluxcore.SetLogHandler(LuxCoreLog.silent)
 
         try:
-            logger.info("=" * 50)
-            logger.info("[Engine/Viewport] New session")
-            engine.exporter = export.Exporter()
-            engine.session = engine.exporter.create_session(
-                depsgraph, context, engine=engine
-            )
+            engine.session = restart_session(engine, context, depsgraph)
+            if engine.session is None:
+                logger.info("=" * 50)
+                logger.info("[Engine/Viewport] New session")
+                engine.exporter = export.Exporter()
+                engine.session = engine.exporter.create_session(
+                    depsgraph, context, engine=engine
+                )
             # Start in separate thread to avoid blocking the UI
             engine.starting_session = True
             engine.is_first_viewport_start = False
@@ -153,7 +176,7 @@ def view_update(engine, context, depsgraph, changes=None):
         if changes & export.Change.REQUIRES_VIEW_UPDATE:
             # Only restart the session if the view transform didn't change by
             # itself
-            force_session_restart(engine)
+            force_session_restart(engine, changes)
             return
         s = time()
         if engine.framebuffer:
@@ -300,8 +323,7 @@ def view_draw(engine, context, depsgraph):
 
     if changes & export.Change.REQUIRES_VIEW_UPDATE:
         engine.tag_redraw()
-        # view_update(engine, context, depsgraph, changes)  # Disabled, see comment on force_session_restart()
-        force_session_restart(engine)
+        force_session_restart(engine, changes)
         return
     elif changes & (export.Change.CAMERA | export.Change.MATERIAL):
         # Only update in view_draw if it is a camera update,
