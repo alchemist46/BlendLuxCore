@@ -743,10 +743,11 @@ class ObjectCache2:
             )
 
     def diff(self, depsgraph):
-        only_scene = len(depsgraph.updates) == 1 and isinstance(
-            depsgraph.updates[0].id, bpy.types.Scene
+        # id_type_updated("OBJECT") is also true when only the scene is tagged,
+        # e.g. by a scene property with an update callback: look for an object
+        return depsgraph.id_type_updated("OBJECT") and any(
+            isinstance(dg_update.id, bpy.types.Object) for dg_update in depsgraph.updates
         )
-        return depsgraph.id_type_updated("OBJECT") and not only_scene
 
     def update(self, exporter, depsgraph, luxcore_scene, scene_props, context):
         is_viewport_render = bool(context)

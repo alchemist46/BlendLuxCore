@@ -282,6 +282,16 @@ def set_silently(owner, prop, value):
         owner[prop] = value
 
 
+def tag_world_users(node_tree):
+    """Tag the worlds with this volume node tree as updated: the viewport exports
+    a world again only when the world itself is in the depsgraph updates"""
+    if node_tree is None:
+        return
+    for world in bpy.data.worlds:
+        if world.luxcore.volume == node_tree:
+            world.update_tag()
+
+
 def force_viewport_update(_, context):
     """
     Since Blender 2.80, properties on custom sockets and custom nodes are not listed
@@ -289,9 +299,12 @@ def force_viewport_update(_, context):
     updated, so we can update it during viewport render.
     Corresponding bug report: https://developer.blender.org/T66521
     """
+    node_tree = getattr(_, "id_data", None)
     # Keep the generated EEVEE nodes in sync (before the context check: the
     # node tree is known even without an active object, e.g. headless)
-    eevee_sync.mark_tree(getattr(_, "id_data", None))
+    eevee_sync.mark_tree(node_tree)
+
+    tag_world_users(node_tree)
 
     if not getattr(context, "object", None) or not getattr(context.object, "active_material", None):
         return

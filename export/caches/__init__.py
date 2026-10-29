@@ -111,8 +111,16 @@ class WorldCache:
         world_updated = False
 
         if world:
-            # TODO 2.8 for some reason this fires when editing a node tree, even when the world is not touched at all
-            world_updated = depsgraph.id_type_updated("WORLD") or self.world_name != world.name_full
+            # id_type_updated("WORLD") is true after any edit (an object moved, a scene
+            # property set): look for the world or one of its node trees
+            world_updated = self.world_name != world.name_full
+            if depsgraph.id_type_updated("WORLD"):
+                world_ids = {world.original.as_pointer()}
+                for node_tree in (world.original.node_tree, world.luxcore.volume):
+                    if node_tree:
+                        world_ids.add(node_tree.original.as_pointer())
+                world_updated |= any(dg_update.id.original.as_pointer() in world_ids
+                                     for dg_update in depsgraph.updates)
 
             # The sun influcences the world, e.g. through direction and turbidity if sky2 is used
             if world.luxcore.light == "sky2" and depsgraph.id_type_updated("OBJECT"):

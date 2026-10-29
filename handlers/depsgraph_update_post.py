@@ -8,11 +8,13 @@ def handler(scene, depsgraph=None):
     # selector): convert the LuxCore colours as Blender converted its own
     utils.colorspace.sync_luxcore_colors()
 
-    # If material name was changed, rename the node tree, too.
+    # If material name was changed, rename the node tree, too. Not when another
+    # tree has the name: the rename would keep the old name, but tag the tree
+    # as updated, in every depsgraph update
     for mat in bpy.data.materials:
         node_tree = mat.luxcore.node_tree
 
-        if node_tree and node_tree.name != mat.name:
+        if node_tree and node_tree.name != mat.name and mat.name not in bpy.data.node_groups:
             node_tree.name = mat.name
 
     # Safety net for the EEVEE node sync: LuxCore node tree changes that the
