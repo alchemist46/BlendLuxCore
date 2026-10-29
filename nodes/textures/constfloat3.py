@@ -45,7 +45,7 @@ class LuxCoreNodeTexConstfloat3(LuxCoreNodeTexture, bpy.types.Node):
     show_values: BoolProperty(name="Values", default=False)
 
     def update_value(self, context):
-        self["value_hsv"] = linear_to_srgb(self.value).hsv
+        utils_node.set_silently(self, "value_hsv", linear_to_srgb(self.value).hsv)
         utils_node.force_viewport_update(self, context)
 
     value: FloatVectorProperty(name="Color", description="A constant color",
@@ -56,7 +56,7 @@ class LuxCoreNodeTexConstfloat3(LuxCoreNodeTexture, bpy.types.Node):
     def update_value_hsv(self, context):
         col = Color()
         col.hsv = self.value_hsv
-        self["value"] = srgb_to_linear(col)
+        utils_node.set_silently(self, "value", tuple(srgb_to_linear(col)))
         utils_node.force_viewport_update(self, context)
 
     # This is a helper property to offer an "HSV view" on the value property

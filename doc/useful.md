@@ -11,22 +11,28 @@ __import__('code').interact(local=dict(globals(), **locals()))
 
 #### Change property without triggering update
 
-If you want to edit a Blender property without triggering it's update function, 
-access it like in this example:
+If you want to edit a Blender property without triggering its update function, 
+use `utils.node.set_silently()` like in this example:
 ```python
+from ..utils import node as utils_node
+
 class Test:
     def update_a(self, context):
         # Wrong, would cause endless recursion
         # self.b = str(self.a)
         # Correct, does not trigger b's update method
-        self["b"] = str(self.a)
+        utils_node.set_silently(self, "b", str(self.a))
         
     def update_b(self, context):
-        self["a"] = int(self.b)
+        utils_node.set_silently(self, "a", int(self.b))
 
     a: IntProperty(update=update_a)
     b: StringProperty(update=update_b)
 ```
+
+`self["b"] = ...` does the same on a `PropertyGroup`, but not on a node, a node
+tree or another ID in Blender 5: their `bpy.props` values are kept apart from
+the custom properties, so it only creates a custom property named "b".
 
 #### Creating a hidden datablock
 

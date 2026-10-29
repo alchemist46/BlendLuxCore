@@ -97,6 +97,12 @@ def _render_layer(engine, depsgraph, statistics, view_layer):
             output_path = session_config.GetProperty("filesaver.directory").GetString()
         engine.report({"INFO"}, 'Exported to "%s"' % output_path)
 
+        # Nothing was rendered: hand Blender an empty (black) result, else it
+        # crashes writing the image of render(write_still=True) or an animation
+        width, height = utils.calc_filmsize(scene)
+        result = engine.begin_result(0, 0, width, height, layer=view_layer.name)
+        engine.end_result(result)
+
         # Clean up
         del engine.session
         engine.session = None

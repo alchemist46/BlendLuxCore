@@ -88,6 +88,9 @@ cases = {
     "square area": dict(kind="AREA", energy=1000, shape="SQUARE", size=1.0),
     "rectangle area": dict(kind="AREA", energy=1000, shape="RECTANGLE", size=1.0, size_y=2.0),
 }
+if "normalize" in bpy.types.AreaLight.bl_rna.properties:
+    # Normalize off: the power is not divided by the area (4 m^2 here)
+    cases["area, normalize off"] = dict(kind="AREA", energy=250, shape="SQUARE", size=2.0, normalize=False)
 for name, settings in cases.items():
     lamp(**settings)
     cycles = center(harness.render(scene, "CYCLES", os.path.join(OUT, name + "_cycles.exr"), 128))

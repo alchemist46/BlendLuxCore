@@ -158,7 +158,7 @@ def get_pretty_stats(config, stats, scene, context=None):
     if context:
         # In viewport, the usual halt conditions are irrelevant, only the time counts
         rendered_time = stats.Get("stats.renderengine.time").GetFloat()
-        viewport_halt_time = scene.luxcore.viewport.halt_time
+        viewport_halt_time = context.scene.luxcore.viewport.halt_time
         if rendered_time > viewport_halt_time:
             # This is only a UI issue, the render always pauses
             rendered_time = viewport_halt_time

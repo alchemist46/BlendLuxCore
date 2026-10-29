@@ -3,8 +3,21 @@ from bpy.props import IntProperty, EnumProperty, BoolProperty
 from .. import utils
 import pyluxcore
 
+def redraw_viewports(_, context):
+    """The display settings (halt time, pixel size, filter) are read by view_draw(),
+    from the scene itself: setting one does not update the depsgraph, so nothing
+    else redraws a paused viewport"""
+    window_manager = getattr(context, "window_manager", None)
+    if window_manager is None:
+        return
+    for window in window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == "VIEW_3D":
+                area.tag_redraw()
+
+
 class LuxCoreViewportSettings(bpy.types.PropertyGroup):
-    halt_time: IntProperty(name="Halt Time (s)", default=10, min=1,
+    halt_time: IntProperty(name="Halt Time (s)", default=10, min=1, update=redraw_viewports,
                             description="How long to render in the viewport. "
                                         "When this time is reached, the render is paused")
 
@@ -22,7 +35,7 @@ class LuxCoreViewportSettings(bpy.types.PropertyGroup):
         ("4", "4x", "1 rendered pixel = 4x4 displayed pixels", 2),
         ("8", "8x", "1 rendered pixel = 8x8 displayed pixels", 3),
     ]
-    pixel_size: EnumProperty(name="Pixel Size", items=pixel_sizes, default="1",
+    pixel_size: EnumProperty(name="Pixel Size", items=pixel_sizes, default="1", update=redraw_viewports,
                               description="Scale factor for rendered pixels")
 
     mag_filters = [
@@ -32,7 +45,7 @@ class LuxCoreViewportSettings(bpy.types.PropertyGroup):
          "Smooth like Linear, with sharp edges (the edge-adaptive upscale of "
          "AMD FidelityFX Super Resolution 1)", 2),
     ]
-    mag_filter: EnumProperty(name="Filter", items=mag_filters, default="EASU",
+    mag_filter: EnumProperty(name="Filter", items=mag_filters, default="EASU", update=redraw_viewports,
                               description="Upscaling filter used when pixel size is larger than 1")
 
     reduce_resolution_on_edit: BoolProperty(name="Reduce first sample resolution", default=True,

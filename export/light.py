@@ -158,10 +158,12 @@ def _convert_cycles_light(exporter, obj, depsgraph, luxcore_scene, transform, is
         # Calculate gain similar to Cycles (scaling with light surface area)
         transform_matrix = calc_area_light_transformation(light, transform)
         scale = transform_matrix.to_scale()
-        area_gain = gain / (scale.x * scale.y)
-        # Cycles emits the power from one side of the light: radiance P / (pi * area).
+        # Cycles emits the power from one side of the light: radiance P / (pi * area),
+        # or P / pi with Normalize off (the power is then the radiance of a 1 m^2 light).
         # The light mesh is 2x2 before the transformation, so its area is 4 * scale.x * scale.y
-        area_gain /= 4 * math.pi
+        area_gain = gain / math.pi
+        if getattr(light, "normalize", True):
+            area_gain /= 4 * scale.x * scale.y
 
         # Material
         mat_name = luxcore_name + "_AREA_LIGHT_MAT"

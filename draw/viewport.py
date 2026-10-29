@@ -45,7 +45,9 @@ class FrameBuffer:
         self._offset_x, self._offset_y = self._calc_offset(
             context, scene, self._border
         )
-        self._pixel_size = int(scene.luxcore.viewport.pixel_size)
+        # A display setting: from the scene itself, the evaluated copy of the
+        # depsgraph is not updated for it
+        self._pixel_size = int(context.scene.luxcore.viewport.pixel_size)
         # The upscaling filter (pixel size > 1), set again by view_draw()
         self.mag_filter = scene.luxcore.viewport.mag_filter
 
@@ -130,7 +132,7 @@ class FrameBuffer:
             context, scene, new_border
         ):
             return True
-        if self._pixel_size != int(scene.luxcore.viewport.pixel_size):
+        if self._pixel_size != int(context.scene.luxcore.viewport.pixel_size):
             return True
         return False
 

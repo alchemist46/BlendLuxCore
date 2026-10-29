@@ -306,6 +306,8 @@ def view_draw(engine, context, depsgraph):
         engine.framebuffer = FrameBuffer(engine, context, scene)
         # A new framebuffer starts black
         engine.viewport_film_key = None
+        # A new film size (pixel size) needs a new session: check now
+        engine.viewport_last_view_state = None
 
     framebuffer = engine.framebuffer
     # A display setting: from the scene itself, the evaluated copy of the
@@ -365,7 +367,8 @@ def view_draw(engine, context, depsgraph):
     # Check if we need to pause the viewport render
     # (note: the LuxCore stat "stats.renderengine.time" is not reliable here)
     rendered_time = time() - engine.viewport_start_time
-    halt_time = scene.luxcore.viewport.halt_time
+    # A display setting: from the scene itself, like the filter
+    halt_time = context.scene.luxcore.viewport.halt_time
     status_message = ""
 
     if rendered_time > halt_time:
@@ -399,6 +402,10 @@ def view_draw(engine, context, depsgraph):
 
     else:
         # Not in pause yet, keep drawing
+        if engine.session.IsInPause():
+            # The halt time was raised after the pause
+            logger.info("[Engine/Viewport] Resuming session")
+            engine.session.Resume()
         engine.session.WaitNewFrame()
         try:
             engine.session.UpdateStats()

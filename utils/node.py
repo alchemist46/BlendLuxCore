@@ -269,6 +269,19 @@ def has_nodes_multi(node_tree, bl_idname_set, follow_pointers):
     return False
 
 
+def set_silently(owner, prop, value):
+    """Set a bpy.props property without running its update callback.
+
+    Blender 5 stores the bpy.props values of IDs and nodes apart from the user
+    properties: owner["name"] = value only creates a custom property there.
+    Property groups still keep their values as their own items.
+    """
+    if not isinstance(owner, bpy.types.PropertyGroup) and hasattr(owner, "bl_system_properties_get"):
+        owner.bl_system_properties_get(do_create=True)[prop] = value
+    else:
+        owner[prop] = value
+
+
 def force_viewport_update(_, context):
     """
     Since Blender 2.80, properties on custom sockets and custom nodes are not listed

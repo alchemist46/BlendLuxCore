@@ -68,13 +68,13 @@ class LuxCoreNodeTexBand(LuxCoreNodeTexture, bpy.types.Node):
         new_item.index = len(self.ramp_items) - 1
         new_item.node_name = self.name
 
-        self["add_item"] = False
+        utils_node.set_silently(self, "add_item", False)
         utils_node.force_viewport_update(self, context)
 
     def update_remove(self, context):
         if len(self.ramp_items) > 2:
             self.ramp_items.remove(len(self.ramp_items) - 1)
-        self["remove_item"] = False
+        utils_node.set_silently(self, "remove_item", False)
         utils_node.force_viewport_update(self, context)
 
     # This is a bit of a hack, we use BoolProperties as buttons

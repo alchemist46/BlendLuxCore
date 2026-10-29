@@ -15,13 +15,6 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 
 ## Open
 
-### A Pixel Size change does not reach a running viewport (suspected)
-- Found: 2026-10-26
-- Area: viewport
-- Problem: setting `scene.luxcore.viewport.pixel_size` while the viewport renders leaves the viewport at the old pixel size: `view_draw()` reads it from `depsgraph.scene_eval`, and the evaluated scene keeps the old value until some other scene property changes.
-- Reproduce: Blender 5.2.2, `scenes/cornell/Cornell Box Luxcore.blend` (LuxCore repo), viewport in Rendered mode; set the Pixel Size from Python (`scene.luxcore.viewport.pixel_size = "2"`) or with `wm.context_set_enum`: `bpy.context.evaluated_depsgraph_get().scene_eval.luxcore.viewport.pixel_size` stays "1", the viewport neither restarts nor changes its film size, even after 20 s of redraws. Setting an RNA property of the scene afterwards (`render.resolution_percentage`) brings the new value over, as does `scene.update_tag()`. The same holds for `halt_time`.
-- Notes: a click on the Pixel Size field in the panel was not simulated, so it is not known whether the UI path has the same problem (both go through `RNA_property_update()`). The Filter setting has it too and is read from `context.scene` for that reason (`72bf7ada`). Fix: read the display settings (pixel size, halt time) from `context.scene` in `view_draw()`, `FrameBuffer` and `utils.calc_filmsize()`, or tag the scene from an update callback of these properties. Found during LuxCore ROADMAP E4b.
-
 ### The viewport main thread still stalls 30-45 ms once per frame while RTPATHOCL renders LynxSpider
 - Found: 2026-10-29
 - Area: viewport
@@ -50,26 +43,12 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: as above, full path depth (`g0_prepare.py --depth 8`), 540x540, 64 and 256 spp.
 - Notes: LuxCore has `roughmatte` (Oren-Nayar with sigma); Cycles' Diffuse BSDF roughness is the energy-conserving Oren-Nayar of Blender 4.x, so the mapping needs a check against Cycles (furnace or a flat-lit plane), not only a sigma conversion.
 
-### Area light "Normalize" off is not exported (suspected)
-- Found: 2026-10-23
-- Area: export
-- Problem: with "Use Cycles settings", an area light's power is always divided by its area (`_convert_cycles_light`), while Cycles divides only when `Light.normalize` is on (the default). Not tested.
-- Reproduce: Blender 5.2, an area light of size 2 with Normalize off, Cycles against LuxCore: LuxCore should be 4x too dark.
-- Notes: read from the code during LuxCore ROADMAP D1.
-
 ### Blender's other ray visibility flags are ignored
 - Found: 2026-10-24
 - Area: export
 - Problem: of Blender's Object > Visibility > Ray Visibility (what Cycles uses), the addon reads only Camera on meshes (and drops an object with every flag off). Meshes: Diffuse, Glossy, Transmission, Volume Scatter and Shadow off still show the object to those rays. Lights: Diffuse, Glossy and Transmission are ignored, and Camera too except on an area light with LuxCore settings; an area light with "Use Cycles settings" is always hidden from the camera (`visible_to_camera = False` in `_convert_cycles_light()`), while Cycles shows it with Camera on (the default): a 4x4 area light seen from below reads 2.04 in Cycles with Camera on, 0.05 with it off (16x16, CPU).
 - Reproduce: Blender 5.2, any of these flags off, Cycles against LuxCore; for the area light, a camera looking at it.
 - Notes: LuxCore counterparts exist only in part. A light's `visibility.indirect.diffuse/glossy/specular.enable` could take the light's Diffuse, Glossy and Transmission flags. For meshes there is no per-object flag besides `camerainvisible`: the emission's `visibility.indirect.*` and `transparency.shadow` are per material (a material shared by objects with different flags needs copies), and they hide only the emitted light or the shadow, not the surface. Showing the Cycles area light to the camera changes the G0 and D1 Cornell comparisons (the light is in view there).
-
-### Item assignment does not set a node's property in Blender 5
-- Found: 2026-10-24
-- Area: nodes
-- Problem: `node["name"] = value`, the way the addon sets a property without its update callback (CLAUDE.md, `doc/useful.md`), creates a user custom property on a node or node tree in Blender 5 and leaves the `bpy.props` value unchanged. Checked in Blender 5.2: the 2D Mapping node's UV Scale does not reach U and V (`update_uniform_scale()`; the export uses UV Scale while Uniform Scale is on, so only switching it off shows the old U and V); the Constant Color node's HSV values do not follow the color, and editing them does not change it (`constfloat3.py`); a node tree's `refresh` stays on (`acknowledge_connection()`, `nodes/base.py`). `band.py` does the same for its add and remove buttons. Property groups on an ID (`material.luxcore["use_cycles_nodes"]`) are not affected.
-- Reproduce: Blender 5.2, background: `n = tree.nodes.new("LuxCoreNodeTexMapping2D"); n.uniform_scale = 3`; `n.uscale` stays 1.
-- Notes: Blender 5 keeps the `bpy.props` values of nodes and IDs apart from the user properties; `node.bl_system_properties_get(do_create=True)["name"] = value` sets the value without the callback (`utils/temperature.py` `store()` does this). Blender 4.5 still shares the storage.
 
 ### Limits of the Max (Legacy) temperature normalization of old files
 - Found: 2026-10-24
@@ -78,9 +57,9 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Reproduce: (1) open an old file with the addon disabled, enable it; (2) add a light, wait for an autosave, recover it (not tried).
 - Notes: `utils/temperature.py`. Case 1 could run the conversion on register, but Reload Scripts would then convert the lights created since the last save.
 
-### "Only write LuxCore scene" crashes Blender when the render is written
-- Found: 2026-10-24
-- Area: export
-- Problem: `bpy.ops.render.render(write_still=True)` with `config.use_filesaver` on writes the scene files, then Blender crashes in `BKE_image_render_write_exr` (null read at 0x48: no render result). An animation render with the file saver probably crashes the same way (not tried).
-- Reproduce: Blender 5.2 background, any scene, PATHOCL, `scene.luxcore.config.use_filesaver = True`, a file saver path, `render(write_still=True)`; same with the addon of 5569b5df.
-- Notes: the engine leaves no render result in file saver mode; giving Blender an empty result would avoid it.
+### A viewport setting change re-exports the objects and the world
+- Found: 2026-10-29
+- Area: viewport
+- Problem: setting a viewport setting that has an update callback (Halt Time, Pixel Size, Filter) while the viewport renders makes `view_update()` report `OBJECT | WORLD` ("[Exporter] Update because of: OBJECT | REQUIRES_SCENE_EDIT | WORLD"): a scene edit that clears the film, so raising the Halt Time after the pause starts the samples over instead of going on. Expected: no scene edit for a display setting.
+- Reproduce: Blender 5.2.2, `scenes/cornell/Cornell Box Luxcore.blend` (LuxCore repo), RTPATHCPU viewport, halt time 4 s; once paused, `scene.luxcore.viewport.halt_time = 30` from Python: the samples fall from 9.2M to 7.1M.
+- Notes: Blender's RNA update of a property with an update callback (and, presumably, of any edit in the UI panel) tags the scene in the depsgraph with transform and geometry; the object and world caches then see changes. Not checked which objects are exported again, nor the cost on a large scene (LynxSpider). Probably the same for every LuxCore scene setting edited during a viewport render.

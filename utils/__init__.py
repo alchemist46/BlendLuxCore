@@ -208,7 +208,9 @@ def calc_filmsize(scene, context=None):
                     base * aspect_y * border_min_y
                 )
 
-        pixel_size = int(scene.luxcore.viewport.pixel_size)
+        # A display setting: from the scene itself, the evaluated copy of the
+        # depsgraph is not updated for it
+        pixel_size = int(context.scene.luxcore.viewport.pixel_size)
         width //= pixel_size
         height //= pixel_size
     else:

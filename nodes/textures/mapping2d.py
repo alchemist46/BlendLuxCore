@@ -17,8 +17,8 @@ class LuxCoreNodeTexMapping2D(LuxCoreNodeTexture, bpy.types.Node):
         utils_node.force_viewport_update(self, context)
 
     def update_uniform_scale(self, context):
-        self["uscale"] = self.uniform_scale
-        self["vscale"] = self.uniform_scale
+        utils_node.set_silently(self, "uscale", self.uniform_scale)
+        utils_node.set_silently(self, "vscale", self.uniform_scale)
         utils_node.force_viewport_update(self, context)
 
     def update_mapping_type(self, context):

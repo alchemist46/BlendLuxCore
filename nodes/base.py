@@ -37,7 +37,7 @@ class LuxCoreNodeTree:
 
     def acknowledge_connection(self, context):
         # Set refresh to False without triggering acknowledge_connection again
-        self["refresh"] = False
+        utils_node.set_silently(self, "refresh", False)
 
     refresh: bpy.props.BoolProperty(
         default=False,
