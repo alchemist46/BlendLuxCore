@@ -306,6 +306,8 @@ class ObjectCache2:
         self.exported_objects = {}
         self.exported_meshes = {}
         self.exported_hair = {}
+        # The transform each light was exported with (obj_key: matrix)
+        self.light_transforms = {}
 
     def first_run(
         self,
@@ -577,6 +579,7 @@ class ObjectCache2:
                     dg_obj_instance.matrix_world.copy(),
                     is_viewport_render,
                 )
+                self.light_transforms[obj_key] = dg_obj_instance.matrix_world.copy()
 
         # Convert hair
         for psys in obj.particle_systems:
@@ -857,6 +860,17 @@ class ObjectCache2:
         #  Would be better for performance with many particles, however I'm not sure
         #  we can find all instances corresponding to one particle system?
 
+        # A light is exported again (deleted and defined, so the core rebuilds
+        # its lights) on any update but object moves; on those, only when it
+        # moved itself, or with its parent or instancer
+        updated_objects = set()
+        only_objects_updated = True
+        for dg_update in depsgraph.updates:
+            if isinstance(dg_update.id, bpy.types.Object):
+                updated_objects.add(dg_update.id.name_full)
+            else:
+                only_objects_updated = False
+
         # Currently, every update that doesn't require a mesh re-export happens here
         for dg_obj_instance in depsgraph.object_instances:
             if not supports_live_transform(dg_obj_instance.particle_system):
@@ -868,6 +882,15 @@ class ObjectCache2:
 
             obj_key = utils.make_key_from_instance(dg_obj_instance)
             mesh_key = self._get_mesh_key(obj, use_instancing)
+
+            if (
+                obj.type == "LIGHT"
+                and only_objects_updated
+                and obj_key in self.exported_objects
+                and obj.name_full not in updated_objects
+                and self.light_transforms.get(obj_key) == dg_obj_instance.matrix_world
+            ):
+                continue
 
             if (
                 obj_key in self.exported_objects and obj.type != "LIGHT"

@@ -289,9 +289,32 @@ Plan, in order:
    pixel size run `camera_cache.diff()` alone; the config export only on a size
    change, a Scene depsgraph update or the 0.5 s periodic check;
    `CameraCache.diff()` compares the view-state tuple before `camera.convert()`.
-4. `session.Resume()` before `BeginSceneEdit()` when paused.
-5. Lights like meshes in `ObjectCache2.update()`: keep the exported transform
-   and re-export a light only when its object is in `depsgraph.updates`.
+   *Measured 2026-10-30:* the change check costs ~1 ms per camera move on the
+   Cornell box (0.9-1.2 ms median in the draw that edits), against the 75 ms
+   of the move on screen; left for later.
+4. `session.Resume()` before `BeginSceneEdit()` when paused. *Not needed
+   (2026-10-30):* LuxCore E6 (a) removed the parked thread's 100 ms polling and
+   the stale frame; a move after the halt now reaches the screen faster than
+   one while rendering (59-62 against 72-79 ms on the Cornell box).
+5. *Done 2026-10-30.* Lights like meshes in `ObjectCache2.update()`: an update
+   that only moves objects exports a light again only when its object is among
+   them or its world matrix changed (a parent or an instancer moved), from the
+   transform kept per light (`light_transforms`); any other update (light data,
+   node trees, images, the scene) still exports every light. Moving a mesh on
+   the Cornell box (one area light, `viewport_timing.py --object-moves 8`, new
+   option): `EndSceneEdit()` 18.5 to 11.4 ms, `view_update()` 24 to 20 ms
+   (medians), the light no longer redefined (the core rebuilds its lights on
+   every light edit, LuxCore BUGS.md); moving the light still exports it.
+   Found with it, fixed (2026-10-30): the viewport session had the final
+   render's halt conditions (`Exporter.create_session()` added them for both,
+   though `get_changes()` keeps them for the final render): with a noise
+   threshold, every `UpdateStats()` in `view_draw()` ran the convergence test
+   on the main thread (74 runs in a 35 s session), and a halt time, sample
+   count or threshold could stop the viewport before its own halt time. Now
+   `UpdateStats()` takes 0.05 ms while rendering instead of 1.1 (peaks 0.2
+   against 14-16 ms), the draw that applies a camera move 8-12 instead of
+   15-24 ms, the longest main-thread stall 16-18 instead of 26-28 ms; moves
+   unchanged.
 6. *Done 2026-10-29* (1.5). Keep the `Exporter` and its `luxcore_scene` across
    a CONFIG restart: a new `RenderConfig(props, luxcore_scene)` and
    `RenderSession` only.
