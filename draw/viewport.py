@@ -339,6 +339,14 @@ class FrameBuffer:
         self._end_read()
         return False
 
+    def finish_read(self):
+        """Show the image of a finished read on the next draw; True if there
+        was one"""
+        if self._reader is None or not self._reader.is_set():
+            return False
+        self._end_read()
+        return True
+
     def wait_read(self):
         if self._reader is not None:
             self._reader.wait()

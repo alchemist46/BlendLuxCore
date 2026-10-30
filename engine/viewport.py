@@ -1,4 +1,6 @@
+import functools
 from time import time
+import weakref
 
 _needs_reload = "bpy" in locals()
 
@@ -187,8 +189,11 @@ def view_update(engine, context, depsgraph, changes=None):
             depsgraph, context, engine.session, changes
         )
         engine.viewport_start_time = time()
-        # An edit can change the image without new samples (image pipeline)
-        engine.viewport_film_key = None
+        # An edit can change the image without new samples (image pipeline).
+        # The frame watch reads the frames the edit brings: a read now could
+        # show a part of RTPATHCPU's first frame
+        if not engine.viewport_watch_frames:
+            engine.viewport_film_key = None
         delta_t = (time() - s) * 1000
         logger.debug(f"view_update(): applying changes took {delta_t:.1f} ms")
 
@@ -209,14 +214,17 @@ def _film_generation(stats):
     return stats.Get("stats.renderengine.total.samplecount").GetFloat()
 
 
-def update_film(engine, framebuffer, force=False):
+def update_film(engine, framebuffer, force=False, generation=None):
     """Read the film into the framebuffer if it has new samples: most draws
     come before the next frame, and a read costs more than the draw, so the
     draws in between show the last one. Not throttled further: a delay on a
     read after a film reset (a camera move) shows on screen.
     The read runs in a thread (the image pipeline can take tens of ms): a
-    draw shows the last finished one, and starts the next once it is done"""
-    key = (id(engine.session), _film_generation(engine.session.GetStats()))
+    draw shows the last finished one, and starts the next once it is done.
+    generation: the film generation, from the stats if None"""
+    if generation is None:
+        generation = _film_generation(engine.session.GetStats())
+    key = (id(engine.session), generation)
     if key == engine.viewport_film_key and not force:
         return
     if force:
@@ -224,6 +232,81 @@ def update_film(engine, framebuffer, force=False):
         framebuffer.wait_read()
     if framebuffer.start_read(engine.session):
         engine.viewport_film_key = key
+
+
+# The timed WaitNewFrame(generation, timeoutMs) of the loaded pyluxcore
+_has_timed_wait = None
+
+
+def _timed_wait(session):
+    """True if pyluxcore has WaitNewFrame(generation, timeoutMs) (LuxCore 3.0
+    builds from 2026-10-30)"""
+    global _has_timed_wait
+    if _has_timed_wait is None:
+        try:
+            session.WaitNewFrame(0, 0)
+            _has_timed_wait = True
+        except TypeError:
+            _has_timed_wait = False
+    return _has_timed_wait
+
+
+def _watch_frames(engine_ref):
+    """The frame watch of a viewport engine: a bpy.app.timers callback, run
+    in every pass of Blender's main loop (every ~5 ms when idle), on the main
+    thread like view_draw(). It starts a film read when the film has a new
+    frame and asks for a draw when a read is done, so Blender draws once per
+    frame instead of all the time while rendering.
+    A timer and not a thread waiting in WaitNewFrame(): a tag_redraw() from a
+    timer is drawn in the same pass, so a thread would see the frames no
+    sooner, and it would hold the engine (here a weak reference only: Blender
+    stops the session in the engine's __del__(), which only runs at the last
+    reference)"""
+    engine = engine_ref()
+    if engine is None:
+        return None
+    try:
+        session = engine.session
+        framebuffer = engine.framebuffer
+        if (not engine.viewport_watch_frames or session is None or framebuffer is None
+                or engine.starting_session):
+            return 0.0
+        if framebuffer.finish_read():
+            engine.tag_redraw()
+        if not (session.IsInPause() or framebuffer.is_denoiser_active()):
+            # The generation of the last read: RTPATHCPU returns it until the
+            # first frame after an edit is complete
+            key = engine.viewport_film_key
+            seen = key[1] if key is not None and key[0] == id(session) else 0
+            generation = session.WaitNewFrame(seen, 0)
+            # 0: no complete frame in this session yet
+            if generation != 0:
+                update_film(engine, framebuffer, generation=generation)
+    except ReferenceError:
+        # The engine was freed
+        return None
+    except Exception as error:
+        # An exception would end the timer: view_draw() handles a failed session
+        logger.warning(f"[Engine/Viewport] Frame watch: {error}")
+        engine.tag_redraw()
+        return 0.1
+    return 0.0
+
+
+def _start_frame_watch(engine, context):
+    """True when the frame watch (_watch_frames()) reads the film and asks
+    for the draws; not in material preview mode, nor with older pyluxcore
+    builds: view_draw() does it then, drawing all the time"""
+    watch = (_timed_wait(engine.session)
+             and not utils.in_material_shading_mode(context))
+    engine.viewport_watch_frames = watch
+    if watch:
+        if engine.viewport_frame_watch is None:
+            engine.viewport_frame_watch = functools.partial(_watch_frames, weakref.ref(engine))
+        # Also after a file load, which removes the timers
+        if not bpy.app.timers.is_registered(engine.viewport_frame_watch):
+            bpy.app.timers.register(engine.viewport_frame_watch, first_interval=0.0)
+    return watch
 
 
 def _view_state(context):
@@ -323,6 +406,7 @@ def view_draw(engine, context, depsgraph):
     framebuffer.mag_filter = context.scene.luxcore.viewport.mag_filter
     # The image of a film read done since the last draw
     framebuffer.poll_read()
+    watch = _start_frame_watch(engine, context)
 
     # Check for changes because some actions in Blender (e.g. moving the viewport
     # camera) do not trigger a view_update() call, but only a view_draw() call.
@@ -352,7 +436,8 @@ def view_draw(engine, context, depsgraph):
             depsgraph, context, engine.session, changes
         )
         engine.viewport_start_time = time()
-        engine.viewport_film_key = None
+        if not watch:
+            engine.viewport_film_key = None
 
     if utils.in_material_shading_mode(context):
         if not engine.session.IsInPause():
@@ -414,15 +499,18 @@ def view_draw(engine, context, depsgraph):
             # The halt time was raised after the pause
             logger.info("[Engine/Viewport] Resuming session")
             engine.session.Resume()
-        engine.session.WaitNewFrame()
+        if not watch:
+            # Blocks until RTPATHCPU's first frame after an edit is done
+            engine.session.WaitNewFrame()
         try:
             engine.session.UpdateStats()
         except RuntimeError as error:
             logger.warning(f"[Engine/Viewport] Error during UpdateStats(): {error}")
-        update_film(engine, framebuffer)
-        engine.tag_redraw()
+        if not watch:
+            update_film(engine, framebuffer)
+            engine.tag_redraw()
 
-    if framebuffer.poll_read():
+    if framebuffer.poll_read() and not watch:
         # Draw again to show the read once it is done (also when paused)
         engine.tag_redraw()
     framebuffer.draw()

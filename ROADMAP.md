@@ -295,11 +295,31 @@ Plan, in order:
 6. *Done 2026-10-29* (1.5). Keep the `Exporter` and its `luxcore_scene` across
    a CONFIG restart: a new `RenderConfig(props, luxcore_scene)` and
    `RenderSession` only.
-7. With E6 (c) and (d): drive redraws from a thread on `WaitNewFrame(50)` +
-   `tag_redraw()`, so Blender draws exactly once per frame; the log handler must
-   be thread-safe. LuxCore E6 (c) landed as `WaitNewFrame(generation,
-   timeoutMs)`, which returns the generation (the caller passes the last one
-   it saw).
+7. *Done 2026-10-30.* Draw once per frame: a `bpy.app.timers` callback per
+   viewport engine (`_watch_frames()` in `engine/viewport.py`), run in every
+   pass of Blender's main loop (~5 ms apart when idle), polls
+   `WaitNewFrame(generation, 0)` with the generation of the last read, starts
+   the film read when it moved and asks for a draw (`tag_redraw()`) when a read
+   is done; `view_draw()` no longer asks for the next draw nor calls the
+   blocking `WaitNewFrame()` while rendering, and an edit keeps the last image
+   until the frames it brings are read. Changed from the plan: a timer, not a
+   thread waiting in `WaitNewFrame(50)`. A tag from a timer is drawn in the
+   same pass (1.8 ms later), so a thread would see the frames no sooner, and it
+   would hold the engine: Blender only runs the engine's `__del__()` (which
+   stops the session) at the last reference, so the timer holds a weak one.
+   With RTPATHCPU the core now hides the partial first frame after an edit
+   from the timed wait (LuxCore E6 (c)). Material preview mode and pyluxcore
+   builds without the timed wait (before 2026-10-30) keep the old way.
+   `tests/test_viewport_frame_watch.py`. Cornell box (`viewport_timing.py`,
+   1600x1000, the same wheel, A/B with the previous commit, four rounds):
+   on the GPU at pixel size 1, 25-36 draws/s while rendering instead of 96
+   (37 frames/s, every frame still read), the main thread in `view_draw()`
+   172-240 against 273 ms/s, Blender's loop 123-145 passes/s instead of 96;
+   a camera move while rendering 75.6 against 72.4 ms (mean of 32), after the
+   halt 62 against 59 ms. On the CPU (RTPATHCPU, pixel size 2): 64 against
+   98 draws/s, 157 against 243 ms/s, moves 46 and 35 against 45 and 33 ms
+   (the timer's poll; the old way blocked the main thread for the first frame
+   instead).
 8. *Done 2026-10-29* (with LuxCore E6 (d), which releases the GIL in
    `GetOutputFloat()`). The film is read in a thread: `update_film()` starts
    `FrameBuffer.start_read()` when the samples changed and no read is running,

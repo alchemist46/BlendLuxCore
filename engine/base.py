@@ -73,8 +73,12 @@ class LuxCoreRenderEngine(bpy.types.RenderEngine):
         # The changes seen when the session was stopped for a restart
         # (engine/viewport.py, force_session_restart())
         self.viewport_restart_changes = 0
-        # The film last read by view_draw(): (session, sample count)
+        # The film last read in the viewport: (session, film generation)
         self.viewport_film_key = None
+        # The frame watch (engine/viewport.py, _watch_frames()): its timer
+        # function, and whether it reads the film and asks for the draws
+        self.viewport_frame_watch = None
+        self.viewport_watch_frames = False
 
     def __del__(self):
         # Note: this method is also called when unregister() is called (for some reason I don't understand)
