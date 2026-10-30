@@ -262,10 +262,13 @@ class Exporter(object):
         # Add imagepipeline to config props
         config_props.Set(imagepipeline_props)
 
-        # Halt conditions
-        halt_props = halt.convert(scene)
-        self.halt_cache.diff(halt_props)
-        config_props.Set(halt_props)
+        # Halt conditions: the final render's only. The viewport pauses itself
+        # after its halt time (view_draw()); a noise threshold would also run
+        # the convergence test in each UpdateStats() on Blender's main thread
+        if not is_viewport_render:
+            halt_props = halt.convert(scene)
+            self.halt_cache.diff(halt_props)
+            config_props.Set(halt_props)
 
         light_count = luxcore_scene.GetLightCount()
         if light_count > 1000:
@@ -529,7 +532,6 @@ class Exporter(object):
         # The config props cached by get_viewport_changes() or create_session()
         config_props = pyluxcore.Properties(self.config_cache.props)
         config_props.Set(self.imagepipeline_cache.props)
-        config_props.Set(self.halt_cache.props)
         renderconfig = pyluxcore.RenderConfig(config_props, luxcore_scene)
 
         # Do not hold reference to temporary data
