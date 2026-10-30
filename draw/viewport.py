@@ -5,6 +5,7 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 import math
+import queue
 import threading
 from time import sleep
 import numpy as np
@@ -33,6 +34,40 @@ def denoiser_imagepipeline_props(pipeline_props):
     props.Set(pyluxcore.Property(f"{prefix}{index}.type", "INTEL_OIDN"))
     props.Set(pyluxcore.Property(f"{prefix}{index}.sharpness", 0.0))
     return props
+
+
+class _FilmReader:
+    """The one thread that runs the viewport film reads, for every viewport.
+    The image pipeline uses OpenMP, which gives each thread that runs it a
+    team of worker threads of its own, spinning for a while after each read:
+    with a new thread per read, the spinning teams starved the render threads
+    (the RT frame after a camera move took ~120 ms instead of ~30 ms)"""
+
+    def __init__(self):
+        self._jobs = queue.Queue()
+        self._thread = None
+        self._lock = threading.Lock()
+
+    def submit(self, job):
+        """Run job() on the reader thread; returns an Event set when it is done"""
+        done = threading.Event()
+        with self._lock:
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(target=self._run, name="BLC film read", daemon=True)
+                self._thread.start()
+        self._jobs.put((job, done))
+        return done
+
+    def _run(self):
+        while True:
+            job, done = self._jobs.get()
+            try:
+                job()
+            finally:
+                done.set()
+
+
+_film_reader = _FilmReader()
 
 
 class FrameBuffer:
@@ -67,7 +102,8 @@ class FrameBuffer:
         self._texture = None
         self._init_opengl()
 
-        # The film read in flight (start_read()): it writes self._data
+        # The film read in flight (start_read()), set when it is done: it
+        # writes self._data
         self._reader = None
         self._read_error = None
 
@@ -291,22 +327,21 @@ class FrameBuffer:
             except Exception as error:
                 self._read_error = error
 
-        self._reader = threading.Thread(target=read, name="BLC film read", daemon=True)
-        self._reader.start()
+        self._reader = _film_reader.submit(read)
         return True
 
     def poll_read(self):
         """Show the image of a finished read; True while one is running"""
         if self._reader is None:
             return False
-        if self._reader.is_alive():
+        if not self._reader.is_set():
             return True
         self._end_read()
         return False
 
     def wait_read(self):
         if self._reader is not None:
-            self._reader.join()
+            self._reader.wait()
             self._end_read()
 
     def _end_read(self):
