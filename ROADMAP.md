@@ -279,7 +279,12 @@ Plan, in order:
    against 41 ms, 24 moves each). Left for later: a `gpu.types.Buffer` that
    wraps `FrameBuffer._data` instead of a copy per read (1-5 ms), the stats
    strings cached per session (`stats.renderengine.film.generation` when E6 (c)
-   lands).
+   lands). *2026-10-30:* the read is keyed on that generation (LuxCore E6 (c)),
+   the sample count with older pyluxcore builds: the count missed the first
+   frame after a reset when it equalled the count before it (a camera move one
+   frame after the previous one, as in an orbit). Cornell box on the GPU, pixel
+   size 1, two rounds: a move after the halt 68-69 to 59-62 ms on screen, while
+   rendering unchanged.
 3. Camera-only change check: on a view-state change with the same region and
    pixel size run `camera_cache.diff()` alone; the config export only on a size
    change, a Scene depsgraph update or the 0.5 s periodic check;
@@ -292,7 +297,9 @@ Plan, in order:
    `RenderSession` only.
 7. With E6 (c) and (d): drive redraws from a thread on `WaitNewFrame(50)` +
    `tag_redraw()`, so Blender draws exactly once per frame; the log handler must
-   be thread-safe.
+   be thread-safe. LuxCore E6 (c) landed as `WaitNewFrame(generation,
+   timeoutMs)`, which returns the generation (the caller passes the last one
+   it saw).
 8. *Done 2026-10-29* (with LuxCore E6 (d), which releases the GIL in
    `GetOutputFloat()`). The film is read in a thread: `update_film()` starts
    `FrameBuffer.start_read()` when the samples changed and no read is running,

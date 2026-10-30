@@ -200,6 +200,15 @@ def view_update(engine, context, depsgraph, changes=None):
 VIEW_CHANGE_CHECK_INTERVAL = 0.5
 
 
+def _film_generation(stats):
+    """Changes with every frame merged in the film. The sample count of
+    older pyluxcore builds misses a frame after a reset with the count of
+    the one before it (a camera move one frame after the last one)"""
+    if stats.IsDefined("stats.renderengine.film.generation"):
+        return stats.Get("stats.renderengine.film.generation").GetUnsignedLongLong()
+    return stats.Get("stats.renderengine.total.samplecount").GetFloat()
+
+
 def update_film(engine, framebuffer, force=False):
     """Read the film into the framebuffer if it has new samples: most draws
     come before the next frame, and a read costs more than the draw, so the
@@ -207,8 +216,7 @@ def update_film(engine, framebuffer, force=False):
     read after a film reset (a camera move) shows on screen.
     The read runs in a thread (the image pipeline can take tens of ms): a
     draw shows the last finished one, and starts the next once it is done"""
-    stats = engine.session.GetStats()
-    key = (id(engine.session), stats.Get("stats.renderengine.total.samplecount").GetFloat())
+    key = (id(engine.session), _film_generation(engine.session.GetStats()))
     if key == engine.viewport_film_key and not force:
         return
     if force:
