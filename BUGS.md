@@ -15,6 +15,13 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 
 ## Open
 
+### A camera move while rendering takes twice as long since the film read went to a thread
+- Found: 2026-10-30
+- Area: viewport
+- Problem: on the GPU viewport, a camera move made while the viewport renders reaches the screen in 168-176 ms (median of 4 moves) instead of 80 ms. Moves after the halt (paused) are not affected (70-75 ms).
+- Reproduce: Blender 5.2.2, `scenes/cornell/Cornell Box Luxcore.blend` (LuxCore repo), GPU (HIP) viewport, pixel size 1, 1600x1000 region: LuxCore `tests/benchmark/viewport_timing.py --device OCL --pixel-size 1 --halt 4 --moves 4 --paused-moves 6 --no-resize` with the same pyluxcore (LuxCore at E6 (a), 2026-10-30). The addon at `009130a9` (before the threaded read): `move_running` median 80 ms; at `2c607d0b` ("Viewport: read the film in a thread"): 168 ms; at `0725037c`: 176 ms. The RT frame time is 29 ms in all three.
+- Notes: bisected to `2c607d0b`; not looked into further. The extra ~90 ms is about three RT frames. Suspects: after the move, the draw first waits for or shows the read in flight (an image of the old view), and the read of the new film starts only at a later draw (`start_read()` returns False while a read runs, and `viewport_film_key` is set only when a read starts); or `poll_read()` asks for a redraw only while a read is running, so the draw that would start the read of the new frame waits for Blender's own redraw.
+
 ### The viewport main thread still stalls 30-45 ms once per frame while RTPATHOCL renders LynxSpider
 - Found: 2026-10-29
 - Area: viewport
