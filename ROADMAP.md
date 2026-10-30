@@ -307,6 +307,18 @@ Plan, in order:
    432). With an older pyluxcore, which holds the GIL in the read, the thread
    blocks Blender as the read on the main thread did. What is left of the
    stalls is in BUGS.md (once per frame, outside `view_draw()`).
+   *Fixed 2026-10-30:* the reads run on one long-lived thread
+   (`_FilmReader` in `draw/viewport.py`), not a new thread each. The image
+   pipeline uses OpenMP (MSVC's `vcomp` on Windows), which gives every thread
+   that runs it a team of its own; the teams of the finished read threads kept
+   spinning and starved the render threads: on the native Cornell box (GPU,
+   pixel size 1, 1600x1000, 29 ms frames) the frame after a camera move took
+   120-130 ms and the read waiting for it ~100 ms, so a move while rendering
+   reached the screen in 168-176 ms instead of the 80 ms of the read on the
+   main thread (`OMP_WAIT_POLICY=PASSIVE` gave 75 ms, which confirmed the
+   cause). Now 83-84 ms, frames at most 33 ms (125 ms before), reads 6.4 ms
+   median and at most 8.8 ms (9 and 108 ms before). LynxSpider unchanged
+   (moves 205-213 ms while rendering, reads 30-33 ms).
 
 Measured before and after each step with `tests/benchmark/viewport_timing.py`
 in the LuxCore repo (GUI Blender, from `lc-work/e4b/guitest.py`): per-draw
