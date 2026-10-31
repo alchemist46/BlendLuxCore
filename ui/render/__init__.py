@@ -14,6 +14,7 @@ classes = (
     config.LUXCORE_RENDER_PT_add_light_tracing,
     config.LUXCORE_RENDER_PT_lightpaths_clamping,
     config.LUXCORE_RENDER_PT_lightpaths_regularization,
+    config.LUXCORE_RENDER_PT_lightpaths_volumes,
     debug.LUXCORE_RENDER_PT_debug_settings,
     denoiser.LUXCORE_RENDER_PT_denoiser,
     denoiser.LUXCORE_RENDER_PT_denoiser_bcd_advanced,
