@@ -151,13 +151,20 @@ PHOTONGI_HALTTHRESH_DESC = (
 PHOTONGI_GLOSSINESSTHRESH_DESC = (
     "A glossy bounce with a roughness below this threshold counts as mirror-like: the indirect cache is not "
     "used right after it (its blur would show in the reflection), and the light it reflects goes to the "
-    "caustic cache. The indirect cache stands for the diffuse part of any material"
+    "caustic cache. The indirect cache stands for the diffuse part of any material, and for the whole of the "
+    "materials rougher than Cached Glossy Roughness"
 )
 
 PHOTONGI_INDIRECT_LIGHTSAMPLING_DESC = (
     "Where the indirect cache is used, sample the lights for the direct light and keep only the indirect "
-    "light in the cache: closer to path tracing. Disabled, the cache holds the direct light too (blurred), "
-    "which is faster to a clean image in rooms lit through windows but less accurate"
+    "light in the cache: closer to path tracing, but slower to a clean image. Disabled, the cache holds the "
+    "direct light too (blurred), and matte surfaces need no light sampling where the cache is used"
+)
+
+PHOTONGI_INDIRECT_GLOSSYTHRESHOLD_DESC = (
+    "Materials whose glossy lobes are at least this rough (and that have no mirror or transmission lobe) are "
+    "taken whole from the indirect cache, as for matte surfaces: faster, slightly blurred reflections. "
+    "Sharper glossy lobes are path traced. Set above 1 to path trace every glossy lobe (slower)"
 )
 
 PHOTONGI_INDIRECT_USAGETHRESHOLDSCALE_DESC = (
@@ -332,8 +339,11 @@ class LuxCoreConfigPhotonGI(PropertyGroup):
                                          subtype="ANGLE", description=NORMAL_ANGLE_DESC)
     indirect_usagethresholdscale: FloatProperty(name="Brute Force Radius Scale", default=8, min=0, precision=1,
                                                  description=PHOTONGI_INDIRECT_USAGETHRESHOLDSCALE_DESC)
-    indirect_lightsampling: BoolProperty(name="Light Sampling", default=True,
+    indirect_lightsampling: BoolProperty(name="Light Sampling", default=False,
                                          description=PHOTONGI_INDIRECT_LIGHTSAMPLING_DESC)
+    indirect_glossythreshold: FloatProperty(name="Cached Glossy Roughness", default=0.05, min=0, soft_max=1,
+                                            max=2, precision=3,
+                                            description=PHOTONGI_INDIRECT_GLOSSYTHRESHOLD_DESC)
 
     # Caustic cache
     caustic_enabled: BoolProperty(name="Use Caustic Cache", default=False,

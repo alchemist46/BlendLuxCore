@@ -127,6 +127,7 @@ class LUXCORE_RENDER_PT_caches_photongi_indirect(RenderButtonsPanel, Panel):
         col.prop(photongi, "indirect_usagethresholdscale")
         col.prop(photongi, "indirect_normalangle")
         layout.prop(photongi, "indirect_lightsampling")
+        layout.prop(photongi, "indirect_glossythreshold")
         col = layout.column(align=True)
         col.prop(photongi, "indirect_lookup_radius_auto")
         if not photongi.indirect_lookup_radius_auto:
