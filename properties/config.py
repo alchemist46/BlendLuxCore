@@ -79,13 +79,6 @@ REGULARIZATION_DESC = (
     "With Add Light Tracing enabled, the light paths render the caustics on diffuse surfaces "
     "sharp and only the rest is regularized"
 )
-EQUIANGULAR_DESC = (
-    "Volumes: sample the light scattered along each ray segment in a homogeneous volume "
-    "with equiangular sampling (points near the lights), with multiple importance sampling "
-    "against the distance sampling. Unbiased: the image is the same, with less noise near "
-    "small or point lights in thin media (fog, light shafts), at a higher cost per sample. "
-    "Not used with PhotonGI"
-)
 REGULARIZATION_ROUGHNESS_DESC = (
     "The roughness floor given to the regularized lobes (a GGX alpha). Lobes rougher than "
     "three times this value are not changed"
@@ -264,10 +257,6 @@ class LuxCoreConfigPath(PropertyGroup):
                                      description=REGULARIZATION_DESC)
     regularization_roughness: FloatProperty(name="Roughness Floor", default=0.1, min=0.001, max=1,
                                             description=REGULARIZATION_ROUGHNESS_DESC)
-
-    # path.volume.equiangular.enable
-    use_equiangular: BoolProperty(name="Equiangular Sampling", default=False,
-                                  description=EQUIANGULAR_DESC)
 
     # We probably don't need to expose these properties because they have good
     # default values that should very rarely (or never?) need adjustment

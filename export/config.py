@@ -125,11 +125,6 @@ def convert(exporter, scene, context=None, engine=None):
                     config.path.regularization_roughness
                 )
 
-        # Equiangular sampling in the volumes (PATH engines). Exported only
-        # when enabled, so older pyluxcore builds keep working
-        if config.path.use_equiangular and config.engine == "PATH":
-            definitions["path.volume.equiangular.enable"] = True
-
         # Filter
         if config.filter == "GAUSSIAN":
             definitions["film.filter.gaussian.alpha"] = config.gaussian_alpha

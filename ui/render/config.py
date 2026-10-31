@@ -250,29 +250,6 @@ class LUXCORE_RENDER_PT_lightpaths_regularization(RenderButtonsPanel, Panel):
         layout.prop(config.path, "regularization_roughness")
 
 
-class LUXCORE_RENDER_PT_lightpaths_volumes(RenderButtonsPanel, Panel):
-    COMPAT_ENGINES = {"LUXCORE"}
-    bl_parent_id = "LUXCORE_RENDER_PT_lightpaths"
-    bl_label = "Volumes"
-    bl_options = {"DEFAULT_CLOSED"}
-
-    @classmethod
-    def poll(cls, context):
-        config = context.scene.luxcore.config
-        return config.engine == "PATH"
-
-    def draw(self, context):
-        layout = self.layout
-        config = context.scene.luxcore.config
-
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-
-        col = layout.column()
-        col.active = not config.photongi.enabled
-        col.prop(config.path, "use_equiangular")
-
-
 def compatible_panels():
     panels = [
         "RENDER_PT_color_management",
