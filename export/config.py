@@ -592,5 +592,9 @@ def _convert_photongi_settings(context, scene, definitions, config):
         }
     )
 
+    # Exported only when not the default, for the older pyluxcore builds
+    if not photongi.indirect_lightsampling:
+        definitions["path.photongi.indirect.lightsampling"] = False
+
     if photongi.debug != "off":
         definitions["path.photongi.debug.type"] = photongi.debug

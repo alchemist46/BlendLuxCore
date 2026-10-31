@@ -154,6 +154,12 @@ PHOTONGI_GLOSSINESSTHRESH_DESC = (
     "caustic cache. The indirect cache stands for the diffuse part of any material"
 )
 
+PHOTONGI_INDIRECT_LIGHTSAMPLING_DESC = (
+    "Where the indirect cache is used, sample the lights for the direct light and keep only the indirect "
+    "light in the cache: closer to path tracing. Disabled, the cache holds the direct light too (blurred), "
+    "which is faster to a clean image in rooms lit through windows but less accurate"
+)
+
 PHOTONGI_INDIRECT_USAGETHRESHOLDSCALE_DESC = (
     "In corners and other areas with fine detail, LuxCore uses brute force pathtracing instead of the cache "
     "entries. This parameter is multiplied with the lookup radius and controls the size of the pathtraced area "
@@ -326,6 +332,8 @@ class LuxCoreConfigPhotonGI(PropertyGroup):
                                          subtype="ANGLE", description=NORMAL_ANGLE_DESC)
     indirect_usagethresholdscale: FloatProperty(name="Brute Force Radius Scale", default=8, min=0, precision=1,
                                                  description=PHOTONGI_INDIRECT_USAGETHRESHOLDSCALE_DESC)
+    indirect_lightsampling: BoolProperty(name="Light Sampling", default=True,
+                                         description=PHOTONGI_INDIRECT_LIGHTSAMPLING_DESC)
 
     # Caustic cache
     caustic_enabled: BoolProperty(name="Use Caustic Cache", default=False,
