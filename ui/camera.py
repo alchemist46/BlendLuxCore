@@ -304,6 +304,39 @@ class LUXCORE_CAMERA_PT_image_pipeline_mist(CameraButtonsPanel, Panel):
         layout.prop(mist, "exclude_background")
 
 
+class LUXCORE_CAMERA_PT_image_pipeline_outline(CameraButtonsPanel, Panel):
+    bl_label = "Outline"
+    bl_parent_id = "LUXCORE_CAMERA_PT_image_pipeline"
+    bl_options = {'DEFAULT_CLOSED'}
+    COMPAT_ENGINES = {"LUXCORE"}
+
+    def draw_header(self, context):
+        pipeline = context.camera.luxcore.imagepipeline
+        self.layout.prop(pipeline.outline, "enabled", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        pipeline = context.camera.luxcore.imagepipeline
+        outline = pipeline.outline
+        layout.enabled = outline.enabled
+
+        col = layout.column(align=True)
+        col.scale_y = 0.8
+        col.label(text="Note: the lines are not anti-aliased.", icon=icons.WARNING)
+
+        layout.prop(outline, "color")
+        layout.prop(outline, "amount", slider=True)
+        layout.prop(outline, "width")
+
+        col = layout.column(align=True)
+        col.prop(outline, "use_object_id")
+        col.prop(outline, "depth_threshold")
+        col.prop(outline, "normal_angle")
+
+
 class LUXCORE_CAMERA_PT_image_pipeline_vignetting(CameraButtonsPanel, Panel):
     bl_label = "Vignetting"
     bl_parent_id = "LUXCORE_CAMERA_PT_image_pipeline"

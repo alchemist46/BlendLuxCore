@@ -1149,6 +1149,13 @@ def _mat_velvet(p, node):
     return _Shader(Ref(spec.name, "BSDF"), normals=[spec])
 
 
+def _mat_toon(p, node):
+    # The EEVEE preview shows the lit colour (the ramp, specular and rim are LuxCore's)
+    spec = p.add(node, "", "ShaderNodeBsdfDiffuse")
+    spec.inputs["Color"] = p.tex_in(node, "Tint")
+    return _Shader(Ref(spec.name, "BSDF"), normals=[spec])
+
+
 def _mat_two_sided(p, node):
     geometry = p.add(node, "geometry", "ShaderNodeNewGeometry", -200, 200)
     spec = p.add(node, "", "ShaderNodeMixShader")
@@ -1208,6 +1215,7 @@ MATERIAL_HANDLERS = {
     "LuxCoreNodeMatGlossyCoating": _mat_glossy_coating,
     "LuxCoreNodeMatSubsurface": _mat_subsurface,
     "LuxCoreNodeMatVelvet": _mat_velvet,
+    "LuxCoreNodeMatToon": _mat_toon,
     "LuxCoreNodeMatTwoSided": _mat_two_sided,
     "LuxCoreNodeMatFrontBackOpacity": _mat_front_back_opacity,
     "LuxCoreNodeMatCarpaint": _mat_carpaint,

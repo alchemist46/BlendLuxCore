@@ -67,6 +67,7 @@ classes = (
     camera.LUXCORE_CAMERA_PT_image_pipeline_tonemapper,
     camera.LUXCORE_CAMERA_PT_image_pipeline_bloom,
     camera.LUXCORE_CAMERA_PT_image_pipeline_mist,
+    camera.LUXCORE_CAMERA_PT_image_pipeline_outline,
     camera.LUXCORE_CAMERA_PT_image_pipeline_vignetting,
     camera.LUXCORE_CAMERA_PT_image_pipeline_color_aberration,
     camera.LUXCORE_CAMERA_PT_image_pipeline_background_image,

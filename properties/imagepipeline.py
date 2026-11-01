@@ -209,6 +209,60 @@ class LuxCoreImagepipelineMist(PropertyGroup, LuxCoreImagepipelinePluginMixin):
     )
 
 
+class LuxCoreImagepipelineOutline(PropertyGroup, LuxCoreImagepipelinePluginMixin):
+    """The OUTLINE plugin (pyluxcore 3.0): lines at the silhouettes, the depth
+    jumps and the creases of the image, from the OBJECT_ID, DEPTH and
+    AVG_SHADING_NORMAL AOVs"""
+    NAME = "Outline"
+    enabled: BoolProperty(
+        name=NAME, default=False, description="Enable/disable " + NAME
+    )
+    compatible_with_viewport_denoising = True
+
+    color: FloatVectorProperty(
+        name="Color", default=(0, 0, 0), min=0, max=1, subtype="COLOR",
+        description="The colour of the lines",
+    )
+    amount: FloatProperty(
+        name="Strength",
+        default=100,
+        min=0,
+        max=100,
+        precision=1,
+        subtype="PERCENTAGE",
+        description="The opacity of the lines",
+    )
+    width: FloatProperty(
+        name="Width",
+        default=1,
+        min=1,
+        max=16,
+        subtype="PIXEL",
+        description="The width of the lines in pixels",
+    )
+    use_object_id: BoolProperty(
+        name="Silhouettes",
+        default=True,
+        description="Draw a line where one object meets another or the background",
+    )
+    depth_threshold: FloatProperty(
+        name="Depth Threshold",
+        default=0.05,
+        min=0,
+        soft_max=1,
+        description="Draw a line where the depth jumps by more than this fraction of the nearer "
+                    "depth (0 turns this test off)",
+    )
+    normal_angle: FloatProperty(
+        name="Crease Angle",
+        default=0.785398,
+        min=0,
+        max=3.14159,
+        subtype="ANGLE",
+        description="Draw a line where the surface turns by more than this angle (0 turns this test off)",
+    )
+
+
 class LuxCoreImagepipelineVignetting(
     PropertyGroup, LuxCoreImagepipelinePluginMixin
 ):
@@ -454,6 +508,7 @@ class LuxCoreImagepipeline(PropertyGroup):
     tonemapper: PointerProperty(type=LuxCoreImagepipelineTonemapper)
     bloom: PointerProperty(type=LuxCoreImagepipelineBloom)
     mist: PointerProperty(type=LuxCoreImagepipelineMist)
+    outline: PointerProperty(type=LuxCoreImagepipelineOutline)
     vignetting: PointerProperty(type=LuxCoreImagepipelineVignetting)
     coloraberration: PointerProperty(type=LuxCoreImagepipelineColorAberration)
     backgroundimage: PointerProperty(type=LuxCoreImagepipelineBackgroundImage)

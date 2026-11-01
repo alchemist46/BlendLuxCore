@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import math
 import pyluxcore
 from .. import utils
 from .image import ImageExporter
@@ -61,6 +62,9 @@ def convert_defs(context, scene, definitions, plugin_index, define_radiancescale
 
     if pipeline.mist.is_enabled(context):
         index = _mist(definitions, index, pipeline.mist)
+
+    if pipeline.outline.is_enabled(context):
+        index = _outline(definitions, index, pipeline.outline)
 
     if pipeline.bloom.is_enabled(context):
         index = _bloom(definitions, index, pipeline.bloom)
@@ -173,6 +177,17 @@ def _mist(definitions, index, mist):
     definitions[str(index) + ".startdistance"] = mist.start_distance
     definitions[str(index) + ".enddistance"] = mist.end_distance
     definitions[str(index) + ".excludebackground"] = mist.exclude_background
+    return index + 1
+
+
+def _outline(definitions, index, outline):
+    definitions[str(index) + ".type"] = "OUTLINE"
+    definitions[str(index) + ".color"] = list(outline.color)
+    definitions[str(index) + ".amount"] = outline.amount / 100
+    definitions[str(index) + ".width"] = outline.width
+    definitions[str(index) + ".objectid.enable"] = outline.use_object_id
+    definitions[str(index) + ".depth.threshold"] = outline.depth_threshold
+    definitions[str(index) + ".normal.angle"] = math.degrees(outline.normal_angle)
     return index + 1
 
 

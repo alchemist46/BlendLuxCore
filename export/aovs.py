@@ -83,7 +83,7 @@ def convert(exporter, scene, context=None, engine=None):
         # AOVs
         if (final and aovs.alpha) or use_transparent_film or use_backgroundimage(context, scene):
             _add_output(definitions, "ALPHA")
-        if (final and aovs.depth) or pipeline.mist.enabled:
+        if (final and aovs.depth) or pipeline.mist.enabled or pipeline.outline.enabled:
             _add_output(definitions, "DEPTH")
         if (final and aovs.irradiance) or pipeline.contour_lines.enabled:
             _add_output(definitions, "IRRADIANCE")
@@ -94,6 +94,11 @@ def convert(exporter, scene, context=None, engine=None):
             #  black squares in the result - re-enable when this is fixed in OptiX
             if final or (context and scene.luxcore.viewport.get_denoiser(context) == "OIDN"):
                 _add_output(definitions, "AVG_SHADING_NORMAL")
+        elif pipeline.outline.enabled:
+            _add_output(definitions, "AVG_SHADING_NORMAL")
+        if pipeline.outline.enabled:
+            # The silhouettes of the outline
+            _add_output(definitions, "OBJECT_ID")
 
         pipeline_props = pyluxcore.Properties()
 
@@ -103,6 +108,9 @@ def convert(exporter, scene, context=None, engine=None):
                 if output_name in {"RGB_IMAGEPIPELINE", "RGBA_IMAGEPIPELINE", "ALPHA", "DEPTH",
                                    "IRRADIANCE", "ALBEDO", "AVG_SHADING_NORMAL"}:
                     # We already checked these
+                    continue
+                if output_name == "OBJECT_ID" and pipeline.outline.enabled:
+                    # Already added for the outline
                     continue
 
                 # Check if AOV is enabled by user

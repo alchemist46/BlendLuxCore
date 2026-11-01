@@ -71,6 +71,7 @@ classes = (
     imagepipeline.LuxCoreImagepipelineTonemapper,
     imagepipeline.LuxCoreImagepipelineBloom,
     imagepipeline.LuxCoreImagepipelineMist,
+    imagepipeline.LuxCoreImagepipelineOutline,
     imagepipeline.LuxCoreImagepipelineVignetting,
     imagepipeline.LuxCoreImagepipelineColorAberration,
     imagepipeline.LuxCoreImagepipelineBackgroundImage,

@@ -34,6 +34,7 @@ from mathutils import Vector
 
 from ..utils import node as utils_node
 from ..utils import colorspace
+from ..utils import toon as utils_toon
 from ..utils.luxutils import has_material_type
 from ..export.cycles_node_reader import PRINCIPLED_OPENPBR_UNSUPPORTED, MISSING_IMAGE_COLOR, texcoord_output
 
@@ -688,6 +689,38 @@ class _Converter:
         self.common_inputs(node, lux)
         return Linked(lux, "Material")
 
+    def toon(self, node, out_socket):
+        # reader: ShaderNodeBsdfToon (utils/toon.py)
+        if not has_material_type("toon"):
+            return self.unsupported(node, out_socket)
+        size, smooth = self.resolve(node.inputs["Size"]), self.resolve(node.inputs["Smooth"])
+        if _is_linked(size) or _is_linked(smooth):
+            self.warn(f'Toon BSDF "{node.name}": a linked Size or Smooth is replaced by its value')
+        definitions, color_key, color_scale = utils_toon.cycles_toon_definitions(
+            node.component, node.inputs["Size"].default_value, node.inputs["Smooth"].default_value)
+
+        lux = self.new_node("LuxCoreNodeMatToon", node)
+        lux.set_ramp(utils_toon.ramp_keys(definitions))
+        lux.ramp_smooth = definitions.get("ramp.smooth", 0)
+        lux.light_center = definitions["lightcenter"]
+        if "specular.roughness" in definitions:
+            _input(lux, "Roughness").default_value = definitions["specular.roughness"]
+            lux.specular_smooth = definitions["specular.smooth"]
+
+        if color_key == "kd":
+            self.connect(node.inputs["Color"], lux, "Tint")
+            _input(lux, "Specular Color").default_value = (0, 0, 0)
+        else:
+            _input(lux, "Tint").default_value = (0, 0, 0)
+            # The highlight is brighter than 1 (no clamp through a texture)
+            scale = self.new_node("LuxCoreNodeTexColorMix", node, helper=True, label="× Toon Normalization")
+            scale.mode = "scale"
+            scale.inputs[1].default_value = (color_scale, color_scale, color_scale)
+            self.connect(node.inputs["Color"], scale, 2)
+            self.tree.links.new(scale.outputs["Color"], lux.inputs["Specular Color"])
+        self.common_inputs(node, lux)
+        return Linked(lux, "Material")
+
     def subsurface(self, node, out_socket):
         # reader :258
         lux = self.new_node("LuxCoreNodeMatSubsurface", node)
@@ -1223,6 +1256,7 @@ HANDLERS = {
     "ShaderNodeMixShader": _Converter.mix_shader,
     "ShaderNodeBsdfDiffuse": _Converter.diffuse,
     "ShaderNodeBsdfSheen": _Converter.sheen,
+    "ShaderNodeBsdfToon": _Converter.toon,
     "ShaderNodeSubsurfaceScattering": _Converter.subsurface,
     "ShaderNodeBsdfGlossy": _Converter.glossy,
     "ShaderNodeBsdfAnisotropic": _Converter.glossy,

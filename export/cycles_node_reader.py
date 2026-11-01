@@ -2,6 +2,7 @@ import math
 import pyluxcore
 from .. import utils
 from ..utils import node as utils_node
+from ..utils import toon as utils_toon
 from ..utils.errorlog import LuxCoreErrorLog
 from ..utils.log import logger
 from .image import ImageExporter
@@ -255,6 +256,27 @@ def _node(node, output_socket, props, material, luxcore_name=None, obj_name="", 
             "roughness": _socket(node.inputs["Roughness"], props, material, obj_name, group_node_stack),
             "bumptex": _socket(node.inputs["Normal"], props, material, obj_name, group_node_stack),
         }
+    elif node.bl_idname == "ShaderNodeBsdfToon" and utils.luxutils.has_material_type("toon"):
+        # LuxCore's toon material (pyluxcore 3.0): the same direct light per
+        # light, Lambert indirect light (see utils/toon.py)
+        prefix = "scene.materials."
+        size_socket, smooth_socket = node.inputs["Size"], node.inputs["Smooth"]
+        if size_socket.is_linked or smooth_socket.is_linked:
+            LuxCoreErrorLog.add_warning(f"In material {material.name}: the Size and Smooth of a Toon BSDF "
+                                        "can't be textured, their values are used", obj_name=obj_name)
+        definitions, color_key, color_scale = utils_toon.cycles_toon_definitions(
+            node.component, size_socket.default_value, smooth_socket.default_value)
+        color = _socket(node.inputs["Color"], props, material, obj_name, group_node_stack)
+        if color_scale != 1:
+            color_tex = luxcore_name + "_color"
+            props.Set(utils.luxutils.create_props("scene.textures." + color_tex + ".",
+                                                  {"type": "scale", "texture1": color_scale, "texture2": color}))
+            color = color_tex
+        definitions.update({
+            "type": "toon",
+            color_key: color,
+            "bumptex": _socket(node.inputs["Normal"], props, material, obj_name, group_node_stack),
+        })
     elif node.bl_idname == "ShaderNodeSubsurfaceScattering":
         # LuxCore's subsurface material is Cycles' random walk (pyluxcore 3.0).
         # Cycles enters the plain random walk without a reflection (IOR 1
