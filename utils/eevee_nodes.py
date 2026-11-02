@@ -33,6 +33,7 @@ import math
 import bpy
 
 from . import colorspace
+from . import metal_presets
 from . import temperature as utils_temperature
 from .errorlog import LuxCoreErrorLog
 from .log import logger
@@ -45,40 +46,6 @@ _MAX_NAME_BYTES = 60
 LUXCORE_MATERIAL_TREE = "luxcore_material_nodes"
 LUXCORE_TEXTURE_TREE = "luxcore_texture_nodes"
 
-# Approximate reflectance at normal incidence (F0, linear) of the metal
-# presets of the LuxCore Fresnel node (nodes/textures/fresnel.py)
-METAL_PRESET_COLORS = {
-    "aluminium": (0.913, 0.922, 0.924),
-    "amorphous_carbon": (0.2, 0.2, 0.2),
-    "beryllium": (0.5, 0.5, 0.5),
-    "brass": (0.91, 0.778, 0.423),
-    "red_brass": (0.93, 0.66, 0.49),
-    "calcium": (0.6, 0.6, 0.6),
-    "chromium": (0.55, 0.556, 0.554),
-    "cobalt": (0.662, 0.655, 0.634),
-    "copper": (0.955, 0.638, 0.538),
-    "electrum": (0.97, 0.88, 0.62),
-    "gold": (1.0, 0.766, 0.336),
-    "green_gold": (0.98, 0.85, 0.5),
-    "purple_gold": (0.8, 0.55, 0.7),
-    "iridium": (0.7, 0.7, 0.7),
-    "iron": (0.562, 0.565, 0.578),
-    "lead": (0.632, 0.626, 0.641),
-    "magnesium": (0.85, 0.85, 0.85),
-    "mercury": (0.78, 0.78, 0.78),
-    "molybdenum": (0.6, 0.6, 0.6),
-    "nickel": (0.66, 0.609, 0.526),
-    "osmium": (0.6, 0.6, 0.6),
-    "palladium": (0.733, 0.697, 0.652),
-    "platinum": (0.673, 0.637, 0.585),
-    "rhodium": (0.78, 0.78, 0.78),
-    "silver": (0.972, 0.96, 0.915),
-    "stainless_steel": (0.6, 0.6, 0.6),
-    "stainless_steel_ferritic": (0.58, 0.58, 0.58),
-    "titanium": (0.542, 0.497, 0.449),
-    "tungsten": (0.59, 0.57, 0.55),
-    "zinc": (0.664, 0.824, 0.85),
-}
 DEFAULT_METAL_COLOR = (0.7, 0.7, 0.7)
 
 # Node properties that are part of the content signature (when the node has them)
@@ -678,18 +645,17 @@ class _Planner:
         spec.inputs["Thin Film Thickness"] = thickness
         spec.inputs["Thin Film IOR"] = self.tex_in(node, "Film IOR")
 
-    def fresnel_color(self, fresnel):
+    def fresnel_colors(self, fresnel):
+        """Base Color and Specular Tint of a metal Principled BSDF (F0 and the
+        F82 tint) from a Fresnel node"""
         if fresnel.input_type == "color":
-            return self.tex_in(fresnel, "Reflection Color")
+            return self.tex_in(fresnel, "Reflection Color"), (1.0, 1.0, 1.0)
         if fresnel.input_type == "preset":
-            return METAL_PRESET_COLORS.get(fresnel.preset, DEFAULT_METAL_COLOR)
+            return metal_presets.get_preset(fresnel.preset, colorspace.get_working_space())
         if fresnel.input_type == "custom_nk":
-            result = []
-            for n, k in zip(fresnel.n, fresnel.k):
-                result.append(((n - 1) ** 2 + k ** 2) / ((n + 1) ** 2 + k ** 2))
-            return tuple(result)
+            return metal_presets.nk_to_f82(fresnel.n, fresnel.k)
         self.warn(f'Material "{self.material.name}": the metal color of an nk file is gray in the EEVEE nodes')
-        return DEFAULT_METAL_COLOR
+        return DEFAULT_METAL_COLOR, (1.0, 1.0, 1.0)
 
     # Textures ----------------------------------------------------------------
 
@@ -1010,7 +976,7 @@ def _mat_metal(p, node):
     else:
         link = _get_link(_input(node, "Fresnel"))
         if link is not None and link.from_node.bl_idname == "LuxCoreNodeTexFresnel":
-            spec.inputs["Base Color"] = p.fresnel_color(link.from_node)
+            spec.inputs["Base Color"], spec.inputs["Specular Tint"] = p.fresnel_colors(link.from_node)
         else:
             spec.inputs["Base Color"] = DEFAULT_METAL_COLOR
     roughness, anisotropy = p.roughness(node)
@@ -1548,6 +1514,11 @@ def _tex_iorpreset(p, node, output_socket):
     return None
 
 
+def _tex_metalpreset(p, node, output_socket):
+    color, tint = node.get_colors()
+    return color if output_socket.name == "Color" else tint
+
+
 def _tex_triplanar(p, node, output_socket):
     p.warn_type(node, "uses only its first input in the EEVEE nodes")
     return p.tex_in(node, "Color")
@@ -1649,6 +1620,7 @@ TEXTURE_HANDLERS = {
     "LuxCoreNodeTexUV": _tex_uv,
     "LuxCoreNodeTexWireframe": _tex_wireframe,
     "LuxCoreNodeTexIORPreset": _tex_iorpreset,
+    "LuxCoreNodeTexMetalPreset": _tex_metalpreset,
     "LuxCoreNodeTexTriplanar": _tex_triplanar,
     "LuxCoreNodeTreePointer": _tex_pointer,
     "LuxCoreNodeTexfBM": _tex_noise,

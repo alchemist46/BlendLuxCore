@@ -32,8 +32,10 @@ harness.setup()
 import bpy
 import numpy as np
 from blendluxcore.utils import eevee_nodes, eevee_sync
+from blendluxcore.utils.colorspace import get_working_space
 from blendluxcore.utils.errorlog import LuxCoreErrorLog
 from blendluxcore.utils.luxutils import has_material_type
+from blendluxcore.utils.metal_presets import get_preset
 from blendluxcore.utils.node import get_active_output, get_linked_node
 
 checks = harness.Checks("test_eevee_sync")
@@ -212,9 +214,11 @@ fresnel.input_type = "preset"
 fresnel.preset = "gold"
 eevee_nodes.generate(material)
 bsdf = surface_node(material)
+gold_color, gold_tint = get_preset("gold", get_working_space())
 checks.check(close(value(bsdf, "Metallic"), 1)
-             and close(value(bsdf, "Base Color")[:3], eevee_nodes.METAL_PRESET_COLORS["gold"]),
-             "Metal with the gold Fresnel preset: metallic with the preset color")
+             and close(value(bsdf, "Base Color")[:3], gold_color)
+             and close(value(bsdf, "Specular Tint")[:3], gold_tint),
+             "Metal with the gold Fresnel preset: metallic with the preset's F0 and F82 tint")
 fresnel.input_type = "custom_nk"
 fresnel.n = (0.2, 0.4, 1.4)
 fresnel.k = (3.6, 2.4, 1.8)
