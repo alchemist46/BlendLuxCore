@@ -209,43 +209,95 @@ class LuxCoreImagepipelineMist(PropertyGroup, LuxCoreImagepipelinePluginMixin):
     )
 
 
+THICKNESS_DESC = ("The width of the lines in pixels at 1920x1080, scaled with the resolution "
+                  "(anti-aliased, so a fraction of a pixel gives a fainter line)")
+
+
 class LuxCoreImagepipelineOutline(PropertyGroup, LuxCoreImagepipelinePluginMixin):
-    """The OUTLINE plugin (pyluxcore 3.0): lines at the silhouettes, the depth
-    jumps and the creases of the image, from the OBJECT_ID, DEPTH and
-    AVG_SHADING_NORMAL AOVs"""
+    """The OUTLINE plugin (pyluxcore 3.0), with the parameters of Redshift's
+    Contour shader: external lines at the silhouettes, internal lines at the
+    depth jumps and the creases inside an object, from the OBJECT_ID, DEPTH
+    and AVG_SHADING_NORMAL AOVs. The external ones keep the names of the
+    first version (color, amount, width, use_object_id)"""
     NAME = "Outline"
     enabled: BoolProperty(
         name=NAME, default=False, description="Enable/disable " + NAME
     )
     compatible_with_viewport_denoising = True
 
+    scale: FloatProperty(
+        name="Scale",
+        default=1,
+        min=0,
+        soft_max=4,
+        description="Scales the thickness of all the lines",
+    )
+
+    # External lines
+    use_object_id: BoolProperty(
+        name="External",
+        default=True,
+        description="Draw a line at the silhouettes, where one object meets another or the background",
+    )
     color: FloatVectorProperty(
         name="Color", default=(0, 0, 0), min=0, max=1, subtype="COLOR",
-        description="The colour of the lines",
+        description="The color of the external lines",
     )
     amount: FloatProperty(
-        name="Strength",
+        name="Opacity",
         default=100,
         min=0,
         max=100,
         precision=1,
         subtype="PERCENTAGE",
-        description="The opacity of the lines",
+        description="The opacity of the external lines",
     )
     width: FloatProperty(
-        name="Width",
+        name="Thickness",
         default=1,
-        min=0.25,
-        max=16,
-        subtype="PIXEL",
-        description="The width of the lines in pixels (anti-aliased, so a "
-        "fraction of a pixel gives a fainter line; pyluxcore before the "
-        "anti-aliased lines draws at least 1 pixel)",
+        min=0,
+        soft_max=8,
+        max=32,
+        description=THICKNESS_DESC,
     )
-    use_object_id: BoolProperty(
-        name="Silhouettes",
+    separate_meshes: EnumProperty(
+        name="Detect Separate Meshes",
+        items=[
+            ("off", "Off", "No line where two objects touch, only on the silhouette of the nearer one", 0),
+            ("intersecting", "Intersecting", "Also a line where two objects touch or intersect", 1),
+            ("overlapping", "Overlapping", "The silhouette line also covers the object behind it", 2),
+            ("both", "Overlapping and Intersecting", "Both", 3),
+        ],
+        default="intersecting",
+        description="The lines between two objects",
+    )
+
+    # Internal lines
+    use_internal: BoolProperty(
+        name="Internal",
         default=True,
-        description="Draw a line where one object meets another or the background",
+        description="Draw a line at the creases and the depth jumps inside an object",
+    )
+    internal_color: FloatVectorProperty(
+        name="Color", default=(0, 0, 0), min=0, max=1, subtype="COLOR",
+        description="The color of the internal lines",
+    )
+    internal_amount: FloatProperty(
+        name="Opacity",
+        default=100,
+        min=0,
+        max=100,
+        precision=1,
+        subtype="PERCENTAGE",
+        description="The opacity of the internal lines",
+    )
+    internal_width: FloatProperty(
+        name="Thickness",
+        default=1,
+        min=0,
+        soft_max=8,
+        max=32,
+        description=THICKNESS_DESC,
     )
     depth_threshold: FloatProperty(
         name="Depth Threshold",
@@ -256,7 +308,7 @@ class LuxCoreImagepipelineOutline(PropertyGroup, LuxCoreImagepipelinePluginMixin
                     "depth (0 turns this test off)",
     )
     normal_angle: FloatProperty(
-        name="Crease Angle",
+        name="Angle Threshold",
         default=0.785398,
         min=0,
         max=3.14159,

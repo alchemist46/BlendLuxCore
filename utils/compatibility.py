@@ -33,6 +33,7 @@ def run():
         update_subsurface_scatter_color(node_tree)
         update_glossycoating_add_darkening_input(node_tree)
         update_openpbr_add_coat_bump(node_tree)
+        update_toon_redshift_sockets(node_tree)
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
@@ -419,3 +420,20 @@ def update_openpbr_add_coat_bump(node_tree):
         # After Coat Darkening, as in a new node
         node.inputs.move(len(node.inputs) - 1, node.inputs.find("Coat Darkening") + 1)
         logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+
+
+def update_toon_redshift_sockets(node_tree):
+    # The Toon node with the names of Redshift's Toon material: Tint is the
+    # Base Color, Specular Color the Reflection Color. The nodes made before
+    # keep their look: no reflection tonemap (the step of their Softness) and
+    # Base Indirect Scale 1 (the property's default, see
+    # nodes/materials/toon.py).
+    for node in find_nodes(node_tree, "LuxCoreNodeMatToon", False):
+        renamed = False
+        for old, new in (("Tint", "Base Color"), ("Specular Color", "Reflection Color")):
+            node_id = node.inputs.find(old)
+            if node_id != -1:
+                node.inputs[node_id].name = new
+                renamed = True
+        if renamed:
+            logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))

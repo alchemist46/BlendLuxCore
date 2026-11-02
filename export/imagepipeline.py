@@ -188,6 +188,18 @@ def _outline(definitions, index, outline):
     definitions[str(index) + ".objectid.enable"] = outline.use_object_id
     definitions[str(index) + ".depth.threshold"] = outline.depth_threshold
     definitions[str(index) + ".normal.angle"] = math.degrees(outline.normal_angle)
+    # Redshift's Contour parameters (pyluxcore from b4ef21f51): the keys
+    # above are the defaults of both kinds of lines, for the older builds
+    definitions[str(index) + ".scale"] = outline.scale
+    for kind, enable, color, amount, width in (
+            ("external", outline.use_object_id, outline.color, outline.amount, outline.width),
+            ("internal", outline.use_internal, outline.internal_color, outline.internal_amount,
+             outline.internal_width)):
+        definitions[f"{index}.{kind}.enable"] = enable
+        definitions[f"{index}.{kind}.color"] = list(color)
+        definitions[f"{index}.{kind}.opacity"] = amount / 100
+        definitions[f"{index}.{kind}.thickness"] = width
+    definitions[str(index) + ".external.separatemeshes"] = outline.separate_meshes
     return index + 1
 
 

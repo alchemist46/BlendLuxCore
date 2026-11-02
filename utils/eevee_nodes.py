@@ -1122,7 +1122,7 @@ def _mat_velvet(p, node):
 def _mat_toon(p, node):
     # The EEVEE preview shows the lit colour (the ramp, specular and rim are LuxCore's)
     spec = p.add(node, "", "ShaderNodeBsdfDiffuse")
-    spec.inputs["Color"] = p.tex_in(node, "Tint")
+    spec.inputs["Color"] = p.tex_in(node, "Base Color")
     return _Shader(Ref(spec.name, "BSDF"), normals=[spec])
 
 

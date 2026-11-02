@@ -323,14 +323,57 @@ class LUXCORE_CAMERA_PT_image_pipeline_outline(CameraButtonsPanel, Panel):
         outline = pipeline.outline
         layout.enabled = outline.enabled
 
+        layout.prop(outline, "scale")
+
+
+class LUXCORE_CAMERA_PT_image_pipeline_outline_external(CameraButtonsPanel, Panel):
+    bl_label = "External"
+    bl_parent_id = "LUXCORE_CAMERA_PT_image_pipeline_outline"
+    COMPAT_ENGINES = {"LUXCORE"}
+
+    def draw_header(self, context):
+        outline = context.camera.luxcore.imagepipeline.outline
+        self.layout.active = outline.enabled
+        self.layout.prop(outline, "use_object_id", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        outline = context.camera.luxcore.imagepipeline.outline
+        layout.enabled = outline.enabled and outline.use_object_id
+
         layout.prop(outline, "color")
         layout.prop(outline, "amount", slider=True)
         layout.prop(outline, "width")
+        layout.prop(outline, "separate_meshes")
 
+
+class LUXCORE_CAMERA_PT_image_pipeline_outline_internal(CameraButtonsPanel, Panel):
+    bl_label = "Internal"
+    bl_parent_id = "LUXCORE_CAMERA_PT_image_pipeline_outline"
+    COMPAT_ENGINES = {"LUXCORE"}
+
+    def draw_header(self, context):
+        outline = context.camera.luxcore.imagepipeline.outline
+        self.layout.active = outline.enabled
+        self.layout.prop(outline, "use_internal", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        outline = context.camera.luxcore.imagepipeline.outline
+        layout.enabled = outline.enabled and outline.use_internal
+
+        layout.prop(outline, "internal_color")
+        layout.prop(outline, "internal_amount", slider=True)
+        layout.prop(outline, "internal_width")
         col = layout.column(align=True)
-        col.prop(outline, "use_object_id")
-        col.prop(outline, "depth_threshold")
         col.prop(outline, "normal_angle")
+        col.prop(outline, "depth_threshold")
 
 
 class LUXCORE_CAMERA_PT_image_pipeline_vignetting(CameraButtonsPanel, Panel):

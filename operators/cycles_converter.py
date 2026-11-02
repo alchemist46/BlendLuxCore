@@ -709,21 +709,26 @@ class _Converter:
         lux.set_ramp(utils_toon.ramp_keys(definitions))
         lux.ramp_smooth = definitions.get("ramp.smooth", 0)
         lux.light_center = definitions["lightcenter"]
+        # As the reader: the step highlight of Cycles' size and smooth (no
+        # reflection tonemap) and the Lambert indirect light (Cycles samples
+        # the toon lobe)
+        lux.set_ramp([], "reflection")
+        lux.indirect_scale = 1
         if "specular.roughness" in definitions:
             _input(lux, "Roughness").default_value = definitions["specular.roughness"]
             lux.specular_smooth = definitions["specular.smooth"]
 
         if color_key == "kd":
-            self.connect(node.inputs["Color"], lux, "Tint")
-            _input(lux, "Specular Color").default_value = (0, 0, 0)
+            self.connect(node.inputs["Color"], lux, "Base Color")
+            _input(lux, "Reflection Color").default_value = (0, 0, 0)
         else:
-            _input(lux, "Tint").default_value = (0, 0, 0)
+            _input(lux, "Base Color").default_value = (0, 0, 0)
             # The highlight is brighter than 1 (no clamp through a texture)
             scale = self.new_node("LuxCoreNodeTexColorMix", node, helper=True, label="× Toon Normalization")
             scale.mode = "scale"
             scale.inputs[1].default_value = (color_scale, color_scale, color_scale)
             self.connect(node.inputs["Color"], scale, 2)
-            self.tree.links.new(scale.outputs["Color"], lux.inputs["Specular Color"])
+            self.tree.links.new(scale.outputs["Color"], lux.inputs["Reflection Color"])
         self.common_inputs(node, lux)
         return Linked(lux, "Material")
 

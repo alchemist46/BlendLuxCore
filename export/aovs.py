@@ -94,7 +94,8 @@ def convert(exporter, scene, context=None, engine=None):
             #  black squares in the result - re-enable when this is fixed in OptiX
             if final or (context and scene.luxcore.viewport.get_denoiser(context) == "OIDN"):
                 _add_output(definitions, "AVG_SHADING_NORMAL")
-        elif pipeline.outline.enabled:
+        elif pipeline.outline.enabled and pipeline.outline.use_internal:
+            # The creases of the outline's internal lines
             _add_output(definitions, "AVG_SHADING_NORMAL")
         if pipeline.outline.enabled:
             # The silhouettes of the outline
