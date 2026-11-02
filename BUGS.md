@@ -15,6 +15,13 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 
 ## Open
 
+### test_cycles_convert: principled_metal's pixel error is flaky around its tolerance
+- Found: 2026-11-01
+- Area: tests
+- Problem: the case compares the converted LuxCore nodes with the Cycles node reader, both rendered by LuxCore; its pixel error (tolerance 0.05) is 0.022 to 0.066 from run to run and the mean 0.993-1.007, with the same pyluxcore, so the test fails about one run in three.
+- Reproduce: `tests/run.sh <site-packages> test_cycles_convert`, run it several times; seen with the pyluxcore of LuxCore be438657d and with the OpenPBR coat normal build on top of it (the metal case doesn't use the coat), Blender 5.2.3.
+- Notes: the material properties match (the test checks them); the two renders differ by the noise of a multi-threaded PATHCPU render at the test's sample count. More samples, or a tolerance from the seed spread, would make it stable.
+
 ### The viewport main thread still stalls 30-45 ms once per frame while RTPATHOCL renders LynxSpider
 - Found: 2026-10-29
 - Area: viewport

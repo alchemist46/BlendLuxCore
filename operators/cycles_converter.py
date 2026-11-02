@@ -36,7 +36,7 @@ from ..utils import node as utils_node
 from ..utils import colorspace
 from ..utils import toon as utils_toon
 from ..utils.luxutils import has_material_type
-from ..export.cycles_node_reader import PRINCIPLED_OPENPBR_UNSUPPORTED, MISSING_IMAGE_COLOR, texcoord_output
+from ..export.cycles_node_reader import principled_openpbr_warnings, MISSING_IMAGE_COLOR, texcoord_output
 
 PLACEHOLDER_LABEL = "Unsupported: "
 PLACEHOLDER_COLOR = (0.55, 0.1, 0.1)
@@ -559,6 +559,10 @@ class _Converter:
             lux.use_transmission = True
             connect("Transmission Weight", "Transmission Weight")
             connect("Base Color", "Transmission Color")
+            # Blender 5.3: the dispersion of OpenPBR
+            if "Dispersion Scale" in inputs and "Abbe Number" in inputs:
+                connect("Dispersion Scale", "Dispersion Scale")
+                connect("Abbe Number", "Abbe Number")
 
         if self.used(inputs["Subsurface Weight"]):
             lux.use_subsurface = True
@@ -574,6 +578,9 @@ class _Converter:
             connect("Coat Tint", "Coat Color")
             connect("Coat Roughness", "Coat Roughness")
             connect("Coat IOR", "Coat IOR")
+            # Unlinked, the coat keeps the shading normal (reader, Coat Normal)
+            if inputs["Coat Normal"].is_linked:
+                connect("Coat Normal", "Coat Bump")
 
         if self.used(inputs["Sheen Weight"]):
             lux.use_fuzz = True
@@ -594,9 +601,8 @@ class _Converter:
                 self.warn('Principled BSDF: a linked "Thin Wall" is not supported, its value is used')
             lux.thin_walled = bool(inputs["Thin Wall"].default_value)
 
-        for name in PRINCIPLED_OPENPBR_UNSUPPORTED:
-            if name in inputs and inputs[name].is_linked:
-                self.warn(f'Principled BSDF: "{name}" is not supported yet and is ignored')
+        for warning in principled_openpbr_warnings(node):
+            self.warn(warning)
         return lux
 
     def principled_disney(self, node):

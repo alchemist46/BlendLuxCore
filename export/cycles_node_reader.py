@@ -968,8 +968,33 @@ def texcoord_output(socket):
     return None
 
 
-# The Principled BSDF sockets that the OpenPBR material can't take yet
-PRINCIPLED_OPENPBR_UNSUPPORTED = ("Coat Normal", "Tangent", "Subsurface IOR")
+# Cycles' default Subsurface IOR, used by the Random Walk (Skin) method only
+# (Random Walk takes the IOR): OpenPBR has none, its walk leaves through the
+# specular IOR (one interface, one IOR)
+PRINCIPLED_SUBSURFACE_IOR = 1.4
+
+
+def principled_openpbr_warnings(node):
+    """The warnings for the Principled BSDF inputs the OpenPBR material can't take"""
+    warnings = []
+
+    subsurface = node.inputs["Subsurface Weight"]
+    # Only a socket of the Skin method (not found by name otherwise)
+    ior = next((s for s in node.inputs if s.name == "Subsurface IOR"), None)
+    if ((subsurface.is_linked or subsurface.default_value > 0)
+            and node.subsurface_method == "RANDOM_WALK_SKIN" and ior is not None
+            and (ior.is_linked or abs(ior.default_value - PRINCIPLED_SUBSURFACE_IOR) > 1e-3)):
+        warnings.append('Principled BSDF: "Subsurface IOR" is not used, the subsurface scattering '
+                        'leaves through the surface at its IOR')
+
+    # The tangent of the UV map is LuxCore's (the frame of the UVs); another
+    # one isn't supported yet
+    tangent = utils_node.get_linked_node(node.inputs["Tangent"])
+    if tangent and not (tangent.bl_idname == "ShaderNodeTangent" and tangent.direction_type == "UV_MAP"):
+        warnings.append('Principled BSDF: a "Tangent" other than the UV map\'s is not supported yet '
+                        'and is ignored')
+
+    return warnings
 
 
 def _principled_openpbr(node, props, material, luxcore_name, obj_name, group_node_stack):
@@ -1028,6 +1053,10 @@ def _principled_openpbr(node, props, material, luxcore_name, obj_name, group_nod
     if used(transmission):
         put("transmission.weight", transmission, 0)
         put("transmission.color", base_color, [1, 1, 1])
+        # Blender 5.3: the dispersion of OpenPBR
+        if "Dispersion Scale" in node.inputs and "Abbe Number" in node.inputs:
+            put("transmission.dispersionscale", value("Dispersion Scale"), 0)
+            put("transmission.dispersionabbenumber", value("Abbe Number"), 20)
 
     subsurface = value("Subsurface Weight")
     if used(subsurface):
@@ -1043,6 +1072,10 @@ def _principled_openpbr(node, props, material, luxcore_name, obj_name, group_nod
         put("coat.color", value("Coat Tint"), [1, 1, 1])
         put("coat.roughness", value("Coat Roughness"), 0)
         put("coat.ior", value("Coat IOR"), 1.6)
+        # Unlinked, the coat keeps the shading normal, not the Normal input's
+        # (as Cycles)
+        if node.inputs["Coat Normal"].is_linked:
+            definitions["coat.bumptex"] = value("Coat Normal")
 
     sheen = value("Sheen Weight")
     if used(sheen):
@@ -1067,10 +1100,8 @@ def _principled_openpbr(node, props, material, luxcore_name, obj_name, group_nod
         if thin_wall.default_value:
             definitions["geometry.thinwalled"] = True
 
-    for name in PRINCIPLED_OPENPBR_UNSUPPORTED:
-        if name in node.inputs and node.inputs[name].is_linked:
-            LuxCoreErrorLog.add_warning(f'Principled BSDF: "{name}" is not supported yet and is ignored',
-                                        obj_name=obj_name)
+    for warning in principled_openpbr_warnings(node):
+        LuxCoreErrorLog.add_warning(warning, obj_name=obj_name)
 
     return definitions
 

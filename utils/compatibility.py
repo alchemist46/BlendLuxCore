@@ -32,6 +32,7 @@ def run():
         update_velvet_microfiber_sheen(node_tree)
         update_subsurface_scatter_color(node_tree)
         update_glossycoating_add_darkening_input(node_tree)
+        update_openpbr_add_coat_bump(node_tree)
 
     for scene in bpy.data.scenes:
         config = scene.luxcore.config
@@ -405,4 +406,16 @@ def update_glossycoating_add_darkening_input(node_tree):
         node.add_input("LuxCoreSocketFloat0to1", "Darkening", 0)
         # After Absorption Depth, as in a new node
         node.inputs.move(len(node.inputs) - 1, node.inputs.find("Absorption Depth (nm)") + 1)
+        logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))
+
+
+def update_openpbr_add_coat_bump(node_tree):
+    # The Coat Bump input (coat.bumptex), in the Coat group (see nodes/materials/openpbr.py)
+    for node in find_nodes(node_tree, "LuxCoreNodeMatOpenPBR", False):
+        if node.inputs.find("Coat Bump") != -1:
+            continue
+
+        node.add_input("LuxCoreSocketBump", "Coat Bump", enabled=node.use_coat)
+        # After Coat Darkening, as in a new node
+        node.inputs.move(len(node.inputs) - 1, node.inputs.find("Coat Darkening") + 1)
         logger.info('Updated %s node "%s" in tree "%s" to new version' % (node.bl_idname, node.name, node_tree.name))

@@ -52,6 +52,12 @@ INPUTS = (
     ("Thin Film IOR", "LuxCoreSocketFilmIOR", 1.4, "thinfilm.ior", "use_thin_film", 1),
 )
 
+# The coat's own bump or normal map (coat.bumptex, pyluxcore 3.0 builds since
+# 2026-11-01), after Coat Darkening. Without it the coat stays smooth over the
+# Bump of the base, as OpenPBR and Cycles' Coat Normal
+COAT_BUMP_NAME = "Coat Bump"
+COAT_BUMP_AFTER = "Coat Darkening"
+
 # The weight that switching a group on sets to 1 when it is 0
 GROUP_WEIGHTS = {
     "use_transmission": "Transmission Weight",
@@ -153,6 +159,8 @@ class LuxCoreNodeMatOpenPBR(LuxCoreNodeMaterial, bpy.types.Node):
             for name, _, _, _, group, _ in INPUTS:
                 if group == prop:
                     _input(self, name).enabled = enabled
+            if prop == "use_coat" and self.inputs.find(COAT_BUMP_NAME) != -1:
+                _input(self, COAT_BUMP_NAME).enabled = enabled
 
             # Switching a group on means using it, which a weight of 0 doesn't
             weight = _input(self, GROUP_WEIGHTS[prop])
@@ -179,6 +187,8 @@ class LuxCoreNodeMatOpenPBR(LuxCoreNodeMaterial, bpy.types.Node):
     def init(self, context):
         for name, socket_type, default, _, group, _ in INPUTS:
             self.add_input(socket_type, name, default, enabled=group is None)
+            if name == COAT_BUMP_AFTER:
+                self.add_input("LuxCoreSocketBump", COAT_BUMP_NAME, enabled=False)
         self.add_common_inputs()
 
         self.outputs.new("LuxCoreSocketMaterial", "Material")
@@ -234,6 +244,17 @@ class LuxCoreNodeMatOpenPBR(LuxCoreNodeMaterial, bpy.types.Node):
                 else:
                     value *= factor
             definitions[key] = value
+
+        if self.use_coat and self.inputs.find(COAT_BUMP_NAME) != -1:
+            coat_bump_socket = _input(self, COAT_BUMP_NAME)
+            coat_bump = coat_bump_socket.export(exporter, depsgraph, props)
+            if coat_bump:
+                definitions["coat.bumptex"] = coat_bump
+                # One sampling distance per material: the base Bump's, set by
+                # export_common_inputs() below, wins over the coat's
+                from_node = coat_bump_socket.links[0].from_node
+                if from_node.bl_idname in {"LuxCoreNodeTexBump", "LuxCoreNodeTexTriplanarBump"}:
+                    definitions["bumpsamplingdistance"] = from_node.sampling_distance
 
         if self.thin_walled:
             definitions["geometry.thinwalled"] = True

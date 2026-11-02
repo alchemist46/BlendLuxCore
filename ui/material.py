@@ -139,6 +139,8 @@ class LUXCORE_PT_material_presets(MaterialButtonsPanel, Panel):
                 op = col.operator("luxcore.preset_material", text=preset)
                 op.preset = preset
 
+        layout.operator("luxcore.import_materialx", text="Import MaterialX (.mtlx)", icon=icons.IMPORT)
+
 
 class LUXCORE_PT_material_preview(MaterialButtonsPanel, Panel):
     COMPAT_ENGINES = {"LUXCORE"}

@@ -906,6 +906,10 @@ def _mat_openpbr(p, node):
         spec.inputs["Coat Roughness"] = g("Coat Roughness")
         spec.inputs["Coat IOR"] = g("Coat IOR")
         spec.inputs["Coat Tint"] = g("Coat Color")
+        # Unlinked, the coat keeps the shading normal in both
+        normal = p.bump(_input(node, "Coat Bump"))
+        if normal is not None:
+            spec.inputs["Coat Normal"] = normal
     if getattr(node, "use_fuzz", False):
         spec.inputs["Sheen Weight"] = g("Fuzz Weight")
         spec.inputs["Sheen Tint"] = g("Fuzz Color")
