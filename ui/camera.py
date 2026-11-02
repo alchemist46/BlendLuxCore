@@ -323,10 +323,6 @@ class LUXCORE_CAMERA_PT_image_pipeline_outline(CameraButtonsPanel, Panel):
         outline = pipeline.outline
         layout.enabled = outline.enabled
 
-        col = layout.column(align=True)
-        col.scale_y = 0.8
-        col.label(text="Note: the lines are not anti-aliased.", icon=icons.WARNING)
-
         layout.prop(outline, "color")
         layout.prop(outline, "amount", slider=True)
         layout.prop(outline, "width")
