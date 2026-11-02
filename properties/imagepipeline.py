@@ -235,10 +235,12 @@ class LuxCoreImagepipelineOutline(PropertyGroup, LuxCoreImagepipelinePluginMixin
     width: FloatProperty(
         name="Width",
         default=1,
-        min=1,
+        min=0.25,
         max=16,
         subtype="PIXEL",
-        description="The width of the lines in pixels",
+        description="The width of the lines in pixels (anti-aliased, so a "
+        "fraction of a pixel gives a fainter line; pyluxcore before the "
+        "anti-aliased lines draws at least 1 pixel)",
     )
     use_object_id: BoolProperty(
         name="Silhouettes",
