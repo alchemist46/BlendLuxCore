@@ -2,7 +2,10 @@ from bl_ui.properties_data_camera import CameraButtonsPanel
 import bpy
 from bpy.types import Panel
 from bl_ui.utils import PresetPanel
+import math
+from .. import utils
 from ..utils import ui as utils_ui
+from ..properties.camera import LENS_PRESET_DATA
 from .. import icons
 from ..icons import icon_manager
 
@@ -110,6 +113,7 @@ class LUXCORE_CAMERA_PT_depth_of_field(CameraButtonsPanel, Panel):
         layout.active = cam.dof.use_dof
 
         layout.prop(cam.dof, "aperture_fstop")
+        layout.prop(cam.luxcore.bokeh, "obstruction")
         layout.prop(cam.luxcore, "use_autofocus")
 
         col = layout.column(align=True)
@@ -140,6 +144,8 @@ class LUXCORE_CAMERA_PT_bokeh(CameraButtonsPanel, Panel):
         layout.active = bokeh.non_uniform
 
         layout.prop(bokeh, "blades")
+        layout.prop(bokeh, "rotation")
+        layout.prop(bokeh, "roundness")
         layout.prop(bokeh, "anisotropy")
         
         col = layout.column()
@@ -149,6 +155,126 @@ class LUXCORE_CAMERA_PT_bokeh(CameraButtonsPanel, Panel):
         elif bokeh.distribution == "CUSTOM":
             col.template_ID(bokeh, "image", open="image.open")
             bokeh.image_user.draw(col, context.scene)
+
+
+class LUXCORE_CAMERA_PT_lens_effects(CameraButtonsPanel, Panel):
+    """The thin lens effects (pyluxcore 3.0+)"""
+    bl_label = "Lens Effects"
+    bl_order = 5
+    bl_options = {'DEFAULT_CLOSED'}
+    COMPAT_ENGINES = {"LUXCORE"}
+
+    @classmethod
+    def poll(cls, context):
+        engine = context.scene.render.engine
+        return context.camera and context.camera.type == "PERSP" and engine == "LUXCORE"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        cam = context.camera
+        lens = cam.luxcore.lens
+        layout.active = not lens.use_realistic
+
+        col = layout.column(align=True)
+        col.prop(lens, "distortion_k1")
+        col.prop(lens, "distortion_k2")
+
+        col = layout.column(align=True)
+        col.prop(lens, "dispersion_lateral", text="Lateral Chromatic Aberration")
+
+        # The effects of the aperture: with Depth of Field
+        layout.separator()
+        col = layout.column(align=True)
+        col.active = cam.dof.use_dof
+        if not cam.dof.use_dof:
+            col.label(text="Enable Depth of Field for these:", icon="INFO")
+        col.prop(lens, "vignetting_distance")
+        sub = col.column(align=True)
+        sub.active = lens.vignetting_distance > 0
+        sub.prop(lens, "vignetting_scale")
+
+        col.separator()
+        col.prop(lens, "aberration_spherical")
+        col.prop(lens, "aberration_coma")
+        col.prop(lens, "aberration_astigmatism")
+        col.prop(lens, "aberration_field_curvature")
+
+        col.separator()
+        col.prop(lens, "dispersion_longitudinal", text="Axial Chromatic Aberration")
+
+        col.separator()
+        col.prop(lens, "tilt_x")
+        col.prop(lens, "tilt_y")
+
+
+class LUXCORE_CAMERA_PT_realistic_lens(CameraButtonsPanel, Panel):
+    """The realistic lens camera (pyluxcore 3.0+)"""
+    bl_label = "Realistic Lens"
+    bl_order = 6
+    bl_options = {'DEFAULT_CLOSED'}
+    COMPAT_ENGINES = {"LUXCORE"}
+
+    @classmethod
+    def poll(cls, context):
+        engine = context.scene.render.engine
+        return context.camera and context.camera.type == "PERSP" and engine == "LUXCORE"
+
+    def draw_header(self, context):
+        self.layout.prop(context.camera.luxcore.lens, "use_realistic", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        cam = context.camera
+        lens = cam.luxcore.lens
+        layout.active = lens.use_realistic
+
+        layout.prop(lens, "preset")
+        if lens.preset == "FILE":
+            layout.prop(lens, "lens_file")
+        layout.prop(lens, "use_camera_focal_length")
+        layout.prop(lens, "dispersion")
+
+        if lens.preset in LENS_PRESET_DATA:
+            self.draw_coverage(context, layout, cam, lens)
+
+        col = layout.column(align=True)
+        col.label(text="F-stop and focus from Depth of Field", icon="INFO")
+        col.label(text="Not for the Bidir and Light engines", icon="INFO")
+
+    @staticmethod
+    def draw_coverage(context, layout, cam, lens):
+        """The focal lengths from which the design covers the frame: a design keeps its field of view (degrees) at
+        any focal length, so its image circle grows with the focal length"""
+        native, height = LENS_PRESET_DATA[lens.preset]
+        focal = cam.lens if lens.use_camera_focal_length else native
+        # The frame (mm), as the export (export.camera._sensor_size())
+        render = context.scene.render
+        _, xaspect, yaspect = utils.calc_aspect(render.resolution_x * render.pixel_aspect_x,
+                                                render.resolution_y * render.pixel_aspect_y, cam.sensor_fit)
+        sensor = cam.sensor_height if cam.sensor_fit == "VERTICAL" else cam.sensor_width
+        half_width, half_height = 0.5 * sensor * xaspect, 0.5 * sensor * yaspect
+        corners = math.hypot(half_width, half_height) / height
+
+        col = layout.column(align=True)
+        if lens.preset == "fisheye":
+            inside = min(half_width, half_height) / height
+            if focal <= inside:
+                col.label(text="Round image in the frame up to %.0fmm" % inside, icon="INFO")
+            elif focal < corners:
+                col.label(text="Round image, cropped: fills the frame from %.0fmm" % corners, icon="INFO")
+            else:
+                col.label(text="Fills the frame (from %.0fmm)" % corners, icon="CHECKMARK")
+        elif focal >= corners * 0.995:
+            col.label(text="Covers the frame (from %.0fmm)" % corners, icon="CHECKMARK")
+        else:
+            col.label(text="Covers the frame from %.0fmm" % corners, icon="INFO")
+            col.label(text="Below, the corners are outside its field: softer, darker", icon="BLANK1")
 
 
 class LUXCORE_CAMERA_PT_motion_blur(CameraButtonsPanel, Panel):
@@ -246,6 +372,50 @@ class LUXCORE_CAMERA_PT_image_pipeline_tonemapper(CameraButtonsPanel, Panel):
             msg = name + " and multiple renderlayers will cause brightness difference!"
             col = layout.column(align=True)
             col.label(text=msg, icon=icons.WARNING)
+
+
+class LUXCORE_CAMERA_PT_image_pipeline_glare(CameraButtonsPanel, Panel):
+    bl_label = "Glare"
+    bl_parent_id = "LUXCORE_CAMERA_PT_image_pipeline"
+    bl_options = {'DEFAULT_CLOSED'}
+    COMPAT_ENGINES = {"LUXCORE"}
+
+    def draw_header(self, context):
+        pipeline = context.camera.luxcore.imagepipeline
+        self.layout.prop(pipeline.glare, "enabled", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        pipeline = context.camera.luxcore.imagepipeline
+        glare = pipeline.glare
+        layout.enabled = glare.enabled
+
+        if context.scene.luxcore.viewport.get_denoiser(context) == "OIDN":
+            layout.label(text="Disabled in viewport because of viewport denoising", icon=icons.INFO)
+
+        col = layout.column(align=True)
+        col.prop(glare, "use_camera_fstop")
+        if glare.use_camera_fstop:
+            col.prop(context.camera.dof, "aperture_fstop", text="F-Stop")
+        else:
+            col.prop(glare, "fstop")
+
+        col = layout.column(align=True)
+        col.prop(glare, "blades")
+        col.prop(glare, "rotation")
+        col.prop(glare, "roundness", slider=True)
+        col.prop(glare, "obstruction", slider=True)
+
+        col = layout.column(align=True)
+        col.prop(glare, "scatter")
+        col.prop(glare, "scatter_radius")
+
+        col = layout.column(align=True)
+        col.prop(glare, "scale")
+        col.prop(glare, "radius")
 
 
 class LUXCORE_CAMERA_PT_image_pipeline_bloom(CameraButtonsPanel, Panel):
@@ -419,6 +589,11 @@ class LUXCORE_CAMERA_PT_image_pipeline_color_aberration(CameraButtonsPanel, Pane
 
         if context.scene.luxcore.viewport.get_denoiser(context) == "OIDN":
             self.layout.label(text="Disabled in viewport because of viewport denoising", icon=icons.INFO)
+
+        layout.prop(coloraberration, "mode")
+        if coloraberration.mode == "SPECTRAL":
+            layout.prop(coloraberration, "amount", slider=True)
+            return
 
         layout.prop(coloraberration, "uniform")
         if coloraberration.uniform:

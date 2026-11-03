@@ -45,6 +45,10 @@ def convert_defs(context, scene, definitions, plugin_index, define_radiancescale
     definitions[str(index) + ".type"] = "NOP"
     index += 1
 
+    # On the linear image, in front of the tonemapper
+    if pipeline.glare.is_enabled(context):
+        index = _glare(definitions, index, pipeline.glare, scene)
+
     if pipeline.tonemapper.enabled:
         index = convert_tonemapper(definitions, index, pipeline.tonemapper)
 
@@ -214,11 +218,51 @@ def _coloraberration(definitions, index, coloraberration):
     definitions[str(index) + ".type"] = "COLOR_ABERRATION"
     amount_x = coloraberration.amount / 100
     amount_y = coloraberration.amount_y / 100
-    if coloraberration.uniform:
+    # SPECTRAL is the default of pyluxcore, and it is isotropic (one amount)
+    if coloraberration.mode == "LEGACY":
+        definitions[str(index) + ".mode"] = "LEGACY"
+    if coloraberration.uniform or coloraberration.mode != "LEGACY":
         definitions[str(index) + ".amount"] = amount_x
     else:
         definitions[str(index) + ".amount"] = [amount_x, amount_y]
     return index + 1
+
+
+def _glare(definitions, index, glare, scene):
+    if not utils.luxutils.has_imagepipeline_plugin("GLARE"):
+        LuxCoreErrorLog.add_warning("Glare needs a newer pyluxcore, it is not rendered")
+        return index
+
+    camera = scene.camera.data if scene.camera else None
+    definitions[str(index) + ".type"] = "GLARE"
+    if glare.use_camera_fstop and camera:
+        definitions[str(index) + ".fstop"] = camera.dof.aperture_fstop
+    else:
+        definitions[str(index) + ".fstop"] = glare.fstop
+    if camera:
+        definitions[str(index) + ".sensorwidth"] = _sensor_width(camera, scene)
+    definitions[str(index) + ".blades"] = glare.blades
+    definitions[str(index) + ".rotation"] = math.degrees(glare.rotation)
+    definitions[str(index) + ".roundness"] = glare.roundness
+    definitions[str(index) + ".obstruction"] = glare.obstruction
+    definitions[str(index) + ".scatter"] = glare.scatter / 100
+    definitions[str(index) + ".scatter.radius"] = glare.scatter_radius / 100
+    definitions[str(index) + ".scale"] = glare.scale
+    definitions[str(index) + ".radius"] = glare.radius / 100
+    return index + 1
+
+
+def _sensor_width(camera, scene):
+    """The width of the sensor (mm) across the image width, from Blender's sensor fit"""
+    width = scene.render.resolution_x * scene.render.pixel_aspect_x
+    height = scene.render.resolution_y * scene.render.pixel_aspect_y
+    fit = camera.sensor_fit
+    if fit == "AUTO":
+        fit = "HORIZONTAL" if width >= height else "VERTICAL"
+        sensor = camera.sensor_width
+    else:
+        sensor = camera.sensor_width if fit == "HORIZONTAL" else camera.sensor_height
+    return sensor if fit == "HORIZONTAL" else sensor * width / height
 
 
 def _vignetting(definitions, index, vignetting):

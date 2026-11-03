@@ -127,3 +127,35 @@ def has_material_type(type_name):
         except RuntimeError:
             _known_material_types[type_name] = False
     return _known_material_types[type_name]
+
+
+_known_imagepipeline_plugins = {}
+_known_camera_types = {}
+
+
+def has_camera_type(type_name):
+    """Check if pyluxcore knows a camera type (e.g. "realistic", new in pyluxcore 3.0)"""
+    if type_name not in _known_camera_types:
+        props = pyluxcore.Properties()
+        props.Set(pyluxcore.Property("scene.camera.type", type_name))
+        try:
+            pyluxcore.Scene().Parse(props)
+            _known_camera_types[type_name] = True
+        except RuntimeError:
+            _known_camera_types[type_name] = False
+    return _known_camera_types[type_name]
+
+
+def has_imagepipeline_plugin(type_name):
+    """Check if pyluxcore knows an image pipeline plugin (e.g. "GLARE", new in pyluxcore 3.0)"""
+    if type_name not in _known_imagepipeline_plugins:
+        props = pyluxcore.Properties()
+        props.Set(pyluxcore.Property("film.width", 1))
+        props.Set(pyluxcore.Property("film.height", 1))
+        props.Set(pyluxcore.Property("film.imagepipelines.0.0.type", type_name))
+        try:
+            pyluxcore.Film(props, False, False)
+            _known_imagepipeline_plugins[type_name] = True
+        except RuntimeError:
+            _known_imagepipeline_plugins[type_name] = False
+    return _known_imagepipeline_plugins[type_name]

@@ -1,7 +1,10 @@
 import math
+import os
+import bpy
 from mathutils import Vector, Matrix
 import pyluxcore
 from .. import utils
+from ..utils import luxutils
 from ..utils.node import get_active_output
 from ..utils.errorlog import LuxCoreErrorLog
 from .image import ImageExporter
@@ -98,6 +101,7 @@ def _view_camera(scene, context, definitions):
         definitions["type"] = "perspective"
         definitions["fieldofview"] = math.degrees(camera.data.angle)
         _depth_of_field(scene, definitions, context)
+        _lens(scene, definitions, context)
     else:
         raise NotImplementedError("Unknown camera.data.type")
 
@@ -132,6 +136,7 @@ def _final(scene, definitions):
     if cam_type == "perspective":
         definitions["fieldofview"] = math.degrees(camera.data.angle)
         _depth_of_field(scene, definitions)
+        _lens(scene, definitions)
 
     # screenwindow (for border rendering and camera shift)
     definitions["screenwindow"] = utils.calc_screenwindow(zoom, camera.data.shift_x, camera.data.shift_y, scene)
@@ -146,23 +151,7 @@ def _depth_of_field(scene, definitions, context=None):
 
     definitions["lensradius"] = (camera.data.lens / 1000) / (2 * camera.data.dof.aperture_fstop)
 
-    if settings.use_autofocus:
-        definitions["autofocus.enable"] = True
-    else:
-        dof_obj = camera.data.dof.focus_object
-
-        if dof_obj:
-            # Use distance along camera Z direction
-            cam_matrix = camera.matrix_world
-            lookat_orig = cam_matrix.to_translation()
-            lookat_target = cam_matrix @ Vector((0, 0, -1))
-
-            lookat_dir = (lookat_target - lookat_orig).normalized()
-            dof_dir = dof_obj.matrix_world.to_translation() - lookat_orig
-
-            definitions["focaldistance"] = abs(lookat_dir.dot(dof_dir))
-        else:
-            definitions["focaldistance"] = camera.data.dof.focus_distance
+    _focus(scene, definitions)
 
     bokeh = settings.bokeh
     if bokeh.non_uniform:
@@ -194,6 +183,115 @@ def _depth_of_field(scene, definitions, context=None):
             except OSError as error:
                 LuxCoreErrorLog.add_warning("Camera: %s" % error)
                 definitions["bokeh.distribution.type"] = "UNIFORM"
+
+
+def _focus(scene, definitions):
+    camera = scene.camera
+    settings = camera.data.luxcore
+
+    if settings.use_autofocus:
+        definitions["autofocus.enable"] = True
+    else:
+        dof_obj = camera.data.dof.focus_object
+
+        if dof_obj:
+            # Use distance along camera Z direction
+            cam_matrix = camera.matrix_world
+            lookat_orig = cam_matrix.to_translation()
+            lookat_target = cam_matrix @ Vector((0, 0, -1))
+
+            lookat_dir = (lookat_target - lookat_orig).normalized()
+            dof_dir = dof_obj.matrix_world.to_translation() - lookat_orig
+
+            definitions["focaldistance"] = abs(lookat_dir.dot(dof_dir))
+        else:
+            definitions["focaldistance"] = camera.data.dof.focus_distance
+
+
+def _sensor_size(camera_data):
+    """The sensor size (mm) across the screen window units -1..1: the fitted dimension (see utils.calc_screenwindow())"""
+    return camera_data.sensor_height if camera_data.sensor_fit == "VERTICAL" else camera_data.sensor_width
+
+
+def _lens(scene, definitions, context=None):
+    """The aperture shape, the thin lens effects and the realistic lens (pyluxcore 3.0+), exported only when
+    they are not at their defaults, so older pyluxcore builds keep working"""
+    camera = scene.camera
+    settings = camera.data.luxcore
+    lens = settings.lens
+    bokeh = settings.bokeh
+    material_preview = utils.in_material_shading_mode(context)
+    use_dof = camera.data.dof.use_dof and not material_preview
+
+    if lens.use_realistic and not material_preview:
+        if not luxutils.has_camera_type("realistic"):
+            LuxCoreErrorLog.add_warning("Camera: this pyluxcore has no realistic lens, the thin lens is used")
+        else:
+            definitions["type"] = "realistic"
+            if lens.preset == "FILE":
+                filepath = bpy.path.abspath(lens.lens_file)
+                if lens.lens_file and os.path.isfile(filepath):
+                    definitions["realistic.lens.file"] = filepath
+                else:
+                    LuxCoreErrorLog.add_warning("Camera: lens file not found, using the double-Gauss: %s" % lens.lens_file)
+                    definitions["realistic.lens.preset"] = "dgauss"
+            else:
+                definitions["realistic.lens.preset"] = lens.preset
+            if lens.use_camera_focal_length:
+                definitions["realistic.focallength"] = camera.data.lens
+            definitions["realistic.sensorwidth"] = _sensor_size(camera.data)
+            # A real lens has always an aperture and a focus, Depth of Field on or off
+            definitions["realistic.fstop"] = camera.data.dof.aperture_fstop
+            definitions.pop("lensradius", None)
+            if "focaldistance" not in definitions and "autofocus.enable" not in definitions:
+                _focus(scene, definitions)
+            if lens.dispersion:
+                definitions["realistic.dispersion"] = True
+            # The shape of the aperture stop
+            if bokeh.non_uniform:
+                definitions["bokeh.blades"] = bokeh.blades
+                if bokeh.rotation != 0:
+                    definitions["bokeh.rotation"] = math.degrees(bokeh.rotation)
+                if bokeh.roundness != 0:
+                    definitions["bokeh.roundness"] = bokeh.roundness
+            if bokeh.obstruction != 0:
+                definitions["bokeh.obstruction"] = bokeh.obstruction
+            return
+
+    # The thin lens
+    if use_dof:
+        if bokeh.non_uniform:
+            if bokeh.rotation != 0:
+                definitions["bokeh.rotation"] = math.degrees(bokeh.rotation)
+            if bokeh.roundness != 0:
+                definitions["bokeh.roundness"] = bokeh.roundness
+        if bokeh.obstruction != 0:
+            definitions["bokeh.obstruction"] = bokeh.obstruction
+
+        if lens.vignetting_distance > 0:
+            definitions["opticalvignetting.distance"] = lens.vignetting_distance
+            definitions["opticalvignetting.scale"] = lens.vignetting_scale
+        if lens.aberration_spherical != 0:
+            definitions["aberration.spherical"] = lens.aberration_spherical
+        if lens.aberration_coma != 0:
+            definitions["aberration.coma"] = lens.aberration_coma
+        if lens.aberration_astigmatism != 0:
+            definitions["aberration.astigmatism"] = lens.aberration_astigmatism
+        if lens.aberration_field_curvature != 0:
+            definitions["aberration.fieldcurvature"] = lens.aberration_field_curvature
+        if lens.tilt_x != 0:
+            definitions["tilt.x"] = math.degrees(lens.tilt_x)
+        if lens.tilt_y != 0:
+            definitions["tilt.y"] = math.degrees(lens.tilt_y)
+        if lens.dispersion_longitudinal != 0:
+            definitions["dispersion.longitudinal"] = lens.dispersion_longitudinal
+
+    if lens.distortion_k1 != 0:
+        definitions["distortion.k1"] = lens.distortion_k1
+    if lens.distortion_k2 != 0:
+        definitions["distortion.k2"] = lens.distortion_k2
+    if lens.dispersion_lateral != 0:
+        definitions["dispersion.lateral"] = lens.dispersion_lateral
 
 
 def _clipping(scene, definitions):

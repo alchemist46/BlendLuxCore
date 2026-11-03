@@ -347,6 +347,18 @@ class LuxCoreImagepipelineColorAberration(
     )
     compatible_with_viewport_denoising = False
 
+    # Exported only for LEGACY: pyluxcore builds before the SPECTRAL mode
+    # ignore it and render the legacy effect
+    mode: EnumProperty(
+        name="Mode",
+        items=[
+            ("SPECTRAL", "Spectral", "A lens' lateral chromatic aberration: every wavelength "
+             "magnified a little differently about the image center, smooth colour fringes", 0),
+            ("LEGACY", "Legacy", "The effect of LuxCore 2.x: a shifted red/blue and green copy "
+             "blended into the image", 1),
+        ],
+        default="SPECTRAL",
+    )
     uniform: BoolProperty(name="Uniform", default=True)
     amount: FloatProperty(
         name="Strength",
@@ -367,6 +379,95 @@ class LuxCoreImagepipelineColorAberration(
         precision=1,
         subtype="PERCENTAGE",
         description="Strength of the color aberration effect",
+    )
+
+
+class LuxCoreImagepipelineGlare(
+    PropertyGroup, LuxCoreImagepipelinePluginMixin
+):
+    NAME = "Glare"
+    enabled: BoolProperty(
+        name=NAME, default=False, description="Enable/disable " + NAME
+    )
+    compatible_with_viewport_denoising = False
+
+    use_camera_fstop: BoolProperty(
+        name="Use Camera F-Stop",
+        default=False,
+        description="Use the F-Stop of the camera's depth of field",
+    )
+    fstop: FloatProperty(
+        name="F-Stop",
+        default=8,
+        min=0.5,
+        soft_max=64,
+        precision=1,
+        description="F-number of the aperture: the diffraction spikes grow with it",
+    )
+    blades: IntProperty(
+        name="Blades",
+        default=6,
+        min=0,
+        max=64,
+        description="Number of aperture blades, 0 for a round aperture. N straight blades "
+                    "make N spikes, 2N when N is odd",
+    )
+    rotation: FloatProperty(
+        name="Rotation",
+        default=0,
+        subtype="ANGLE",
+        description="Rotation of the aperture blades",
+    )
+    roundness: FloatProperty(
+        name="Roundness",
+        default=0,
+        min=0,
+        max=1,
+        description="Curvature of the blades, 1 for a round aperture (no spikes)",
+    )
+    obstruction: FloatProperty(
+        name="Obstruction",
+        default=0,
+        min=0,
+        max=0.95,
+        description="Radius of a central obstruction (mirror lenses), a fraction of the aperture radius",
+    )
+    scatter: FloatProperty(
+        name="Veiling Glare",
+        default=2,
+        min=0,
+        max=100,
+        precision=1,
+        subtype="PERCENTAGE",
+        description="Fraction of the light the lens scatters into a wide halo (1-3% in real lenses)",
+    )
+    scatter_radius: FloatProperty(
+        name="Halo Core",
+        default=0.1,
+        min=0,
+        soft_max=2,
+        max=100,
+        precision=2,
+        subtype="PERCENTAGE",
+        description="Radius of the core of the halo, percent of the image diagonal",
+    )
+    scale: FloatProperty(
+        name="Diffraction Scale",
+        default=1,
+        min=0,
+        soft_max=100,
+        precision=1,
+        description="1 is the physical size of the diffraction, which shows only around very "
+                    "bright highlights. Larger values widen it",
+    )
+    radius: FloatProperty(
+        name="Radius",
+        default=10,
+        min=0.1,
+        max=100,
+        precision=1,
+        subtype="PERCENTAGE",
+        description="Radius of the glare, percent of the image diagonal (larger is slower)",
     )
 
 
@@ -565,6 +666,7 @@ class LuxCoreImagepipeline(PropertyGroup):
     outline: PointerProperty(type=LuxCoreImagepipelineOutline)
     vignetting: PointerProperty(type=LuxCoreImagepipelineVignetting)
     coloraberration: PointerProperty(type=LuxCoreImagepipelineColorAberration)
+    glare: PointerProperty(type=LuxCoreImagepipelineGlare)
     backgroundimage: PointerProperty(type=LuxCoreImagepipelineBackgroundImage)
     white_balance: PointerProperty(type=LuxCoreImagepipelineWhiteBalance)
     camera_response_func: PointerProperty(
