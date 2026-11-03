@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import PointerProperty
+from bpy.props import BoolProperty, PointerProperty
 from . import (
     config, debug, denoiser, display, halt, lightgroups, devices, statistics, viewport,
 )
@@ -19,6 +19,9 @@ class LuxCoreScene(bpy.types.PropertyGroup):
     viewport: PointerProperty(type=viewport.LuxCoreViewportSettings)
     statistics: PointerProperty(type=statistics.LuxCoreRenderStatsCollection)
     debug: PointerProperty(type=debug.LuxCoreDebugSettings)
+    # The file was opened or saved by an addon version with the temperature normalization
+    # setting: lights and worlds without a stored value are new ones (utils/temperature.py)
+    temperature_normalization_stored: BoolProperty(options={"HIDDEN"})
 
     @classmethod
     def register(cls):

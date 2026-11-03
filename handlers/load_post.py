@@ -80,10 +80,8 @@ def handler(_):
     # Run converters for backwards compatibility
     compatibility.run()
     # The lights, worlds and Blackbody nodes of a file saved by an older addon version keep
-    # their Max temperature normalization. Not on the startup file (no path): its lights
-    # are new ones.
-    if bpy.data.filepath:
-        temperature.set_legacy()
+    # their Max temperature normalization
+    temperature.convert_file()
 
     frame_change_pre.have_to_check_node_trees = False
     # Nothing of the previous file is pending (also drops the marks of the converters above)

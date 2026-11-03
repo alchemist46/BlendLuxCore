@@ -37,15 +37,14 @@ def register():
     bpy.app.handlers.save_pre.append(save_pre.handler)
     bpy.app.handlers.blend_import_post.append(blend_import_post.handler)
 
-    # A file already open when the addon is enabled: load_post did not run for it. Lights
-    # and worlds created since it was saved have their values stored (depsgraph_update_post).
-    # While Blender starts, bpy.data cannot be read, and load_post runs for the file later.
+    # A file already open when the addon is enabled: load_post did not run for it. While
+    # Blender starts, bpy.data cannot be read, and load_post runs for the file later.
     try:
-        filepath = bpy.data.filepath
+        bpy.data.filepath
     except AttributeError:
-        filepath = ""
-    if filepath:
-        temperature.set_legacy()
+        pass
+    else:
+        temperature.convert_file()
 
     args = ()
     draw_imageeditor.handle = SpaceImageEditor.draw_handler_add(draw_imageeditor.handler,

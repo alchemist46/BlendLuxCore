@@ -9,11 +9,12 @@ at 3000 K).
 
 New lights, worlds and nodes use Luminance. Data saved by an older addon
 version has no value stored: it is set to Max on load, so old files render as
-before, and when the addon is enabled with a saved file open. Every value is
-written when a file is saved (save_pre), and the value of a new light or world
-in the first depsgraph update it is in (an autosave runs no save_pre), so
-"nothing stored" means "saved by an older addon version" (or created while
-the addon was disabled)."""
+before, and when the addon is enabled with a saved file open. A file this
+addon version has opened or saved is marked (FILE_PROP on its scenes, set on
+load, on save and in the depsgraph updates, so an autosave has it too): in a
+marked file, a light or world without a value is a new one (created since the
+last save, or while the addon was disabled) and keeps Luminance. Every value
+is also written when a file is saved (save_pre)."""
 
 import bpy
 
@@ -67,6 +68,8 @@ def luminance_factor(temperature, normalization):
 LIGHT_PROP = "temperature_normalization"
 NODE_PROP = "normalization"
 NODE_IDNAME = "LuxCoreNodeTexBlackbody"
+# On the luxcore settings of scenes: the file is marked
+FILE_PROP = "temperature_normalization_stored"
 
 
 def get(owner, prop):
@@ -112,7 +115,7 @@ def _owners(ids=None):
 
 def set_legacy(ids=None):
     """Max on the lights, worlds and Blackbody nodes saved by an older addon version (none
-    stored). Called after loading a file and after appending; ids: the appended ones"""
+    stored). Called by convert_file() and after appending; ids: the appended ones"""
     count = 0
     for id_data, owner, prop in _owners(ids):
         if id_data.library is None and not owner.is_property_set(prop):
@@ -121,9 +124,31 @@ def set_legacy(ids=None):
     return count
 
 
-def store_all(ids=None):
-    """Write the value of every local light, world and Blackbody node into the file (save_pre),
-    or of those in ids (new ones, from a depsgraph update: an autosave runs no save_pre)"""
-    for id_data, owner, prop in _owners(ids):
+def store_all():
+    """Write the value of every local light, world and Blackbody node into the file (save_pre)"""
+    for id_data, owner, prop in _owners():
         if id_data.library is None and not owner.is_property_set(prop):
             store(owner, prop, getattr(owner, prop))
+
+
+def is_file_marked():
+    """The open file was opened or saved by this addon version (a local scene is marked)"""
+    return any(getattr(scene.luxcore, FILE_PROP) for scene in bpy.data.scenes if scene.library is None)
+
+
+def mark_file(scenes=None):
+    """Mark every local scene, or those in scenes"""
+    for scene in bpy.data.scenes if scenes is None else scenes:
+        if scene.library is None and not getattr(scene.luxcore, FILE_PROP):
+            setattr(scene.luxcore, FILE_PROP, True)
+
+
+def convert_file():
+    """Max on the lights, worlds and Blackbody nodes of the open file if an older addon version
+    saved it (not marked; not the startup file, whose lights are new ones), then mark it.
+    After loading a file, and when the addon is enabled with a file open"""
+    count = 0
+    if bpy.data.filepath and not is_file_marked():
+        count = set_legacy()
+    mark_file()
+    return count

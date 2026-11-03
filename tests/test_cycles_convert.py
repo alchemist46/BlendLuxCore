@@ -183,13 +183,13 @@ def root_node(tree):
 
 
 def run_case(name, build, root_type, mean_tol=0.02, error_tol=0.05, compare_renders=True,
-             allow_warnings=False, props=False):
+             allow_warnings=False, props=False, samples=SAMPLES):
     material = cycles_material(name, build)
     sphere.data.materials.clear()
     sphere.data.materials.append(material)
 
     LuxCoreErrorLog.clear()
-    reader = harness.render(scene, "LUXCORE", os.path.join(OUT, name + "_reader.exr"), SAMPLES)
+    reader = harness.render(scene, "LUXCORE", os.path.join(OUT, name + "_reader.exr"), samples)
     reader_errors = [e.message for e in LuxCoreErrorLog.errors]
 
     tree, result = convert_material(material)
@@ -203,7 +203,7 @@ def run_case(name, build, root_type, mean_tol=0.02, error_tol=0.05, compare_rend
         compare_props(name, material, tree)
 
     LuxCoreErrorLog.clear()
-    native = harness.render(scene, "LUXCORE", os.path.join(OUT, name + "_native.exr"), SAMPLES)
+    native = harness.render(scene, "LUXCORE", os.path.join(OUT, name + "_native.exr"), samples)
     checks.check(not reader_errors and not LuxCoreErrorLog.errors,
                  f"{name}: no export errors {reader_errors} {[e.message for e in LuxCoreErrorLog.errors]}")
     ratio, error = compare(reader, native)
@@ -224,7 +224,8 @@ material_dielectric, *_ = run_case("principled_dielectric", principled({"Base Co
                                                                         "Roughness": 0.4}),
                                    PRINCIPLED_ROOT, props=True)
 run_case("principled_metal", principled({"Base Color": (0.9, 0.6, 0.3), "Metallic": 1.0, "Roughness": 0.3}),
-         PRINCIPLED_ROOT, props=True)
+         # The glossy highlight is noisy at 32 samples (pixel error 0.02 to 0.07 from run to run)
+         PRINCIPLED_ROOT, props=True, samples=128)
 run_case("principled_glass", principled({"Base Color": (1.0, 1.0, 1.0), "Roughness": 0.1,
                                          "Transmission Weight": 1.0}),
          PRINCIPLED_ROOT if HAS_OPENPBR else "LuxCoreNodeMatGlass", 0.03, 0.10, props=True)

@@ -6,8 +6,10 @@ ignore the first one and fall back to Max). Max (Legacy) exports what the
 older addon versions exported. Files saved by an older addon version (no
 value stored) get Max on load, on append and when the addon is enabled with
 the file open, and linked data from them exports Max; files saved now keep
-their values, and a new light or world has its value stored by the first
-depsgraph update, so an autosave (no save_pre) keeps Luminance. The converted
+their values. A file this addon version opened or saved is marked, so in an
+autosave (no save_pre) a light or world added since the last save, even one
+no scene uses, keeps Luminance, as does one created while the addon was
+disabled. The converted
 Cycles Blackbody node renders like Cycles, its EEVEE nodes in Max like LuxCore,
 and a Temperature light like Blender's light color.
 
@@ -39,6 +41,7 @@ OUT = tempfile.mkdtemp(prefix="blc-temperature-")
 OLD = os.path.join(OUT, "old.blend")
 NEW = os.path.join(OUT, "new.blend")
 AUTOSAVE = os.path.join(OUT, "autosave.blend")
+DISABLED = os.path.join(OUT, "disabled.blend")
 
 
 def blackbody_props(node):
@@ -120,9 +123,10 @@ exported_as(light_export.convert_world(EXPORTER, world, scene, False), "world Lu
 world.luxcore.temperature_normalization = "max"
 exported_as(light_export.convert_world(EXPORTER, world, scene, False), "world Max", False)
 
-# A file of an older addon version: nothing stored. The depsgraph handler would store
-# the values of the lights and the world before the save
+# A file of an older addon version: nothing stored and not marked. The depsgraph handler
+# would mark the scene before the save
 bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post.handler)
+scene.luxcore.property_unset("temperature_normalization_stored")
 tree, node = blackbody_tree("old material")
 material = bpy.data.materials.new("old material")
 material.use_fake_user = True
@@ -148,6 +152,7 @@ def loaded_values():
 
 bpy.ops.wm.open_mainfile(filepath=OLD)
 checks.check(loaded_values() == ("max",) * 4, f"old file loaded: Max on the node, lights and world {loaded_values()}")
+checks.check(bpy.context.scene.luxcore.temperature_normalization_stored, "old file loaded: marked")
 exported_as(blackbody_props(bpy.data.node_groups["old material"].nodes[0])[0], "old Blackbody node", False)
 exported_as(light_props(bpy.data.objects["old light"]), "old light", False)
 
@@ -162,19 +167,16 @@ checks.check(loaded_values() == ("max",) * 4
              f"new file loaded: old data Max {loaded_values()}, added light "
              f"{bpy.data.lights['added light'].luxcore.temperature_normalization}")
 
-# A light and a world added since the last save, in an autosave (which runs no save_pre):
-# stored by the first depsgraph update they are in
+# A light and a world added since the last save, in an autosave (which runs no save_pre),
+# nothing stored: the file is marked, so they are new ones. The world is in no scene, so
+# never in a depsgraph
 autosaved = new_light("autosaved light", "SPOT")
-# A world is in the depsgraph when a scene uses it (Blender's New button assigns it)
 autosaved_world = bpy.data.worlds.new("autosaved world")
 autosaved_world.use_fake_user = True
-old_world = bpy.context.scene.world
-bpy.context.scene.world = autosaved_world
 bpy.context.view_layer.update()
-bpy.context.scene.world = old_world
 stored = [autosaved.data.luxcore.is_property_set("temperature_normalization"),
           autosaved_world.luxcore.is_property_set("temperature_normalization")]
-checks.check(stored == [True, True], f"added light and world: stored by the depsgraph update {stored}")
+checks.check(stored == [False, False], f"added light and world: nothing stored {stored}")
 bpy.app.handlers.save_pre.remove(save_pre.handler)
 bpy.ops.wm.save_as_mainfile(filepath=AUTOSAVE, copy=True)
 bpy.app.handlers.save_pre.append(save_pre.handler)
@@ -332,5 +334,31 @@ before = loaded_values()
 blendluxcore_handlers.register()
 checks.check(loaded_values() == ("max",) * 4,
              f"old file open when the addon is enabled: Max {loaded_values()} (before {before})")
+
+# A light and a world created in a file of this version while the addon was disabled:
+# new ones, Luminance, when the addon is enabled and when the file is loaded again
+blendluxcore_handlers.unregister()
+bpy.ops.wm.open_mainfile(filepath=NEW)
+disabled_light = new_light("disabled light", "POINT")
+disabled_world = bpy.data.worlds.new("disabled world")
+disabled_world.use_fake_user = True
+for data in (disabled_light.data, disabled_world):
+    data.luxcore.property_unset("temperature_normalization")
+bpy.ops.wm.save_as_mainfile(filepath=DISABLED)
+blendluxcore_handlers.register()
+
+
+def disabled_values():
+    return (bpy.data.lights["disabled light"].luxcore.temperature_normalization,
+            bpy.data.worlds["disabled world"].luxcore.temperature_normalization)
+
+
+checks.check(loaded_values() == ("max",) * 4 and disabled_values() == ("luminance",) * 2,
+             f"created while the addon was disabled, addon enabled: old data Max {loaded_values()}, "
+             f"new light and world {disabled_values()}")
+bpy.ops.wm.open_mainfile(filepath=DISABLED)
+checks.check(loaded_values() == ("max",) * 4 and disabled_values() == ("luminance",) * 2,
+             f"created while the addon was disabled, file loaded: old data Max {loaded_values()}, "
+             f"new light and world {disabled_values()}")
 
 checks.finish()

@@ -15,12 +15,12 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 
 ## Open
 
-### test_cycles_convert: principled_metal's pixel error is flaky around its tolerance
-- Found: 2026-11-01
+### test_cycles_convert_disney and test_openpbr_principled fail with pyluxcore builds since LuxCore 07044a57f
+- Found: 2026-11-03
 - Area: tests
-- Problem: the case compares the converted LuxCore nodes with the Cycles node reader, both rendered by LuxCore; its pixel error (tolerance 0.05) is 0.022 to 0.066 from run to run and the mean 0.993-1.007, with the same pyluxcore, so the test fails about one run in three.
-- Reproduce: `tests/run.sh <site-packages> test_cycles_convert`, run it several times; seen with the pyluxcore of LuxCore be438657d and with the OpenPBR coat normal build on top of it (the metal case doesn't use the coat), Blender 5.2.3.
-- Notes: the material properties match (the test checks them); the two renders differ by the noise of a multi-threaded PATHCPU render at the test's sample count. More samples, or a tolerance from the seed spread, would make it stable.
+- Problem: `test_cycles_convert_disney`: principled_coat_sheen's native/reader mean is 0.88-0.98 (tolerance 0.03) and its pixel error 0.15-0.23 (tolerance 0.15). `test_openpbr_principled`: "smooth glass" LuxCore/Cycles mean 0.901 (tolerance 0.03), "glass" 0.963.
+- Reproduce: Blender 5.2, `tests/run.sh <site-packages> test_cycles_convert_disney test_openpbr_principled`, with the pyluxcore builds of LuxCore 7bc5719e5 and ec3b88d9b.
+- Notes: a core bug, nothing to change in the addon: see "One-sided emitters: a BSDF ray goes through the light..." in the core's `BUGS.md`. Since 07044a57f (one-sided transparency), a BSDF ray hitting the emitting front of an area light reads its back transparency (the addon exports `transparency.back = 0`) and goes through without the emission, so after a smooth glass or mirror bounce the light and its caustics are lost. With 07044a57f reverted both tests pass (smooth glass 1.003, coat/sheen 1.002/1.001/1.004). Remove this entry when the core fix is in the pyluxcore the tests use.
 
 ### The viewport main thread still stalls 30-45 ms once per frame while RTPATHOCL renders LynxSpider
 - Found: 2026-10-29
@@ -49,10 +49,3 @@ Addon bugs and issues found during a task that were not fixed right away. Bugs i
 - Problem: of Blender's Object > Visibility > Ray Visibility (what Cycles uses), the addon follows only Camera (meshes, and area lights with either settings). With Diffuse, Glossy, Transmission, Volume Scatter or Shadow off, Cycles leaves the object or light out of those rays; LuxCore still shows it to them. The Object panel says which flags are ignored.
 - Reproduce: Blender 5.2, any of these flags off on a mesh or a light, Cycles against LuxCore.
 - Notes: needs the core. A light's `visibility.indirect.diffuse/glossy/specular.enable` is not the counterpart: it drops only a path that hits the light after such a bounce, and direct light sampling still lights the surface (`PathTracer::CheckDirectHitVisibilityFlags()`), while Cycles' Diffuse off removes the light from diffuse lobes altogether. Point, spot and distant lights have no flags at all. For meshes there is no per-object flag besides `camerainvisible`; the material's `transparency.shadow` would give Shadow off, but per material (copies for objects with different flags). The Cycles area light's Camera flag was fixed on 2026-10-29.
-
-### Two cases where a new light or world gets Max (Legacy) temperature normalization
-- Found: 2026-10-29
-- Area: handlers
-- Problem: a light or world whose value is not stored is taken for one of an older addon version and set to Max on load. Two new ones are not stored: (1) a world that no scene uses, created after the last save and recovered from an autosave (a world is in the depsgraph only when a scene uses it, and the value is stored by the first depsgraph update or on save); (2) a light or world created while the addon was disabled, when the addon is enabled with the file open or the file is loaded again.
-- Reproduce: (1) add a world with a fake user and no scene, wait for an autosave, recover it (not tried).
-- Notes: `utils/temperature.py`, `handlers/depsgraph_update_post.py`. Both only change the brightness of a Temperature color (Max is 0.72x at 6500 K).
