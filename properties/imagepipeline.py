@@ -471,6 +471,18 @@ class LuxCoreImagepipelineGlare(
         subtype="PERCENTAGE",
         description="Radius of the glare, percent of the image diagonal (larger is slower)",
     )
+    use_in_viewport: BoolProperty(
+        name="Show in Viewport",
+        default=True,
+        description="Compute the glare in the viewport too. It runs on the CPU at every refresh of the "
+                    "viewport image (about 90 ms for 1920x1080), which slows the viewport down",
+    )
+
+    def is_enabled(self, context):
+        # In final render, context is None
+        if context and not self.use_in_viewport:
+            return False
+        return super().is_enabled(context)
 
 
 class LuxCoreImagepipelineBackgroundImage(

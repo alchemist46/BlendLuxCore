@@ -402,6 +402,7 @@ class LUXCORE_CAMERA_PT_lens_effects_glare(CameraButtonsPanel, Panel):
         if context.scene.luxcore.viewport.get_denoiser(context) == "OIDN":
             layout.label(text="Disabled in viewport because of viewport denoising", icon=icons.INFO)
 
+        layout.prop(glare, "use_in_viewport")
         layout.prop(glare, "use_camera_aperture")
         col = layout.column(align=True)
         if glare.use_camera_aperture:
