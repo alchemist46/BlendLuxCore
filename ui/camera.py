@@ -158,7 +158,7 @@ class LUXCORE_CAMERA_PT_bokeh(CameraButtonsPanel, Panel):
 
 
 class LUXCORE_CAMERA_PT_lens_effects(CameraButtonsPanel, Panel):
-    """The thin lens effects (pyluxcore 3.0+)"""
+    """The effects of the lens (pyluxcore 3.0+): the thin lens ones, rendered, and Glare, on the image"""
     bl_label = "Lens Effects"
     bl_order = 5
     bl_options = {'DEFAULT_CLOSED'}
@@ -167,7 +167,7 @@ class LUXCORE_CAMERA_PT_lens_effects(CameraButtonsPanel, Panel):
     @classmethod
     def poll(cls, context):
         engine = context.scene.render.engine
-        return context.camera and context.camera.type == "PERSP" and engine == "LUXCORE"
+        return context.camera and engine == "LUXCORE"
 
     def draw(self, context):
         layout = self.layout
@@ -176,6 +176,11 @@ class LUXCORE_CAMERA_PT_lens_effects(CameraButtonsPanel, Panel):
 
         cam = context.camera
         lens = cam.luxcore.lens
+        if cam.type != "PERSP":
+            layout.label(text="Distortion and aberrations: perspective cameras only", icon="INFO")
+            return
+        if lens.use_realistic:
+            layout.label(text="The Realistic Lens renders these itself", icon="INFO")
         layout.active = not lens.use_realistic
 
         col = layout.column(align=True)
@@ -374,9 +379,10 @@ class LUXCORE_CAMERA_PT_image_pipeline_tonemapper(CameraButtonsPanel, Panel):
             col.label(text=msg, icon=icons.WARNING)
 
 
-class LUXCORE_CAMERA_PT_image_pipeline_glare(CameraButtonsPanel, Panel):
+class LUXCORE_CAMERA_PT_lens_effects_glare(CameraButtonsPanel, Panel):
+    """The diffraction spikes and the veiling glare of the lens, computed on the image (the image pipeline's GLARE)"""
     bl_label = "Glare"
-    bl_parent_id = "LUXCORE_CAMERA_PT_image_pipeline"
+    bl_parent_id = "LUXCORE_CAMERA_PT_lens_effects"
     bl_options = {'DEFAULT_CLOSED'}
     COMPAT_ENGINES = {"LUXCORE"}
 
@@ -389,25 +395,32 @@ class LUXCORE_CAMERA_PT_image_pipeline_glare(CameraButtonsPanel, Panel):
         layout.use_property_split = True
         layout.use_property_decorate = False
 
-        pipeline = context.camera.luxcore.imagepipeline
-        glare = pipeline.glare
+        cam = context.camera
+        glare = cam.luxcore.imagepipeline.glare
         layout.enabled = glare.enabled
 
         if context.scene.luxcore.viewport.get_denoiser(context) == "OIDN":
             layout.label(text="Disabled in viewport because of viewport denoising", icon=icons.INFO)
 
+        layout.prop(glare, "use_camera_aperture")
         col = layout.column(align=True)
-        col.prop(glare, "use_camera_fstop")
-        if glare.use_camera_fstop:
-            col.prop(context.camera.dof, "aperture_fstop", text="F-Stop")
+        if glare.use_camera_aperture:
+            # The camera's own properties: editing them changes the bokeh too
+            bokeh = cam.luxcore.bokeh
+            col.prop(cam.dof, "aperture_fstop", text="F-Stop")
+            if bokeh.non_uniform:
+                col.prop(bokeh, "blades")
+                col.prop(bokeh, "rotation")
+                col.prop(bokeh, "roundness", slider=True)
+            else:
+                col.label(text="Round: blades in Depth of Field > Non-Uniform Bokeh", icon="INFO")
+            col.prop(bokeh, "obstruction", slider=True)
         else:
             col.prop(glare, "fstop")
-
-        col = layout.column(align=True)
-        col.prop(glare, "blades")
-        col.prop(glare, "rotation")
-        col.prop(glare, "roundness", slider=True)
-        col.prop(glare, "obstruction", slider=True)
+            col.prop(glare, "blades")
+            col.prop(glare, "rotation")
+            col.prop(glare, "roundness", slider=True)
+            col.prop(glare, "obstruction", slider=True)
 
         col = layout.column(align=True)
         col.prop(glare, "scatter")

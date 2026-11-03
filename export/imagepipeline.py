@@ -235,21 +235,33 @@ def _glare(definitions, index, glare, scene):
 
     camera = scene.camera.data if scene.camera else None
     definitions[str(index) + ".type"] = "GLARE"
-    if glare.use_camera_fstop and camera:
-        definitions[str(index) + ".fstop"] = camera.dof.aperture_fstop
+    if glare.use_camera_aperture and camera:
+        fstop, blades, rotation, roundness, obstruction = camera_aperture(camera)
     else:
-        definitions[str(index) + ".fstop"] = glare.fstop
+        fstop, blades, rotation, roundness, obstruction = (glare.fstop, glare.blades, glare.rotation,
+                                                           glare.roundness, glare.obstruction)
+    definitions[str(index) + ".fstop"] = fstop
     if camera:
         definitions[str(index) + ".sensorwidth"] = _sensor_width(camera, scene)
-    definitions[str(index) + ".blades"] = glare.blades
-    definitions[str(index) + ".rotation"] = math.degrees(glare.rotation)
-    definitions[str(index) + ".roundness"] = glare.roundness
-    definitions[str(index) + ".obstruction"] = glare.obstruction
+    definitions[str(index) + ".blades"] = blades
+    definitions[str(index) + ".rotation"] = math.degrees(rotation)
+    definitions[str(index) + ".roundness"] = roundness
+    definitions[str(index) + ".obstruction"] = obstruction
     definitions[str(index) + ".scatter"] = glare.scatter / 100
     definitions[str(index) + ".scatter.radius"] = glare.scatter_radius / 100
     definitions[str(index) + ".scale"] = glare.scale
     definitions[str(index) + ".radius"] = glare.radius / 100
     return index + 1
+
+
+def camera_aperture(camera):
+    """The aperture the camera renders with (see export.camera): the F-Stop of Depth of Field (a real lens has one
+    with Depth of Field off too), the blades, rotation (radians) and roundness of Non-Uniform Bokeh, 0 blades (round)
+    without it, and the obstruction"""
+    bokeh = camera.luxcore.bokeh
+    if bokeh.non_uniform:
+        return camera.dof.aperture_fstop, bokeh.blades, bokeh.rotation, bokeh.roundness, bokeh.obstruction
+    return camera.dof.aperture_fstop, 0, 0.0, 0.0, bokeh.obstruction
 
 
 def _sensor_width(camera, scene):

@@ -391,10 +391,12 @@ class LuxCoreImagepipelineGlare(
     )
     compatible_with_viewport_denoising = False
 
-    use_camera_fstop: BoolProperty(
-        name="Use Camera F-Stop",
-        default=False,
-        description="Use the F-Stop of the camera's depth of field",
+    use_camera_aperture: BoolProperty(
+        name="Use Camera Aperture",
+        default=True,
+        description="Use the aperture the camera renders with: the F-Stop of Depth of Field, and the blades, "
+                    "rotation and roundness of Non-Uniform Bokeh (round without it) and the obstruction. "
+                    "The spikes then match the shape of the bokeh",
     )
     fstop: FloatProperty(
         name="F-Stop",
